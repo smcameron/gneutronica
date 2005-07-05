@@ -30,6 +30,7 @@
 #include <math.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <netinet/in.h> /* . . . just for for htons() */
 
 #include <gtk/gtk.h>
 
@@ -56,6 +57,7 @@ struct schedule_t sched;
 #define PLAY_ONCE 0
 #define PLAY_LOOP 1
 #define PLAYER_QUIT 2
+#define PERFORM_PATCH_CHANGE 4
 
 int midi_fd = -1;
 int player_process_fd = -1;
@@ -105,6 +107,7 @@ GtkWidget *pattern_name_entry, *pattern_name_label;
 GtkWidget *SaveBox;
 GtkWidget *LoadBox;
 GtkWidget *quitbutton;
+GtkWidget *midi_setup_activate_button;
 GtkWidget *hide_instruments;
 GtkWidget *hide_volume_sliders;
 GtkWidget *pattern_paste_button;
@@ -156,6 +159,23 @@ GtkWidget *arranger_box;
 GtkWidget *arranger_scroller;
 GtkWidget *arranger_table;
 
+/* Midi setup window Allows seting Midi channel to transmit on,
+   and allows sending patch change messages. */
+GtkWidget *midi_setup_window;
+GtkWidget *midi_setup_vbox;
+GtkWidget *midi_setup_hbox1;
+GtkWidget *midi_setup_hbox2;
+GtkWidget *midi_setup_hbox3;
+GtkWidget *midi_bank_label;
+GtkWidget *midi_bank_spin_button;
+GtkWidget *midi_patch_label;
+GtkWidget *midi_patch_spin_button;
+GtkWidget *midi_channel_label;
+GtkWidget *midi_channel_spin_button;
+GtkWidget *midi_change_patch_button;
+GtkWidget *midi_setup_ok_button;
+GtkWidget *midi_setup_cancel_button;
+
 char window_title[255];
 char arranger_title[255];
 char songname[100];
@@ -201,6 +221,9 @@ struct drumkit_struct {
 	char model[30];
 	char name[30];
 	int ninsts;
+	unsigned char midi_channel;
+	unsigned int midi_bank;
+	unsigned char midi_patch;
 	struct instrument_struct *instrument;
 } drumkit[MAXKITS];
 
@@ -2096,11 +2119,33 @@ int save_to_file(char *filename)
 	return 0;
 }
 
+void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch)
+{
+	/* sends a MIDI bank change and patch change message to a MIDI device */
+	unsigned short b;
+	char bank_ch[3];
+	char patch_ch[2];
+
+	printf("Changing MIDI device to bank %d, patch %d\n", bank, patch);
+
+	bank_ch[0] = 0xb0 | (0x0f & drumkit[kit].midi_channel);
+	b = htons(bank); /* put it in big endian order */
+	memcpy(&bank_ch[1], &b, sizeof(b)); 
+
+	patch_ch[0] = 0xc0 | (0x0f & drumkit[kit].midi_channel);
+	patch_ch[1] = patch;
+
+	write(fd, bank_ch, 3);
+	write(fd, patch_ch, 2);
+
+	return;
+}
+
 void note_on(int fd, unsigned char value, unsigned char volume)
 {
 	unsigned char data[3];
 	/* printf("NOTE ON, value=%d, volume=%d\n", value, volume); */
-	data[0] = 0x90;
+	data[0] = 0x90 | (drumkit[kit].midi_channel & 0x0f);
 	data[1] = value;
 	data[2] = volume; 
 	write(fd, data, 3); /* This needs to be atomic */
@@ -2110,7 +2155,7 @@ void note_off(int fd, unsigned char value, unsigned char volume)
 {
 	unsigned char data[3];
 	/* printf("NOTE OFF, value=%d, volume=%d\n", value, volume); */
-	data[0] = 0x80;
+	data[0] = 0x80 | (drumkit[kit].midi_channel & 0x0f);
 	data[1] = value;
 	data[2] = volume; 
 	write(fd, data, 3); /* This needs to be atomic */
@@ -2253,6 +2298,15 @@ void player_process_requests(int fd)
 			case PLAYER_QUIT:
 				silence(midi_fd);
 				exit(0);
+			case PERFORM_PATCH_CHANGE: {
+				unsigned short bank;
+				unsigned char patch;
+				read(fd, &bank, sizeof(bank));
+				read(fd, &patch, sizeof(patch));
+				printf("Player: Changing to bank %d, patch %d\n", bank, patch);
+				send_midi_patch_change(midi_fd, bank, patch);
+				break;
+			}
 			default:
 				printf("Player received unknown cmd: %d\n", cmd);
 		}
@@ -2286,6 +2340,103 @@ int fork_player_process(char *device, int *fd)
 	return(pid);
 }
 
+int midi_change_patch(GtkWidget *widget, gpointer data)
+{
+	/* sends a command to the player process to make it send a bank/patch change to 
+	   the MIDI device */
+	unsigned short bank;
+	unsigned char patch;
+	unsigned char cmd = PERFORM_PATCH_CHANGE;
+	int rc;
+
+	drumkit[kit].midi_bank = bank;
+	drumkit[kit].midi_patch = patch;
+
+	bank = (unsigned short) (gtk_spin_button_get_value_as_int(
+		GTK_SPIN_BUTTON(midi_bank_spin_button))) & 0x00ffff;
+	patch = (unsigned char) (gtk_spin_button_get_value_as_int(
+		GTK_SPIN_BUTTON(midi_patch_spin_button))) & 0x0f;
+	
+	rc = write(player_process_fd, &cmd, 1);
+	rc = write(player_process_fd, &bank, sizeof(bank));
+	rc = write(player_process_fd, &patch, sizeof(patch));
+}
+
+int midi_setup_activate(GtkWidget *widget, gpointer data)
+{
+	gtk_widget_show(midi_setup_window);
+	return TRUE;
+}
+
+int midi_setup_cancel(GtkWidget *widget, gpointer data)
+{
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(midi_channel_spin_button), 
+		(gdouble) drumkit[kit].midi_channel);
+	gtk_widget_hide(midi_setup_window);
+	return TRUE;
+}
+
+int midi_setup_ok(GtkWidget *widget, gpointer data)
+{
+	unsigned char midi_channel;
+	drumkit[kit].midi_channel = (unsigned char) (gtk_spin_button_get_value_as_int(
+		GTK_SPIN_BUTTON(midi_channel_spin_button))) & 0x0f;
+	gtk_widget_hide(midi_setup_window);
+	return TRUE;
+}
+
+void setup_midi_setup_window()
+{
+	char windowname[100];
+	midi_setup_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_container_set_border_width(GTK_CONTAINER (midi_setup_window), 15);
+	midi_setup_vbox = gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER (midi_setup_window), midi_setup_vbox);
+	midi_setup_hbox1 = gtk_hbox_new(FALSE, 0);
+	midi_setup_hbox2 = gtk_hbox_new(FALSE, 0);
+	midi_setup_hbox3 = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_vbox), midi_setup_hbox1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_vbox), midi_setup_hbox2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_vbox), midi_setup_hbox3, FALSE, FALSE, 0);
+
+	midi_bank_label = gtk_label_new("MIDI Bank:");
+	midi_bank_spin_button = gtk_spin_button_new_with_range(0, 0x0ffff, 1);
+	midi_patch_label = gtk_label_new("MIDI Patch:");
+	midi_patch_spin_button = gtk_spin_button_new_with_range(0,0xff,1);
+	midi_channel_label = gtk_label_new("Transmit on MIDI channel:");
+	midi_channel_spin_button = gtk_spin_button_new_with_range(0, 15, 1);
+	midi_change_patch_button = gtk_button_new_with_label("Send Change Patch Message to device");
+	g_signal_connect(G_OBJECT (midi_change_patch_button), "clicked", 
+				G_CALLBACK (midi_change_patch), NULL);
+	midi_setup_ok_button = gtk_button_new_with_label(" Ok ");
+	midi_setup_cancel_button = gtk_button_new_with_label(" Cancel ");
+	g_signal_connect(G_OBJECT (midi_setup_ok_button), "clicked", 
+				G_CALLBACK (midi_setup_ok), NULL);
+	g_signal_connect(G_OBJECT (midi_setup_cancel_button), "clicked", 
+				G_CALLBACK (midi_setup_cancel), NULL);
+
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox1), midi_bank_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox1), midi_bank_spin_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox1), midi_patch_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox1), midi_patch_spin_button, FALSE, FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox1), midi_change_patch_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox2), midi_channel_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox2), midi_channel_spin_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox3), midi_setup_ok_button, TRUE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(midi_setup_hbox3), midi_setup_cancel_button, TRUE, FALSE, 0);
+
+	sprintf(windowname, "%s MIDI Setup", PROGNAME);
+	gtk_window_set_title(GTK_WINDOW(midi_setup_window), windowname);
+
+	g_signal_connect(G_OBJECT (midi_setup_window), "delete_event", 
+		// G_CALLBACK (delete_event), NULL);
+		G_CALLBACK (midi_setup_cancel), NULL);
+	g_signal_connect(G_OBJECT (midi_setup_window), "destroy", 
+		G_CALLBACK (midi_setup_cancel), NULL);
+
+	gtk_widget_show_all(midi_setup_vbox);
+}
 
 int main(int argc, char *argv[])
 {
@@ -2644,6 +2795,12 @@ int main(int argc, char *argv[])
 	arr_loop_check_button = gtk_check_button_new_with_label("Loop");
 	gtk_tooltips_set_tip(tooltips, arr_loop_check_button, 
 		"When checked, will cause playback to loop until 'Stop' is pressed.", NULL);
+	midi_setup_activate_button = gtk_button_new_with_label("MIDI Setup");
+	gtk_tooltips_set_tip(tooltips, midi_setup_activate_button,
+		"Set the MIDI channel to transmit on, and send "
+		"MIDI patch change messages.", NULL);
+	g_signal_connect(G_OBJECT (midi_setup_activate_button), "clicked",
+			G_CALLBACK (midi_setup_activate), NULL);
 	abox = gtk_vbox_new(FALSE, 0);
 	a_button_box = gtk_hbox_new(FALSE, 0);
 	arranger_box = gtk_hbox_new(FALSE, 0);
@@ -2652,6 +2809,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), arr_loop_check_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(arranger_box), midi_setup_activate_button, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(abox), arranger_scroller, TRUE, TRUE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(arranger_scroller), 
 		arranger_table);
@@ -2693,11 +2851,12 @@ int main(int argc, char *argv[])
 	make_file_dialogs();
 	make_tempo_change_editor();
 
-	/* ---------------- start showing stuff ------------------ */
 
 	set_pattern_window_title();
 	set_arranger_window_title();
 
+	setup_midi_setup_window();
+	/* ---------------- start showing stuff ------------------ */
 	gtk_widget_show_all(arranger_window);
 	gtk_widget_show_all(window);
 
