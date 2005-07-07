@@ -49,7 +49,7 @@
 #define DEFAULT_VELOCITY 100
 
 #define PROGNAME "Gneutronica"
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 struct schedule_t sched;
 
