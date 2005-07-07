@@ -1,0 +1,7 @@
+Known bugs:
+
+* Selecting "Cancel" or the (X) button to kill the window in any of the file
+  dialogs will cause the program to crash subsequently whenever that file
+  dialog is made to pop up again (e.g. If you 'Save', but cancel, then
+  'Save' again, the second save will crash the program immediately.
+

@@ -106,12 +106,18 @@ GtkWidget *song_name_entry, *song_name_label;
 GtkWidget *pattern_name_entry, *pattern_name_label;
 GtkWidget *SaveBox;
 GtkWidget *LoadBox;
+GtkWidget *SaveDrumkitBox;
 GtkWidget *quitbutton;
 GtkWidget *midi_setup_activate_button;
 GtkWidget *hide_instruments;
 GtkWidget *hide_volume_sliders;
+GtkWidget *drumkit_vbox;
+GtkWidget *edit_instruments_toggle;
+GtkWidget *save_drumkit_button;
 GtkWidget *pattern_paste_button;
 GtkWidget *nextbutton, *prevbutton;
+GtkWidget *play_button;
+GtkWidget *play_selection_button;
 GtkTooltips *tooltips;
 
 GtkWidget *TempoChWin;
@@ -238,6 +244,9 @@ struct instrument_struct {
 	GtkWidget *canvas;
 	GtkObject *volume_adjustment;
 	GtkWidget *volume_slider;
+	GtkWidget *name_entry;
+	GtkWidget *type_entry;
+	GtkWidget *midi_value_spin_button;
 }; 
 
 int flatten_pattern(int ckit, int cpattern);
@@ -245,22 +254,12 @@ int unflatten_pattern(int ckit, int cpattern);
 void note_on(int fd, unsigned char value, unsigned char volume);
 void note_off(int fd, unsigned char value, unsigned char volume);
 
-int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
+int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct drumkit_struct *drumkit)
 {
-	FILE *f;
 	struct drumkit_struct *dk;
 	int rc, line, n;
 	char cmd[255];
 
-	if (*ndrumkits >= MAXKITS)
-		return -1;
-
-	sprintf(cmd, "grep -v '^#' %s", filename);
-	f = popen(cmd, "r");
-	if (f == NULL) {
-		fprintf(stderr, "Can't open %s: %s\n", filename, strerror(errno));
-		return -1;
-	}
 	line = 1;
 	dk = &drumkit[*ndrumkits];
 	dk->ninsts = 0;
@@ -306,6 +305,65 @@ int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 	return 0;
 }
 
+int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
+{
+	FILE *f;
+	struct drumkit_struct *dk;
+	int rc, line, n;
+	int fileformat;
+	char cmd[255];
+
+	if (*ndrumkits >= MAXKITS)
+		return -1;
+
+	sprintf(cmd, "grep -v '^#' %s", filename);
+	f = popen(cmd, "r");
+	if (f == NULL) {
+		fprintf(stderr, "Can't open %s: %s\n", filename, strerror(errno));
+		return -1;
+	}
+	rc = fscanf(f, "Gneutronica drumkit file format %d\n", &fileformat);
+	if (rc != 1) {
+		printf("%s does not appear to be a Gneutronica drumkit file\n", filename);
+		pclose(f);
+		return -1;
+	}
+
+	switch (fileformat) {
+	case 1: rc = read_drumkit_fileformat_1(filename, f, ndrumkits, drumkit);
+		break;
+	default: printf("Unknown drumkit fileformat version %d\n", fileformat);
+		rc = -1;
+		break;
+	}
+	return rc;
+}
+
+save_drumkit_to_file(const char *filename) 
+{
+	struct drumkit_struct *dk;
+	FILE *f;
+	int i, fileformat = 1;
+
+	printf("save_drumkit_to_file called\n");
+
+	dk = &drumkit[kit];
+
+	f = fopen(filename, "w");
+	if (f == NULL) 
+		return -1;
+
+	fprintf(f, "Gneutronica drumkit file format %d\n", fileformat);
+	fprintf(f, "%s, %s, %s\n", dk->make, dk->model, dk->name);
+	for (i=0;i<dk->ninsts;i++) {
+		fprintf(f, "%s, %s, %d\n",  
+			dk->instrument[i].name, 
+			dk->instrument[i].type,
+			dk->instrument[i].midivalue);
+	}
+	fclose(f);
+}
+
 void destroy_event(GtkWidget *widget, gpointer data);
 void cleanup_tempo_changes();
 
@@ -340,6 +398,13 @@ void tempo_change_delete_button(GtkWidget *widget, gpointer data)
 	gtk_widget_queue_draw(Tempo_da);
 }
 
+void destroy_means_hide(GtkWidget *widget, gpointer data)
+{
+	/* hmm, this doesn't really work, the next time the widget is activated... boom! */
+	gtk_widget_hide(widget); 
+}
+
+
 void make_tempo_change_editor()
 {
 	TempoChWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -364,9 +429,9 @@ void make_tempo_change_editor()
 
 	g_signal_connect(G_OBJECT (TempoChWin), "delete_event", 
 		// G_CALLBACK (delete_event), NULL);
-		G_CALLBACK (destroy_event), NULL);
+		G_CALLBACK (destroy_means_hide), NULL);
 	g_signal_connect(G_OBJECT (TempoChWin), "destroy", 
-		G_CALLBACK (destroy_event), NULL);
+		G_CALLBACK (destroy_means_hide), NULL);
 
 	gtk_container_set_border_width(GTK_CONTAINER (TempoChWin), 15);
 	gtk_container_add(GTK_CONTAINER (TempoChWin), TempoChvbox1);
@@ -750,6 +815,16 @@ void redraw_measure_op_buttons()
 	gtk_widget_queue_draw(Paste_da);
 	gtk_widget_queue_draw(Insert_da);
 	gtk_widget_queue_draw(Delete_da);
+}
+
+void integer_spin_button_change(GtkSpinButton *spinbutton, int *value)
+{
+	*value = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
+}
+
+void unsigned_char_spin_button_change(GtkSpinButton *spinbutton, unsigned char *value)
+{
+	*value = (unsigned char) gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
 
 redraw_arranger()
@@ -1261,7 +1336,7 @@ void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
 		*base = basetime;
 }
 
-void schedule_measures()
+void schedule_measures(int start, int end)
 {
 	int i,j;
 	struct timeval base, tmpbase;
@@ -1270,15 +1345,18 @@ void schedule_measures()
 	/* Give ourself 1/10th millisecond per measure of lead time to 
 	   calculate the schedule, otherwise if we're slow, the first beat
 	   will be late.  Debug output in the scheduler will exacerbate this. */
-	
+
+	if (start < 0 || end < start)
+		return;
+
 	base.tv_usec = 5000L * nmeasures;
 	base.tv_sec = 0L; 
 	
-	for (i=0;i<nmeasures;i++) {
+	for (i=start;i<end;i++) {
 		for (j=0;j<measure[i].npatterns;j++) {
 			tmpbase = base;
 			tempo = find_tempo(i);
-			printf("Tempo for measure %d is %d beats per minute\n", i, tempo);
+			/* printf("Tempo for measure %d is %d beats per minute\n", i, tempo); */
 			schedule_pattern(kit, measure[i].pattern[j], tempo, &tmpbase);
 		}
 		base = tmpbase;
@@ -1305,26 +1383,42 @@ void savebox_file_selected(GtkWidget *widget,
 	save_to_file(filename);
 }
 
+void savedrumkitbox_file_selected(GtkWidget *widget,
+	GtkFileSelection *SaveBox)
+{
+	const char *filename;
+	filename = gtk_file_selection_get_filename(SaveBox);
+	gtk_widget_hide(GTK_WIDGET(SaveBox));
+	save_drumkit_to_file(filename);
+}
+
+static struct file_dialog_descriptor {
+	char *title;
+	GtkWidget **widget;
+	void *file_selected_function;
+} file_dialog[] = {
+	{ "Save Song", &SaveBox, (void *) savebox_file_selected, },
+	{ "Load Song", &LoadBox, (void *) loadbox_file_selected, },
+	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
+};
+	
 void make_file_dialogs()
 {
-    SaveBox = gtk_file_selection_new ("Save");
-    LoadBox = gtk_file_selection_new ("Load");
-    
-    g_signal_connect (G_OBJECT (SaveBox), "destroy",
-	              G_CALLBACK (destroy_event), NULL);
-    g_signal_connect (G_OBJECT (GTK_FILE_SELECTION (SaveBox)->ok_button),
-		      "clicked", G_CALLBACK (savebox_file_selected), (gpointer) SaveBox);
-    g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (SaveBox)->cancel_button),
-	                      "clicked", G_CALLBACK (gtk_widget_destroy),
-			      G_OBJECT (SaveBox));
+	int i;
+	GtkWidget *w;
+	void *f;
 
-    g_signal_connect (G_OBJECT (LoadBox), "destroy",
-	              G_CALLBACK (destroy_event), NULL);
-    g_signal_connect (G_OBJECT (GTK_FILE_SELECTION (LoadBox)->ok_button),
-		      "clicked", G_CALLBACK (loadbox_file_selected), (gpointer) LoadBox);
-    g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (LoadBox)->cancel_button),
-	                      "clicked", G_CALLBACK (gtk_widget_destroy),
-			      G_OBJECT (LoadBox));
+	for (i=0; i<sizeof(file_dialog) / sizeof(file_dialog[0]); i++) {
+		w = gtk_file_selection_new (file_dialog[i].title);
+		f = file_dialog[i].file_selected_function;
+		*(file_dialog[i].widget) = w;
+		g_signal_connect(G_OBJECT (w), "destroy",
+			G_CALLBACK (destroy_means_hide), NULL); /* FIXME, this is not correct */
+		g_signal_connect(G_OBJECT (GTK_FILE_SELECTION (w)->ok_button),
+			"clicked", G_CALLBACK (f), (gpointer) w);
+		g_signal_connect_swapped(G_OBJECT (GTK_FILE_SELECTION (w)->cancel_button),
+			"clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT (w));
+	}
 }
     
 
@@ -1340,12 +1434,31 @@ void load_button_clicked(GtkWidget *widget,
 	gtk_widget_show(LoadBox);
 }
 
+void save_drumkit_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	gtk_widget_show(SaveDrumkitBox);
+}
+
 void send_schedule(struct schedule_t *sched, int loop);
 void arranger_play_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
+	int start, end;
+
+	if (widget == play_button) {
+		start = 0;
+		end = nmeasures;
+	} else {
+		start = start_copy_measure;
+		end = end_copy_measure+1;
+	}
+
+	if (start < 0 || end < start)
+		return;
+
 	flatten_pattern(kit, cpattern);
-	schedule_measures();
+	schedule_measures(start, end);
 	/* print_schedule(&sched); */
 	send_schedule(&sched, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_loop_check_button)));
 	free_schedule(&sched);
@@ -1545,19 +1658,14 @@ void hello(GtkWidget *widget,
 	}
 }
 
+
 void destroy_event(GtkWidget *widget,
 	gpointer data)
 {
 	/* g_print("destroy event!\n"); */
-	if (widget == arranger_window || widget == window || widget == quitbutton) {
-		save_to_file("/tmp/zzz");
-		kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
-		gtk_main_quit();
-	} else if (widget == SaveBox) {
-		gtk_widget_hide(SaveBox);
-	} else if (widget == TempoChWin) {
-		gtk_widget_hide(TempoChWin);
-	}
+	save_to_file("/tmp/zzz");
+	kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
+	gtk_main_quit();
 }
 
 
@@ -1576,17 +1684,35 @@ void song_name_entered(GtkWidget *widget, GtkWidget *entry)
 	set_arranger_window_title();
 }
 
+void instrument_name_entered(GtkWidget *widget, struct instrument_struct *inst)
+{
+	strncpy(inst->name, gtk_entry_get_text(GTK_ENTRY(widget)), 39);
+	gtk_button_set_label(GTK_BUTTON(inst->button), inst->name); 
+}
+
+void instrument_type_entered(GtkWidget *widget, struct instrument_struct *inst)
+{
+	strncpy(inst->type, gtk_entry_get_text(GTK_ENTRY(widget)), 39);
+	gtk_tooltips_set_tip(tooltips, inst->button, inst->type, NULL);
+}
+
 void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 {
-	int i, vshidden, unchecked_hidden;
+	int i, vshidden, unchecked_hidden, editdrumkit;
 
 	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
 	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
+	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
 
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
 		if (vshidden)
 			gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+		if (editdrumkit) {
+			gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+			gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+			gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+		}
 
 		if (unchecked_hidden)
 			gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
@@ -1596,11 +1722,21 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 		if (unchecked_hidden && !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(inst->hidebutton))) {
 			gtk_widget_hide(GTK_WIDGET(inst->canvas));
 			gtk_widget_hide(GTK_WIDGET(inst->button));
+			if (!editdrumkit) { /* otherwise, already hidden */
+				gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+				gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+				gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+			}
 			if (!vshidden) /* otherwise, already hidden */
 				gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
 		} else {
 			gtk_widget_show(GTK_WIDGET(inst->canvas));
 			gtk_widget_show(GTK_WIDGET(inst->button));
+			if (!editdrumkit) {/* otherwise, already hidden */
+				gtk_widget_show(GTK_WIDGET(inst->name_entry));
+				gtk_widget_show(GTK_WIDGET(inst->type_entry));
+				gtk_widget_show(GTK_WIDGET(inst->midi_value_spin_button));
+			}
 			if (!vshidden) /* otherwise, already hidden */
 				gtk_widget_show(GTK_WIDGET(inst->volume_slider));
 		}
@@ -2442,7 +2578,6 @@ int main(int argc, char *argv[])
 {
 	GtkWidget *abox;
 	GtkWidget *a_button_box;
-	GtkWidget *play_button;
 	GtkWidget *stop_button;
 	GtkWidget *save_button;
 	GtkWidget *load_button;
@@ -2542,7 +2677,7 @@ int main(int argc, char *argv[])
 		PSCROLLER_WIDTH, PSCROLLER_HEIGHT);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (pattern_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	table = gtk_table_new(dk->ninsts + 1,  4, FALSE);
+	table = gtk_table_new(dk->ninsts + 1,  6, FALSE);
 	gtk_box_pack_start(GTK_BOX(box1), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box1), middle_box, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(middle_box), pattern_scroller, TRUE, TRUE, 0);
@@ -2554,11 +2689,34 @@ int main(int argc, char *argv[])
 	hide_instruments = gtk_check_button_new_with_label("Hide unchecked\ninstruments");
 	g_signal_connect(G_OBJECT (hide_instruments), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
+	gtk_tooltips_set_tip(tooltips, hide_instruments, 
+		"Hide the instruments below which do not have a "
+		"check beside them to reduce visual clutter.", NULL);
 	hide_volume_sliders = gtk_check_button_new_with_label("Hide volume\nsliders");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hide_volume_sliders), TRUE);
 	g_signal_connect(G_OBJECT (hide_volume_sliders), "toggled", 
+				G_CALLBACK (hide_instruments_button_callback), NULL);
+	gtk_tooltips_set_tip(tooltips, hide_volume_sliders, 
+		"Hide the volume sliders which appear to the left of"
+		" the instrument buttons, below.", NULL);
+	
+	drumkit_vbox = gtk_vbox_new(FALSE, 0);
+	save_drumkit_button = gtk_button_new_with_label("Save Drum Kit");
+	gtk_tooltips_set_tip(tooltips, save_drumkit_button, 
+		"Save instrument names, types, and MIDI note "
+		"assignments into a file for later re-use.", NULL);
+	g_signal_connect(G_OBJECT (save_drumkit_button), "clicked", 
+			G_CALLBACK (save_drumkit_button_clicked), NULL);
+	edit_instruments_toggle = gtk_toggle_button_new_with_label("Edit Drum Kit");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(edit_instruments_toggle), FALSE);
+	gtk_tooltips_set_tip(tooltips, edit_instruments_toggle, 
+		"Assign names, types, and MIDI note numbers to instruments.", NULL);
+	g_signal_connect(G_OBJECT (edit_instruments_toggle), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	pattern_name_label = gtk_label_new("Pattern:");
 	pattern_name_entry = gtk_entry_new();
+	gtk_tooltips_set_tip(tooltips, pattern_name_entry, 
+		"Assign a name to this pattern.", NULL);
 	tempolabel1 = gtk_label_new("Beats/Min");
 	tempospin1 = gtk_spin_button_new_with_range(10, 400, 1);
 	gtk_tooltips_set_tip(tooltips, tempospin1, "Controls tempo only for single pattern playback, "
@@ -2572,6 +2730,9 @@ int main(int argc, char *argv[])
 
 	gtk_box_pack_start(GTK_BOX(topbox), hide_instruments, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), hide_volume_sliders, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), drumkit_vbox, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(drumkit_vbox), save_drumkit_button, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(drumkit_vbox), edit_instruments_toggle, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), pattern_name_label, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), pattern_name_entry, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), tempolabel1, TRUE, TRUE, 0);
@@ -2588,6 +2749,29 @@ int main(int argc, char *argv[])
 		inst->volume_adjustment = gtk_adjustment_new((gdouble) DEFAULT_VELOCITY, 
 			0.0, 127.0, 1.0, 1.0, 0.0);
 		inst->volume_slider = gtk_hscale_new(GTK_ADJUSTMENT(inst->volume_adjustment));
+
+		inst->name_entry = gtk_entry_new();
+		gtk_tooltips_set_tip(tooltips, inst->name_entry, 
+			"Assign a name to this instrument", NULL);
+		gtk_entry_set_text(GTK_ENTRY(inst->name_entry), inst->name);
+		g_signal_connect (G_OBJECT (inst->name_entry), "activate",
+		      G_CALLBACK (instrument_name_entered), (gpointer) inst);
+
+		inst->type_entry = gtk_entry_new();
+		gtk_tooltips_set_tip(tooltips, inst->type_entry, 
+			"Assign a type to this instrument", NULL);
+		gtk_entry_set_text(GTK_ENTRY(inst->type_entry), inst->type);
+		g_signal_connect (G_OBJECT (inst->type_entry), "activate",
+		      G_CALLBACK (instrument_type_entered), (gpointer) inst);
+
+		inst->midi_value_spin_button = gtk_spin_button_new_with_range(0, 127, 1);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->midi_value_spin_button), 
+			(gdouble) inst->midivalue);
+		g_signal_connect(G_OBJECT (inst->midi_value_spin_button), "value-changed", 
+				G_CALLBACK (unsigned_char_spin_button_change), &inst->midivalue);
+		gtk_tooltips_set_tip(tooltips, inst->midi_value_spin_button, 
+			"Assign the MIDI note for this instrument", NULL);
+
 		gtk_widget_set_size_request(inst->volume_slider, 80, 33);
 		gtk_scale_set_digits(GTK_SCALE(inst->volume_slider), 0);
 		gtk_tooltips_set_tip(tooltips, inst->volume_slider, 
@@ -2613,8 +2797,14 @@ int main(int argc, char *argv[])
 			GTK_FILL,
 			0,
 			0, 0);
+		gtk_table_attach(GTK_TABLE(table), inst->name_entry,
+			3, 4, i, i+1, GTK_FILL, 0, 0, 0);
+		gtk_table_attach(GTK_TABLE(table), inst->type_entry,
+			4, 5, i, i+1, GTK_FILL, 0, 0, 0);
+		gtk_table_attach(GTK_TABLE(table), inst->midi_value_spin_button,
+			5, 6, i, i+1, GTK_FILL, 0, 0, 0);
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
-			3, 4, i, i+1, 0, 0, 0, 0);
+			6, 7, i, i+1, 0, 0, 0, 0);
 	}
 
 	for (i=0;i<ndivisions;i++) {
@@ -2683,7 +2873,7 @@ int main(int argc, char *argv[])
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (arranger_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	
-	arranger_table = gtk_table_new(5, ARRANGER_COLS, FALSE);
+	arranger_table = gtk_table_new(6, ARRANGER_COLS, FALSE);
 
 	TempoLabel = gtk_label_new("Tempo changes ->");
 	SelectButton = gtk_button_new_with_label("Select measures ->");
@@ -2817,6 +3007,9 @@ int main(int argc, char *argv[])
 	play_button = gtk_button_new_with_label("Play");
 	gtk_tooltips_set_tip(tooltips, play_button, 
 		"Send this song to MIDI device for playback", NULL);
+	play_selection_button = gtk_button_new_with_label("Play Selection");
+	gtk_tooltips_set_tip(tooltips, play_selection_button, 
+		"Send selected measures to MIDI device for playback", NULL);
 	stop_button = gtk_button_new_with_label("Stop");
 	gtk_tooltips_set_tip(tooltips, stop_button, "Stop any MIDI playback in progress", NULL);
 	save_button = gtk_button_new_with_label("Save");
@@ -2829,6 +3022,9 @@ int main(int argc, char *argv[])
 		"Discard the current song and quit Gneutronica.", NULL);
 	gtk_box_pack_start(GTK_BOX(a_button_box), play_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (play_button), "clicked",
+			G_CALLBACK (arranger_play_button_clicked), NULL);
+	gtk_box_pack_start(GTK_BOX(a_button_box), play_selection_button, TRUE, TRUE, 0);
+	g_signal_connect(G_OBJECT (play_selection_button), "clicked",
 			G_CALLBACK (arranger_play_button_clicked), NULL);
 	gtk_box_pack_start(GTK_BOX(a_button_box), stop_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (stop_button), "clicked",
@@ -2859,8 +3055,15 @@ int main(int argc, char *argv[])
 	/* ---------------- start showing stuff ------------------ */
 	gtk_widget_show_all(arranger_window);
 	gtk_widget_show_all(window);
-
 	gc = gdk_gc_new(dk->instrument[0].canvas->window);
+
+	for (i=0;i<drumkit[kit].ninsts;i++) {
+		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+		gtk_widget_hide(inst->name_entry);
+		gtk_widget_hide(inst->type_entry);
+		gtk_widget_hide(inst->midi_value_spin_button);
+		gtk_widget_hide(inst->volume_slider);
+	}
 
 	flatten_pattern(kit, cpattern);
 	gtk_main();

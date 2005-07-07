@@ -1,0 +1,9 @@
+gneutronica-0.1.tar.gz 
+
+	* Initial release
+
+gneutronica-0.2.tar.gz
+
+	* Can now edit and save drum kits
+	* Can now play selected measures, in addition to 
+          individual patterns or whole songs.
