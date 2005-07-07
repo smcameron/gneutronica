@@ -31,6 +31,22 @@ interface.  These two perceived shortcomings of Hydrogen, (at least I considered
 them to be shortcomings,) plus a desire to learn gnome and MIDI programming
 are what led me to create Gneutronica.
 
+<h1>Building and running Gneutronica</h1>
+<p>Really easy, has not been "autoconfiscated" or anything, just type make.
+<pre>
+[scameron@zuul gneutronica]$ make
+cc    -c -o sched.o sched.c
+gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 sched.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
+[scameron@zuul gneutronica]$
+</pre><p>And running it . . .  (eh, I left some debugging output in there still.)
+<pre>
+[scameron@zuul gneutronica]$ ./gneutronica -d /dev/snd/midi1 -k generic.dk
+pid = 0
+
+Player waiting for requests
+parent, pid =5153
+Using drumkit: Generic Generic Generic
+</pre>
 <h1>(Some ramblings about) Getting Started</h1>
 <p>The first thing you need to do to get started with Gneutronica is to get your
 MIDI device hooked up to your computer and able to make sound.  I'm going to
@@ -64,34 +80,26 @@ changed by the "-d" parameter.  When first firing it up you may also wish to
 tell it to use an alternate drum specification file with the -k option.  
 There is a General MIDI standard
 one which may be useful if you select a GM percussion compatible preset on your machine. 
-If not, you may wish to use generic.dk, which lets you send to all 127 notes without
-trying to guess the names.  Doing this, you can create your own drum specification file,
-which follows a simple format, a bunch of strings of characters, seperated by
-commas.  The first line is the manufacturer, make and model, and subsequent lines
+If not, you may wish to use generic.dk, by specifying "-k drumkits/generic.dk" on
+the command line when starting the program.  This drumkit lets you send to all 127 notes 
+without trying to guess the names.  Doing this, you can create your own drum 
+specification file, which follows a simple format, a bunch of strings of characters, 
+seperated by commas.  The first line is the manufacturer, make and model, and subsequent lines
 specify instrments, with a pair of names, and a MIDI note number.  The first name
 will appear in buttons in Gneutronica, and the second in tooltip windows.   So the
 first name should be short enough to fit in a button, and the 2nd may be longer.
 <pre>
+Gneutronica drumkit file format 1
 Manufacture, Model, drumkit name
 Instrument 1, description of instrument 1, 1
 Instrument 2, description of instrument 2, 2
 </pre>
-<h1>Building and running Gneutronica</h1>
-<p>Really easy, has not been "autoconfiscated" or anything, just type make.
-<pre>
-[scameron@zuul gneutronica]$ make
-cc    -c -o sched.o sched.c
-gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 sched.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
-[scameron@zuul gneutronica]$
-</pre><p>And running it . . .  (eh, I left some debugging output in there still.)
-<pre>
-[scameron@zuul gneutronica]$ ./gneutronica -d /dev/snd/midi1 -k generic.dk
-pid = 0
-
-Player waiting for requests
-parent, pid =5153
-Using drumkit: Generic Generic Generic
-</pre>
+<p>However, that is the hard way, as now there is a drumkit editor.  Just click the
+"Edit Drum Kit" button on the pattern window, and you should see something like this:
+<p align=center><img src="drumkit_editor.png">
+<p>This will allow you to play the instruments by hitting the instrument button,
+hear it, and then type in the instrument name, type, and MIDI note number without
+having to think too hard abuot it.
 <h1>Making a pattern</h1>
 <p>When you first start up Gneutronica, you are presented with two windows, the Arrangement
 Editor, and the Pattern Editor.  The pattern editor lets you construct a pattern of 
