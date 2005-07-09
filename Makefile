@@ -15,7 +15,7 @@ install:	gneutronica
 	cp gneutronica ${BINDIR}/${PROGRAM} 
 	chmod +x ${BINDIR}/${PROGRAM}
 	mkdir -p ${SHAREDIR}/drumkits
-	cp drumkits/*.gdk drumkits/*.dk ${SHAREDIR}/drumkits 
+	cp drumkits/*.dk ${SHAREDIR}/drumkits 
 
 uninstall:
 	/bin/rm -f ${BINDIR}/${PROGRAM}
