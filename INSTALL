@@ -13,12 +13,15 @@ Run "make install" as root.
 
 This copies gneutronica to /usr/local/bin, and copies
 the drumkit files to /usr/local/share/gneutronica/drumkits
+and documenation files to /usr/local/share/gneutronica/documentation,
+and an icon file to /usr/share/pixmaps, (if that directory exists)
 
 
 
 TO UNINSTALL:
 -------------
 Run "make uninstall" will remove /usr/local/bin/gneutronica and
-/usr/local/share/gneutronica
+/usr/local/share/gneutronica, and essentially undoes all the stuff 
+that "make install" does.
 
 

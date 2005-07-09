@@ -1,0 +1,41 @@
+.TH ALLCAPSPROGRAMNAME "1" "THEDATE" "PROGRAMNAME VERSIONNUMBER" "User Commands"
+.SH NAME
+PROGRAMNAME \- a MIDI drum machine application 
+.SH SYNOPSIS
+.B PROGRAMNAME [ -d device ] [ -k drumkit ] 
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+CAPPROGRAMNAME is an application for creating and playing back drum
+tracks to MIDI devices, typically keyboards, drum machines or
+other sound modules.  It provides flexible tempo control allowing
+for tempo changes at measure boundaries, specification of arbitrary
+measure length (in beats) and allows for arbitrary placement of notes,
+.TP
+\fB\-d device\fR
+Specify the device file to which MIDI commands are sent.  
+The default is /dev/snd/midi1
+.TP
+\fB\-k drumkit\fR
+Specify a drumkit file.  There are a number of drumkit files included
+with PROGRAMNAME in /usr/local/share/PROGRAMNAME/drumkits corresponding
+to various devices, or you may create your own drumkit files for your
+particular devices.
+.SH FILES
+/dev/snd/midi* 
+/usr/local/share/PROGRAMNAME/drumkits/* 
+.SH AUTHOR
+Written by Stephen M. Cameron 
+.SH "REPORTING BUGS"
+Report bugs to <smcameron@users.sourceforge.net>.
+.SH COPYRIGHT
+Copyright \(co 2005 Stephen M. Cameron.
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+The full documentation for
+.B PROGRAMNAME 
+is maintained as an HTML file. 
+.B pointing your browser to file:///usr/local/share/PROGRAMNAME/documentation/PROGRAMNAME.html 
+should give you access to the complete manual, such as it is.

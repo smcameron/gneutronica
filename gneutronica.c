@@ -49,7 +49,7 @@
 #define DEFAULT_VELOCITY 100
 
 #define PROGNAME "Gneutronica"
-#define VERSION "0.21"
+#include "version.h"
 
 struct schedule_t sched;
 
@@ -111,6 +111,7 @@ GtkWidget *quitbutton;
 GtkWidget *midi_setup_activate_button;
 GtkWidget *hide_instruments;
 GtkWidget *hide_volume_sliders;
+GtkWidget *snap_to_grid;
 GtkWidget *drumkit_vbox;
 GtkWidget *edit_instruments_toggle;
 GtkWidget *save_drumkit_button;
@@ -181,6 +182,15 @@ GtkWidget *midi_channel_spin_button;
 GtkWidget *midi_change_patch_button;
 GtkWidget *midi_setup_ok_button;
 GtkWidget *midi_setup_cancel_button;
+
+/* "About" stuff */
+GtkWidget *about_button;
+GtkWidget *about_window = NULL;
+GtkWidget *about_vbox;
+GtkWidget *about_da;
+GtkWidget *about_label;
+GtkWidget *about_ok_button;
+GdkPixbuf *robotdrummer;
 
 char window_title[255];
 char arranger_title[255];
@@ -757,6 +767,7 @@ int add_hit(struct hitpattern **hit,
 	int bestbeat = -1;
 	int best_division;
 	int found, i;
+	int stg;
 	double percent, bestpercent, diff, bestdiff;
 	double target, divlen, x;
 	double zero;
@@ -767,49 +778,56 @@ int add_hit(struct hitpattern **hit,
 		return;
 
 	percent = thetime / measurelength;
+
+	stg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (snap_to_grid));
 	
 	/* g_print("percent = %g\n", percent); */
 
 	bestdiff = 1000.0;
 
-	for (i=0;i<ndivisions;i++) {
-		zero =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
-		if (zero < 0.0)
-			zero = -zero;
-		if (zero < 0.00001)
-			continue;
+	if (stg) {
+		for (i=0;i<ndivisions;i++) {
+			zero =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
+			if (zero < 0.0)
+				zero = -zero;
+			if (zero < 0.00001)
+				continue;
 
-		divlen = measurelength / zero; 
-		x = percent * measurelength / divlen;
-		/* g_print("x = %g, == %g * %g / %g, zero = %G\n", percent, measurelength, divlen, zero);
-		g_print("x = %g\n", x); */
-		if (x - trunc(x) > 0.5) {
-			target = (trunc(x) + 1.0);
-			diff = (target - x) * divlen;
-		} else {
-			target = trunc(x);
-			diff = (x - target) * divlen;
+			divlen = measurelength / zero; 
+			x = percent * measurelength / divlen;
+			/* g_print("x = %g, == %g * %g / %g, zero = %G\n", percent, measurelength, divlen, zero);
+			g_print("x = %g\n", x); */
+			if (x - trunc(x) > 0.5) {
+				target = (trunc(x) + 1.0);
+				diff = (target - x) * divlen;
+			} else {
+				target = trunc(x);
+				diff = (x - target) * divlen;
+			}
+			/* g_print("%d: diff = %g, target= %g, x = %g\n", i, diff, target,  x); */
+			if (i == 0 || diff < bestdiff) {
+				bestdiff = diff;
+				bestbeat = (int) target;
+				best_division = (int) zero;
+				bestpercent = (target / zero);
+				/* g_print("i=%d, bestdiff = %g\n", i, bestdiff); */
+			}
 		}
-		/* g_print("%d: diff = %g, target= %g, x = %g\n", i, diff, target,  x); */
-		if (i == 0 || diff < bestdiff) {
-			bestdiff = diff;
-			bestbeat = (int) target;
-			best_division = (int) zero;
-			bestpercent = (target / zero);
-			/* g_print("i=%d, bestdiff = %g\n", i, bestdiff); */
+		if (bestbeat == -1) {
+			g_print("No best beat found\n");
+			return;
 		}
-	}
-	if (bestbeat == -1) {
-		g_print("No best beat found\n");
-		return;
+	} else {
+		bestbeat = (int) thetime; /* cast should be ok, it's mouse coord */
+		best_division = (int) measurelength;
 	}
 
 	reduce_fraction(&bestbeat, &best_division);
 
 	/* If there are 16 beats, that's 0 thru 15, beat 16 belongs to the next measure... */
 	if (bestbeat == best_division) {
-		g_print("Rejecting beat %d of %d beats\n",
-			bestbeat+1, best_division);
+		/* g_print("Rejecting beat %d of %d beats\n",
+			bestbeat+1, best_division); */
 		return;
 	}
 	return (lowlevel_add_hit(hit, dkit, pattern, instnum, bestbeat, best_division, 
@@ -2624,6 +2642,45 @@ void setup_midi_setup_window()
 	gtk_widget_show_all(midi_setup_vbox);
 }
 
+void about_ok_callback(GtkWidget *widget, gpointer data)
+{
+	gtk_widget_hide(about_window);
+}
+
+int about_activate(GtkWidget *widget, gpointer data)
+{
+
+	static char about_msg[200];
+
+	if (about_window == NULL) {
+		sprintf(about_msg, "\n\n%s v. %s\n\n"
+			"Gneutronica is a MIDI drum machine\n\n"
+			"(c) Copyright Stephen M. Cameron\n\n"
+			"http://sourceforge.net/projects/gneutronica\n\n",
+			PROGNAME, VERSION);
+
+		robotdrummer = gdk_pixbuf_new_from_file ("/usr/local/share/gneutronica/documentation/gneutronica_robot.png", NULL);
+		about_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+		about_vbox = gtk_vbox_new(FALSE, 0);
+		gtk_container_add(GTK_CONTAINER (about_window), about_vbox);
+		if (robotdrummer != NULL)
+			about_da = gtk_image_new_from_pixbuf(robotdrummer);
+		about_label = gtk_label_new(about_msg);
+		about_ok_button = gtk_button_new_with_label("Ok");
+		if (about_da != NULL)
+			gtk_box_pack_start(GTK_BOX(about_vbox), about_da, TRUE, TRUE, 0);
+		gtk_box_pack_start(GTK_BOX(about_vbox), about_label, TRUE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(about_vbox), about_ok_button, FALSE, FALSE, 0);
+		g_signal_connect(G_OBJECT (about_window), "destroy", 
+			G_CALLBACK (gtk_widget_hide), NULL);
+		g_signal_connect(G_OBJECT (about_window), "delete_event", 
+			G_CALLBACK (gtk_widget_hide), NULL);
+		g_signal_connect(G_OBJECT (about_ok_button), "clicked",
+				G_CALLBACK (about_ok_callback), NULL);
+	}
+	gtk_widget_show_all(about_window);
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *abox;
@@ -2637,7 +2694,6 @@ int main(int argc, char *argv[])
 	GtkWidget *box1, *box2, *middle_box, *linebox;
 	GtkWidget *topbox;
 	GtkWidget *table;
-	
 
 	struct drumkit_struct *dk;
 	int i, rc;
@@ -2701,6 +2757,8 @@ int main(int argc, char *argv[])
 	kit = 0;
 	dk = &drumkit[kit];
 
+	gtk_init(&argc, &argv);
+
 	g_print("Using drumkit: %s %s %s\n", 
 		dk->make, dk->model, dk->name);
 
@@ -2708,7 +2766,6 @@ int main(int argc, char *argv[])
 	gdk_color_parse("blue", &bluecolor);
 	gdk_color_parse("black", &blackcolor);
 
-	gtk_init(&argc, &argv);
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
 	tooltips = gtk_tooltips_new();
@@ -2756,6 +2813,10 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, hide_volume_sliders, 
 		"Hide the volume sliders and drag settings which appear to the left of"
 		" the instrument buttons, below.", NULL);
+	snap_to_grid = gtk_check_button_new_with_label("Snap to grid");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(snap_to_grid), TRUE);
+	gtk_tooltips_set_tip(tooltips, snap_to_grid, 
+		"Force newly placed notes to line up with the timing lines.", NULL);
 	
 	drumkit_vbox = gtk_vbox_new(FALSE, 0);
 	save_drumkit_button = gtk_button_new_with_label("Save Drum Kit");
@@ -2787,6 +2848,7 @@ int main(int argc, char *argv[])
 
 	gtk_box_pack_start(GTK_BOX(topbox), hide_instruments, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), hide_volume_sliders, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), snap_to_grid, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), drumkit_vbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), save_drumkit_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), edit_instruments_toggle, TRUE, TRUE, 0);
@@ -3061,6 +3123,11 @@ int main(int argc, char *argv[])
 		"MIDI patch change messages.", NULL);
 	g_signal_connect(G_OBJECT (midi_setup_activate_button), "clicked",
 			G_CALLBACK (midi_setup_activate), NULL);
+
+	about_button = gtk_button_new_with_label("About Gneutronica");
+	g_signal_connect(G_OBJECT (about_button), "clicked",
+			G_CALLBACK (about_activate), NULL);
+
 	abox = gtk_vbox_new(FALSE, 0);
 	a_button_box = gtk_hbox_new(FALSE, 0);
 	arranger_box = gtk_hbox_new(FALSE, 0);
@@ -3070,6 +3137,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), arr_loop_check_button, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), midi_setup_activate_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(arranger_box), about_button, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(abox), arranger_scroller, TRUE, TRUE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(arranger_scroller), 
 		arranger_table);

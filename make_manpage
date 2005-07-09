@@ -1,0 +1,12 @@
+#!/bin/sh
+
+DATE=`date '+%b %Y'`
+VERSION=`cat versionnumber.txt`
+
+cat documentation/gneutronica.1.template |\
+sed -e 's/ALLCAPSPROGRAMNAME/GNEUTRONICA/g' \
+	-e 's/CAPPROGRAMNAME/Gneutronica/g' \
+	-e 's/PROGRAMNAME/gneutronica/g' \
+	-e 's/VERSIONNUMBER/'"$VERSION"'/g' \
+	-e 's/THEDATE/'"$DATE"'/g'
+

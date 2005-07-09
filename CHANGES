@@ -22,3 +22,10 @@ gneutronica 0.21:
 	  is, whether through /dev/sequencer, or /dev/snd/midi* is.  For now,
 	  since /dev/snd/midi* is working for me, that's what I'm sticking with.
 	  If you know something about all this, feel free to send me a patch.
+
+gneutronica 0.22
+
+	* Added man page and gneutronica icon and Makefile (un)installs these 
+	* Added "snap to grid" checkbox which, when unchecked, allows arbitrary 
+	  placement of notes on the time axis.
+	* Added an about window.

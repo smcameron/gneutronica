@@ -3,9 +3,16 @@ PROGRAM=gneutronica
 BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share/${PROGRAM}
 
-all:	gneutronica	
+all:	gneutronica documentation/gneutronica.1
 
-gneutronica:	gneutronica.c sched.o
+documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.txt
+	chmod +x ./make_manpage
+	./make_manpage > documentation/gneutronica.1
+
+version.h:	versionnumber.txt
+	@echo '#define VERSION "'`cat versionnumber.txt`'"' > version.h
+
+gneutronica:	gneutronica.c sched.o version.h
 	gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 sched.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0` 
 
 sched.o:	sched.c sched.h		
@@ -16,10 +23,24 @@ install:	gneutronica
 	chmod +x ${BINDIR}/${PROGRAM}
 	mkdir -p ${SHAREDIR}/drumkits
 	cp drumkits/*.dk ${SHAREDIR}/drumkits 
+	mkdir -p ${SHAREDIR}/documentation
+	cp documentation/gneutronica.html ${SHAREDIR}/documentation 
+	cp documentation/*.png ${SHAREDIR}/documentation
+	@if [ -d /usr/share/man/man1 ] ; then \
+		echo "Installing gneutronica man page." ; \
+		gzip < documentation/gneutronica.1 > /usr/share/man/man1/gneutronica.1.gz ; \
+	fi
+	@if [ -d /usr/share/pixmaps ] ; then \
+		echo "Installing gneutronica icon in /usr/share/pixmaps" ; \
+		cp -f icons/gneutronica_icon.png /usr/share/pixmaps/gneutronica_icon.png ; \
+	fi
+	
 
 uninstall:
 	/bin/rm -f ${BINDIR}/${PROGRAM}
 	/bin/rm -fr ${SHAREDIR} 
+	/bin/rm -f /usr/share/man/man1/gneutronica.1.gz
+	/bin/rm -f /usr/share/pixmaps/gneutronica_icon.png
 
 clean:
-	/bin/rm -f gneutronica *.o
+	/bin/rm -f gneutronica *.o documentation/gneutronica.1 version.h
