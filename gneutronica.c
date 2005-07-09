@@ -90,7 +90,8 @@ struct tempo_change_t {
 struct shared_info_struct {
 	int measure;
 	int percent;
-} *transport_location;
+} *transport_location = NULL;
+gint measure_transport_tag; /* tag for cancelling idle function */
 
 int changing_tempo_measure = -1;
 int ntempochanges;
@@ -152,6 +153,7 @@ int end_copy_measure = -1;
 	GtkWidget *PasteLabel;
 	GtkWidget *InsertButton;
 	GtkWidget *DeleteButton;
+	GtkWidget *MeasureTransportLabel;
 
 	/* drawing areas to hold the "buttons" for tempo/copy/paste/ins/del */ 
 	GtkWidget *Tempo_da;
@@ -159,6 +161,7 @@ int end_copy_measure = -1;
 	GtkWidget *Paste_da;
 	GtkWidget *Insert_da;
 	GtkWidget *Delete_da;
+	GtkWidget *measure_transport_da;
 	GtkWidget *arr_loop_check_button;
 
 
@@ -542,7 +545,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	if (p == NULL)
 		return;
 
-	total_rows = total_rows + 5;  /* tempo/del/ins/copy/paste/ */
+	total_rows = total_rows + 6;  /* tempo/del/ins/copy/paste/transport */
 	top = total_rows -1;
 
 	p->arr_button = gtk_button_new_with_label(p->patname);
@@ -1151,6 +1154,48 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	return TRUE;
 }
 
+static int measure_transport_expose(GtkWidget *w, GdkEvent *event, gpointer p)
+{
+	int x, y1, y2;
+	x = 0; y1 = 0; y2 = ARRANGER_HEIGHT;
+	gdk_draw_line(w->window, gc, 0,0, MEASUREWIDTH * (nmeasures), 0);
+	gdk_draw_line(w->window, gc, 0, y2, MEASUREWIDTH * (nmeasures), y2);
+	gdk_draw_line(w->window, gc, 0, 0, 0, ARRANGER_HEIGHT);
+	gdk_draw_line(w->window, gc, MEASUREWIDTH * nmeasures, 0, 
+		MEASUREWIDTH * nmeasures, y2);
+	x = MEASUREWIDTH * transport_location->measure +
+		(transport_location->percent * MEASUREWIDTH / 100);
+	gdk_draw_line(w->window, gc, x-3, 0, x, y2); 
+	gdk_draw_line(w->window, gc, x+3, 0, x, y2); 
+	return TRUE;
+}
+
+gint transport_update_callback (gpointer data)
+{
+	/* this is called back by gtk_main, as an idle function every so often
+	   during playback to update the transport location */ 
+
+	static int lastmeasure = -1;
+	static int lastpercent = -1; /* remember, so if transport hasn't moved, we don't redraw */
+
+	if (transport_location->measure == -1) {
+		transport_location->measure = 0;
+		transport_location->percent = 0;
+		gtk_widget_queue_draw(measure_transport_da);
+		return FALSE;
+	}
+
+	if (lastpercent != transport_location->percent || 
+		lastmeasure != transport_location->measure)
+		gtk_widget_queue_draw(measure_transport_da);
+	else
+		return TRUE;
+
+	lastmeasure = transport_location->measure;
+	lastpercent = transport_location->percent;
+	return TRUE;
+}
+
 static int measure_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	int i, x, y1, y2, j;
@@ -1349,6 +1394,10 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 {
 	printf("Pattern stop button.\n");
 	kill(player_process_pid, SIGUSR1);
+	if (measure_transport_tag != -1) {
+		g_source_remove(measure_transport_tag);
+		measure_transport_tag = -1;
+	}
 }
 
 void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct timeval *base)
@@ -1534,6 +1583,8 @@ void arranger_play_button_clicked(GtkWidget *widget,
 	/* print_schedule(&sched); */
 	send_schedule(&sched, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_loop_check_button)));
 	free_schedule(&sched);
+	measure_transport_tag = g_timeout_add(100, /* 10x per sec? */
+			transport_update_callback, NULL);
 }
 
 void pattern_paste_button_clicked(GtkWidget *widget,
@@ -1574,9 +1625,11 @@ void pattern_play_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	flatten_pattern(kit, cpattern);
-	schedule_pattern(kit, -1, cpattern, -1, NULL);
+	schedule_pattern(kit, 0, cpattern, -1, NULL);
 	send_schedule(&sched, 0);
 	free_schedule(&sched);
+	measure_transport_tag = g_timeout_add(100, /* 10x per sec? */
+			transport_update_callback, NULL);
 }
 
 void set_arranger_window_title()
@@ -2657,10 +2710,12 @@ void player_process_requests(int fd)
 				/* Empty the schedule */
 				free_schedule(&sched);
 				sched.nevents = 0;
+				transport_location->measure = -1;
 				break;
 				}
 			case PLAYER_QUIT:
 				silence(midi_fd);
+				transport_location->measure = -1;
 				exit(0);
 			case PERFORM_PATCH_CHANGE: {
 				unsigned short bank;
@@ -2856,6 +2911,7 @@ int main(int argc, char *argv[])
 	GtkWidget *table;
 
 	struct drumkit_struct *dk;
+	unsigned char shared_buf[4096];
 	int i, rc;
 
 	/* ----- open the midi device ------------------------ */
@@ -2863,7 +2919,16 @@ int main(int argc, char *argv[])
         char device[255], drumkitfile[255];
 
 	transport_location = (struct shared_info_struct *) 
-		mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, -1); 
+		mmap(shared_buf, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+	
+	if (transport_location == (void *) -1) {
+		perror("mmap");
+		exit(1);
+	}
+	set_transport_meter(&transport_location->measure, &transport_location->percent);
+
+	transport_location->measure = 0;
+	transport_location->percent = 0;
 
         strcpy(device, "/dev/snd/midi1");
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");
@@ -3004,7 +3069,8 @@ int main(int argc, char *argv[])
 	tempolabel2 = gtk_label_new("Beats/Measure");
 	tempospin2 = gtk_spin_button_new_with_range(1,  400, 1);
 	gtk_tooltips_set_tip(tooltips, tempospin2, "Controls tempo for single pattern playback, "
-			"and DOES affect the tempo in the context of the song.", NULL);
+			"and DOES affect the tempo in the context of the song."
+			"  Also affects the instrument drag/rush control.", NULL);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) 120);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) 4);
 
@@ -3170,11 +3236,12 @@ int main(int argc, char *argv[])
 	
 	arranger_table = gtk_table_new(6, ARRANGER_COLS, FALSE);
 
-	TempoLabel = gtk_label_new("Tempo changes ->");
-	SelectButton = gtk_button_new_with_label("Select measures ->");
-	PasteLabel = gtk_label_new("Paste measures ->");
-	InsertButton = gtk_button_new_with_label("Insert measures ->:");
-	DeleteButton = gtk_button_new_with_label("Delete measures ->");
+	TempoLabel = gtk_label_new("Tempo changes");
+	SelectButton = gtk_button_new_with_label("Select measures");
+	PasteLabel = gtk_label_new("Paste measures");
+	InsertButton = gtk_button_new_with_label("Insert measures");
+	DeleteButton = gtk_button_new_with_label("Delete measures");
+	MeasureTransportLabel = gtk_label_new("Transport Location");
 	
 	gtk_tooltips_set_tip(tooltips, SelectButton, 
 		"Click this button to select all measures, or twice to select no measures.  "
@@ -3200,6 +3267,7 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(arranger_table), PasteLabel, 3, 4, 2, 3, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), InsertButton, 3, 4, 3, 4, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), DeleteButton, 3, 4, 4, 5, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), MeasureTransportLabel, 3, 4, 5, 6, 0, 0, 0, 0);
 
 	gtk_widget_show(TempoLabel);
 	gtk_widget_show(SelectButton);
@@ -3212,6 +3280,7 @@ int main(int argc, char *argv[])
 	Paste_da = gtk_drawing_area_new();
 	Insert_da = gtk_drawing_area_new();
 	Delete_da = gtk_drawing_area_new();
+	measure_transport_da = gtk_drawing_area_new();
 
 	gtk_widget_add_events(Tempo_da, GDK_BUTTON_PRESS_MASK); 
 	gtk_widget_add_events(Copy_da, GDK_BUTTON_PRESS_MASK); 
@@ -3230,6 +3299,8 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (Paste_da), "expose_event", G_CALLBACK (measure_da_expose), NULL);
 	g_signal_connect(G_OBJECT (Insert_da), "expose_event", G_CALLBACK (measure_da_expose), NULL);
 	g_signal_connect(G_OBJECT (Delete_da), "expose_event", G_CALLBACK (measure_da_expose), NULL);
+	g_signal_connect(G_OBJECT (measure_transport_da), "expose_event", 
+		G_CALLBACK (measure_transport_expose), NULL);
 
 	g_signal_connect(G_OBJECT (Tempo_da), "button-release-event",
 			G_CALLBACK (measure_da_clicked), NULL);
@@ -3249,6 +3320,7 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(arranger_table), Paste_da, 4, 5, 2, 3, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), Insert_da, 4, 5, 3, 4, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), Delete_da, 4, 5, 4, 5, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), measure_transport_da, 4, 5, 5, 6, 0, 0, 0, 0);
 
 	gtk_tooltips_set_tip(tooltips, Tempo_da, 
 		"Click the buttons to the right to insert tempo changes", NULL);
@@ -3266,12 +3338,14 @@ int main(int argc, char *argv[])
 	gtk_widget_set_size_request(Paste_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 	gtk_widget_set_size_request(Insert_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 	gtk_widget_set_size_request(Delete_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
+	gtk_widget_set_size_request(measure_transport_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 
 	gtk_widget_show(Tempo_da);
 	gtk_widget_show(Copy_da);
 	gtk_widget_show(Paste_da);
 	gtk_widget_show(Insert_da);
 	gtk_widget_show(Delete_da);
+	gtk_widget_show(measure_transport_da);
 
 	song_name_label = gtk_label_new("Song:");
 	song_name_entry = gtk_entry_new();

@@ -30,4 +30,4 @@ gneutronica 0.22
 	  placement of notes on the time axis.
 	* Added an about window.
 	* Implemented dragging/rushing per instrument per pattern.
-	* Added infrastructure for animating transport location during playback.
+	* Now indicates transport location during playback. 
