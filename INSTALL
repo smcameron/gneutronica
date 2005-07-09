@@ -1,6 +1,24 @@
-
+TO BUILD:
+---------
 This program has not yet been "autoconfiscated," for now
 just type "make"
 
 The executable "gneutronica" should be produced.
+
+
+
+TO INSTALL:
+-----------
+Run "make install" as root.
+
+This copies gneutronica to /usr/local/bin, and copies
+the drumkit files to /usr/local/share/gneutronica/drumkits
+
+
+
+TO UNINSTALL:
+-------------
+Run "make uninstall" will remove /usr/local/bin/gneutronica and
+/usr/local/share/gneutronica
+
 

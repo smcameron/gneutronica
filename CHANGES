@@ -7,3 +7,18 @@ gneutronica-0.2.tar.gz
 	* Can now edit and save drum kits
 	* Can now play selected measures, in addition to 
           individual patterns or whole songs.
+
+gneutronica 0.21:
+
+	* Fixed the bug that caused using the "Cancel" button or "X" button
+	  on any of the file dialogs to cause the program to crash whenever
+	  any of those file dialogs were told to reappear onscreen.
+
+	* Added some UI stuff for doing drag/rushing of individual instruments,
+	  however, they don't actually do anything yet.
+
+	* Added some infrastructure for accessing different device types.  
+	  I'm still unclear on what the "correct" way of talking to midi devices
+	  is, whether through /dev/sequencer, or /dev/snd/midi* is.  For now,
+	  since /dev/snd/midi* is working for me, that's what I'm sticking with.
+	  If you know something about all this, feel free to send me a patch.

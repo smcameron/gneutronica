@@ -49,7 +49,7 @@
 #define DEFAULT_VELOCITY 100
 
 #define PROGNAME "Gneutronica"
-#define VERSION "0.2"
+#define VERSION "0.21"
 
 struct schedule_t sched;
 
@@ -196,6 +196,10 @@ struct pattern_struct {
 				 Note: the same pattern may be played back several times in a song
 			  	 at different tempos, so this is not the tempo within the context 
 				of a song. */
+	/* put stuff for drag/rush of instruments in here in the pattern.   Cmplicate it
+	   by the (reasonable) presumption it will be sparsely populated?  Or should I
+	   just brute force it and waste space? e.g. "double drag[MAXINSTS];" */
+
 	GtkWidget *copy_button;
 	GtkWidget *del_button;
 	GtkWidget *ins_button;
@@ -244,15 +248,36 @@ struct instrument_struct {
 	GtkWidget *canvas;
 	GtkObject *volume_adjustment;
 	GtkWidget *volume_slider;
+	GtkWidget *drag_spin_button;
 	GtkWidget *name_entry;
 	GtkWidget *type_entry;
 	GtkWidget *midi_value_spin_button;
 }; 
 
-int flatten_pattern(int ckit, int cpattern);
-int unflatten_pattern(int ckit, int cpattern);
 void note_on(int fd, unsigned char value, unsigned char volume);
 void note_off(int fd, unsigned char value, unsigned char volume);
+void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
+
+void int_note_on(int fd, unsigned char value, unsigned char volume);
+void int_note_off(int fd, unsigned char value, unsigned char volume);
+void int_send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
+
+#define EXTERNAL_DEVICE 0
+#define INTERNAL_DEVICE 1
+
+struct device_access_method {
+	void (*note_on)(int fd, unsigned char value, unsigned char volume);
+	void (*note_off)(int fd, unsigned char value, unsigned char volume);
+	void (*send_midi_patch_change)(int fd, unsigned short bank, unsigned char patch);
+} access_method[] = { 
+	{ note_on, note_off, send_midi_patch_change }, /* external MIDI device */
+	{ int_note_on, int_note_off, int_send_midi_patch_change }, /* internal MIDI device */
+};
+
+struct device_access_method *access_device = &access_method[EXTERNAL_DEVICE];
+
+int flatten_pattern(int ckit, int cpattern);
+int unflatten_pattern(int ckit, int cpattern);
 
 int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct drumkit_struct *drumkit)
 {
@@ -1087,7 +1112,7 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		rc = add_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH, 
 			kit, data->instrument_num, cpattern, velocity, change_velocity);
 		if (midi_fd >= 0)
-			note_on(midi_fd, data->midivalue, velocity);
+			access_device->note_on(midi_fd, data->midivalue, velocity);
 		if (rc == -2) /* Note was already there, so we really want to remove it. */
 			remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
 				kit, data->instrument_num, cpattern);
@@ -1658,7 +1683,7 @@ void hello(GtkWidget *widget,
 		printf("%s\n", data->name);
 		/* should be changed to *schedule* a noteon + noteoff */
 		if (midi_fd >= 0)
-			note_on(midi_fd, data->midivalue, velocity);
+			access_device->note_on(midi_fd, data->midivalue, velocity);
 	}
 }
 
@@ -1710,8 +1735,10 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
-		if (vshidden)
+		if (vshidden) {
 			gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+			gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
+		}
 		if (editdrumkit) {
 			gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
 			gtk_widget_hide(GTK_WIDGET(inst->name_entry));
@@ -1731,8 +1758,10 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_hide(GTK_WIDGET(inst->type_entry));
 				gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
 			}
-			if (!vshidden) /* otherwise, already hidden */
+			if (!vshidden) { /* otherwise, already hidden */
 				gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+				gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
+			}
 		} else {
 			gtk_widget_show(GTK_WIDGET(inst->canvas));
 			gtk_widget_show(GTK_WIDGET(inst->button));
@@ -1741,8 +1770,10 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_show(GTK_WIDGET(inst->type_entry));
 				gtk_widget_show(GTK_WIDGET(inst->midi_value_spin_button));
 			}
-			if (!vshidden) /* otherwise, already hidden */
+			if (!vshidden) { /* otherwise, already hidden */
 				gtk_widget_show(GTK_WIDGET(inst->volume_slider));
+				gtk_widget_show(GTK_WIDGET(inst->drag_spin_button));
+			}
 		}
 	}
 }
@@ -2281,6 +2312,21 @@ void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch)
 	return;
 }
 
+void int_note_on(int fd, unsigned char value, unsigned char volume)
+{
+	printf("Internal note_on access method not yet implemented.\n");
+}
+
+void int_note_off(int fd, unsigned char value, unsigned char volume)
+{
+	printf("Internal note_off access method not yet implemented.\n");
+}
+
+void int_send_midi_patch_change(int fd, unsigned short bank, unsigned char patch)
+{
+	printf("Internal send_midi_patch_change  access method not yet implemented.\n");
+}
+
 void note_on(int fd, unsigned char value, unsigned char volume)
 {
 	unsigned char data[3];
@@ -2305,7 +2351,7 @@ void silence(int fd)
 {
 	int i;
 	for (i=0;i<127;i++)
-		note_off(fd, i, 0);
+		access_device->note_off(fd, i, 0);
 }
 
 void init_measures()
@@ -2444,7 +2490,7 @@ void player_process_requests(int fd)
 				read(fd, &bank, sizeof(bank));
 				read(fd, &patch, sizeof(patch));
 				printf("Player: Changing to bank %d, patch %d\n", bank, patch);
-				send_midi_patch_change(midi_fd, bank, patch);
+				access_device->send_midi_patch_change(midi_fd, bank, patch);
 				break;
 			}
 			default:
@@ -2618,14 +2664,18 @@ int main(int argc, char *argv[])
 		unsigned char patchchange[] = { 0xc0, 117};
 
 		midi_fd = fd;
-#if 0 
-		/* Here, was messing around trying to get an ornery Roland
-		   keyboard to switch to a drum preset, but failed... */
-		write(fd, bankchange, 3); 
-		write(fd, patchchange, 2); 
-#endif
 
-		
+		/* do some ioctl or something here to determine how to access 
+		   the device, then set access_device pointer to the correct
+		   set of access methods for the device type, like:
+
+		   if (device type is internal)
+			access_device = &access_method[INTERNAL_DEVICE];
+
+		   If you get this working with soundfonts on soundcard
+		   midi devices, send me a patch. <smcameron@users.sourceforge.net>
+
+		 */
 	} else
 		printf("Can't open MIDI file %s, oh well, NO SOUND FOR YOU!!!\n", device);
 	
@@ -2681,7 +2731,7 @@ int main(int argc, char *argv[])
 		PSCROLLER_WIDTH, PSCROLLER_HEIGHT);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (pattern_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	table = gtk_table_new(dk->ninsts + 1,  6, FALSE);
+	table = gtk_table_new(dk->ninsts + 1,  8, FALSE);
 	gtk_box_pack_start(GTK_BOX(box1), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box1), middle_box, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(middle_box), pattern_scroller, TRUE, TRUE, 0);
@@ -2696,12 +2746,12 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, hide_instruments, 
 		"Hide the instruments below which do not have a "
 		"check beside them to reduce visual clutter.", NULL);
-	hide_volume_sliders = gtk_check_button_new_with_label("Hide volume\nsliders");
+	hide_volume_sliders = gtk_check_button_new_with_label("Hide instrument\nattributes");
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hide_volume_sliders), TRUE);
 	g_signal_connect(G_OBJECT (hide_volume_sliders), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	gtk_tooltips_set_tip(tooltips, hide_volume_sliders, 
-		"Hide the volume sliders which appear to the left of"
+		"Hide the volume sliders and drag settings which appear to the left of"
 		" the instrument buttons, below.", NULL);
 	
 	drumkit_vbox = gtk_vbox_new(FALSE, 0);
@@ -2746,10 +2796,19 @@ int main(int argc, char *argv[])
 
 
 	for (i=0;i<dk->ninsts;i++) {
+		int col;
 		struct instrument_struct *inst = &dk->instrument[i];
+
 		inst->hidebutton = gtk_check_button_new();
 		inst->button = gtk_button_new_with_label(inst->name);
 		gtk_tooltips_set_tip(tooltips, inst->button, inst->type, NULL);
+		inst->drag_spin_button = gtk_spin_button_new_with_range(-10,  10, 0.1);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->drag_spin_button), 
+			(gdouble) 0);
+		gtk_tooltips_set_tip(tooltips, inst->drag_spin_button,
+			"Set percentage of a beat to drag (or rush) this instrument.  "
+			"Use negative numbers for rushing."
+			"(Sorry, this doesn't actually do anything yet.)", NULL);
 		inst->volume_adjustment = gtk_adjustment_new((gdouble) DEFAULT_VELOCITY, 
 			0.0, 127.0, 1.0, 1.0, 0.0);
 		inst->volume_slider = gtk_hscale_new(GTK_ADJUSTMENT(inst->volume_adjustment));
@@ -2792,23 +2851,27 @@ int main(int argc, char *argv[])
 				G_CALLBACK (canvas_clicked), inst);
 		gtk_widget_set_size_request(inst->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
 		// gtk_widget_set_usize(canvas, 400, 10);
+
+		col = 0;
 		gtk_table_attach(GTK_TABLE(table), inst->hidebutton, 
-			0, 1, i, i+1, 0, 0, 0,0);
+			col, col+1, i, i+1, 0, 0, 0,0); col++;
+		gtk_table_attach(GTK_TABLE(table), inst->drag_spin_button,
+			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->volume_slider,
-			1, 2, i, i+1, 0, 0, 0, 0);
+			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->button, 
-			2, 3, i, i+1,
+			col, col+1, i, i+1,
 			GTK_FILL,
 			0,
-			0, 0);
+			0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->name_entry,
-			3, 4, i, i+1, GTK_FILL, 0, 0, 0);
+			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->type_entry,
-			4, 5, i, i+1, GTK_FILL, 0, 0, 0);
+			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->midi_value_spin_button,
-			5, 6, i, i+1, GTK_FILL, 0, 0, 0);
+			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
-			6, 7, i, i+1, 0, 0, 0, 0);
+			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
 
 	for (i=0;i<ndivisions;i++) {
@@ -3065,6 +3128,7 @@ int main(int argc, char *argv[])
 		gtk_widget_hide(inst->type_entry);
 		gtk_widget_hide(inst->midi_value_spin_button);
 		gtk_widget_hide(inst->volume_slider);
+		gtk_widget_hide(inst->drag_spin_button);
 	}
 
 	flatten_pattern(kit, cpattern);

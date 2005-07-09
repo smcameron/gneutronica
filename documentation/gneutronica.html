@@ -84,7 +84,9 @@ If not, you may wish to use generic.dk, by specifying "-k drumkits/generic.dk" o
 the command line when starting the program.  This drumkit lets you send to all 127 notes 
 without trying to guess the names.  Doing this, you can create your own drum 
 specification file, which follows a simple format, a bunch of strings of characters, 
-seperated by commas.  The first line is the manufacturer, make and model, and subsequent lines
+seperated by commas.  The first line is used to identify the file format, in case
+it changes in the future.  The second line contains the manufacturer, make and 
+model, and subsequent lines
 specify instrments, with a pair of names, and a MIDI note number.  The first name
 will appear in buttons in Gneutronica, and the second in tooltip windows.   So the
 first name should be short enough to fit in a button, and the 2nd may be longer.
@@ -100,6 +102,8 @@ Instrument 2, description of instrument 2, 2
 <p>This will allow you to play the instruments by hitting the instrument button,
 hear it, and then type in the instrument name, type, and MIDI note number without
 having to think too hard abuot it.
+<p>BTW, if you make a new drumkit file for a new device, or a new preset on a device
+send it to me, (smcameron@users.sourceforge.net) and I'll include it in the next release.
 <h1>Making a pattern</h1>
 <p>When you first start up Gneutronica, you are presented with two windows, the Arrangement
 Editor, and the Pattern Editor.  The pattern editor lets you construct a pattern of 
