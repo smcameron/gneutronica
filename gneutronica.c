@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <netinet/in.h> /* . . . just for for htons() */
+#include <sys/mman.h>
 
 #include <gtk/gtk.h>
 
@@ -85,6 +86,11 @@ struct tempo_change_t {
 	int measure;
 	int beats_per_minute;
 };
+
+struct shared_info_struct {
+	int measure;
+	int percent;
+} *transport_location;
 
 int changing_tempo_measure = -1;
 int ntempochanges;
@@ -1345,7 +1351,7 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 	kill(player_process_pid, SIGUSR1);
 }
 
-void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
+void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct timeval *base)
 {
 	struct timeval basetime;
 	unsigned long measurelength;
@@ -1376,15 +1382,24 @@ void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
 	for (this = pattern[cpattern]->hitpattern; this != NULL; this = this->next) {
 		struct drumkit_struct *dk = &drumkit[this->h.drumkit];
 		struct instrument_struct *inst = &dk->instrument[this->h.instrument_num];
+		int pct;
 
 		drag = (long) (pattern[cpattern]->drag[this->h.instrument_num] * 
 			(double) measurelength / (double) beats_per_measure / 100.0);
+
+		pct = (int) (100.0 * (((this->h.time * measurelength) + drag) / measurelength));
+		if (pct < 0)
+			pct = 0;
+		else if (pct > 100)
+			pct = 100;
+		
 		/* printf("this->h.time = %g\n", this->h.time); */
 		rc = sched_note(&sched, &basetime, inst->midivalue, 
-			measurelength, this->h.time, 1000000, this->h.velocity, drag);
+			measurelength, this->h.time, 1000000, this->h.velocity, 
+			measure, pct, drag);
 	}
 	/* This no-op is just so the next measure doesn't before this one is really over. */
-	rc = sched_noop(&sched, &basetime, 0, measurelength, 1.0, 1000000, 127); 
+	rc = sched_noop(&sched, &basetime, 0, measurelength, 1.0, 1000000, 127, measure, 100); 
 	if (base != NULL)
 		*base = basetime;
 }
@@ -1410,7 +1425,7 @@ void schedule_measures(int start, int end)
 			tmpbase = base;
 			tempo = find_tempo(i);
 			/* printf("Tempo for measure %d is %d beats per minute\n", i, tempo); */
-			schedule_pattern(kit, measure[i].pattern[j], tempo, &tmpbase);
+			schedule_pattern(kit, i, measure[i].pattern[j], tempo, &tmpbase);
 		}
 		base = tmpbase;
 	}
@@ -1559,7 +1574,7 @@ void pattern_play_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	flatten_pattern(kit, cpattern);
-	schedule_pattern(kit, cpattern, -1, NULL);
+	schedule_pattern(kit, -1, cpattern, -1, NULL);
 	send_schedule(&sched, 0);
 	free_schedule(&sched);
 }
@@ -2847,6 +2862,8 @@ int main(int argc, char *argv[])
         int fd, c;
         char device[255], drumkitfile[255];
 
+	transport_location = (struct shared_info_struct *) 
+		mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, -1); 
 
         strcpy(device, "/dev/snd/midi1");
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");

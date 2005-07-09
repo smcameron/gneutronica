@@ -35,6 +35,11 @@ int beats_per_minute = 120;	/* default 120 beats per minute */
 int measure_length = (60000000 * 4) / 120;
 long long mindiff = 100000;
 
+static int dummy_measure, dummy_percent;
+static int *pmeasure = &dummy_measure;
+static int *ppercent = &dummy_percent;
+
+
 extern int midi_fd;
 extern void note_on(int fd, unsigned char value, unsigned char volume);
 extern void note_off(int fd, unsigned char value, unsigned char volume);
@@ -87,6 +92,12 @@ int wait_for(struct timeval *tm)
 	}
 }
 
+static inline void set_transport_location(int measure, int percent)
+{
+	*pmeasure = measure;
+	*ppercent = percent;
+}
+
 void do_event(struct event *e)
 {
 	/* printf("%6d:%6d event %2d:%3d:%4d\n", 
@@ -98,12 +109,15 @@ void do_event(struct event *e)
 
 	switch (e->e.eventtype) {
 	case NOTE_ON: 
+		set_transport_location(e->e.measure, e->e.percent);
 		note_on(midi_fd, e->e.note, e->e.velocity);
 		break;
 	case NOTE_OFF: 
+		set_transport_location(e->e.measure, e->e.percent);
 		note_off(midi_fd, e->e.note, e->e.velocity);
 		break;
 	case NO_OP:
+		set_transport_location(e->e.measure, e->e.percent);
 		break;
 	default:
 		printf("Unknown event type %d\n", e->e.eventtype);
@@ -180,6 +194,8 @@ int sched_note(struct schedule_t *s,
 		double time, /* fraction of the measure to elapse before starting note */
 		int note_duration, /* have yet to figure units on this... */
 		unsigned char velocity,
+		int measure, 
+		int percent,
 		long drag
 		)
 #if 0
@@ -205,6 +221,8 @@ int sched_note(struct schedule_t *s,
 	note->e.note = noteval;
 	note->e.eventtype = NOTE_ON;
 	note->e.velocity = velocity;
+	note->e.measure = measure;
+	note->e.percent = percent;
 	note2->e.note = noteval;
 	note2->e.eventtype = NOTE_OFF;
 	note2->e.velocity = velocity;
@@ -244,7 +262,9 @@ int sched_noop(struct schedule_t *s,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
 		int note_duration, /* have yet to figure units on this... */
-		unsigned char velocity
+		unsigned char velocity,
+		int measure,
+		int percent
 		)
 {
 	struct event *note;
@@ -257,6 +277,8 @@ int sched_noop(struct schedule_t *s,
 	note->e.note = noteval;
 	note->e.eventtype = NO_OP;
 	note->e.velocity = velocity;
+	note->e.measure = measure;
+	note->e.percent = percent;
 
 	when = (unsigned long long) ((double) measure_length * time);
 	usecs = when % 1000000;
@@ -302,5 +324,11 @@ void print_schedule(struct schedule_t *s)
 		if (s->e[i]->rtime.tv_usec > 1000000) printf("*");
 		printf("\n");
 	}
+}
+
+void set_transport_meter(int *measure, int *percent)
+{
+	pmeasure = measure;
+	ppercent = percent;
 }
 
