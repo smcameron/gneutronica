@@ -1379,9 +1379,6 @@ void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
 
 		drag = (long) (pattern[cpattern]->drag[this->h.instrument_num] * 
 			(double) measurelength / (double) beats_per_measure / 100.0);
-		if (drag != 0L) {
-			printf("drag = %ld\n", drag);
-		}
 		/* printf("this->h.time = %g\n", this->h.time); */
 		rc = sched_note(&sched, &basetime, inst->midivalue, 
 			measurelength, this->h.time, 1000000, this->h.velocity, drag);
@@ -1981,6 +1978,11 @@ int unflatten_pattern(int ckit, int cpattern)
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(timediv[i].spin), 
 			(gdouble) timediv[i].division);
 	}
+	for (i=0;i<drumkit[ckit].ninsts; i++) {
+		struct instrument_struct *inst = &drumkit[ckit].instrument[i];
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->drag_spin_button), 
+			(gdouble) pattern[cpattern]->drag[i]);
+	}
 	set_pattern_window_title();
 }
 
@@ -2010,6 +2012,7 @@ int load_from_file_version_1(FILE *f)
 	int fileformatversion;
 
 
+	printf("Hmm, old file format version 1, will update on save.\n");
 	linecount = 1;
 	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
 	linecount++;
@@ -2105,6 +2108,120 @@ int load_from_file_version_1(FILE *f)
 
 	return 0;
 }
+
+int load_from_file_version_2(FILE *f)
+{
+	char line[255];
+	int linecount;
+	int ninsts;
+	int i,j,count, rc;
+	int hidden;
+	int fileformatversion;
+
+
+	linecount = 1;
+	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
+	linecount++;
+	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Make:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Model:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Name:") == -1) return -1;
+
+	rc = fscanf(f, "Instruments: %d\n", &ninsts);
+	if (rc != 1)  {
+		printf("%d: error\n", linecount);
+		return -1;
+	}
+	linecount++;
+
+	for (i=0;i<ninsts;i++) {
+		fscanf(f, "Instrument %*d: '%*[^']%*c %d\n", &hidden);
+		/* this is questionable if drumkits don't match... */
+		if (i<drumkit[kit].ninsts) {
+			struct instrument_struct *inst = &drumkit[kit].instrument[i];
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
+				(gboolean) hidden);
+		}
+	}
+	rc = fscanf(f, "Patterns: %d\n", &npatterns);
+	for (i=0;i<npatterns;i++) {
+		struct hitpattern **h;
+		pattern[i] = pattern_struct_alloc(i);
+		h = &pattern[i]->hitpattern;
+		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
+		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
+			&pattern[i]->timediv[0].division,
+			&pattern[i]->timediv[1].division,
+			&pattern[i]->timediv[2].division,
+			&pattern[i]->timediv[3].division,
+			&pattern[i]->timediv[4].division);
+		if (rc != 5)
+			printf("Bad divisions...\n");
+		while (1) {
+			rc = fscanf(f, "%[^\n]%*c", line);
+			if (strcmp(line, "END-OF-PATTERN") == 0) {
+				/* printf("end of pattern\n"); fflush(stderr); */
+				break;
+			}
+			*h = malloc(sizeof(struct hitpattern));
+			(*h)->next = NULL;
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
+				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
+				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
+			/* Holy shit, scanf with %g doesn't actually work! */
+			if ((*h)->h.beats_per_measure == 0) {
+				printf("Corrupted file?  beats_per_measure was zero... Guessing 4.\n");
+				(*h)->h.beats_per_measure = 4;
+			}
+			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+
+			/* printf("new time is %g\n", (*h)->h.time); */
+			if (rc != 6) 
+				printf("rc != 6!\n");
+			h = &(*h)->next;
+		}
+		rc = fscanf(f, "dragging count: %d\n", &count);
+		for (j=0;j<count;j++) {
+			int ins;
+			long drag;
+			fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			pattern[i]->drag[ins] = (double) (drag / 1000.0);
+		}
+		make_new_pattern_widgets(i, i+1);
+	}
+	rc = fscanf(f, "Measures: %d\n", &nmeasures);
+	for (i=0;i<nmeasures;i++) {
+		fscanf(f, "m:%*d np:%d\n", &measure[i].npatterns);
+		if (measure[i].npatterns != 0) {
+			for (j=0;j<measure[i].npatterns;j++)
+				fscanf(f, "%d ", &measure[i].pattern[j]);
+			fscanf(f, "\n");
+		}
+		/* printf("m:%*d t:%d p:%d\n", measure[i].tempo, measure[i].pattern); */
+	}
+	rc = fscanf(f, "Tempo changes: %d\n", &ntempochanges);
+	for (i=0;i<ntempochanges;i++) {
+		fscanf(f, "m:%d bpm:%d\n", &tempo_change[i].measure,
+			&tempo_change[i].beats_per_minute);
+	}
+	fclose(f);
+
+	edit_pattern(0);
+/*
+	cpattern = 0;
+	unflatten_pattern(kit, cpattern);
+	for (i=0;i<drumkit[kit].ninsts; i++)
+		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas); */
+
+	return 0;
+}
+
 
 void cleanup_tempo_changes()
 {
@@ -2245,6 +2362,8 @@ int load_from_file(const char *filename)
 	switch (fileformatversion) {
 		case 1: rc = load_from_file_version_1(f);
 			break;
+		case 2: rc = load_from_file_version_2(f);
+			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
 			return -1;
@@ -2255,7 +2374,7 @@ int load_from_file(const char *filename)
 }
 
 
-int current_file_format_version = 1;
+int current_file_format_version = 2;
 int save_to_file(char *filename)
 {
 	int i,j;
@@ -2285,6 +2404,8 @@ int save_to_file(char *filename)
 	/* Save the patterns */
 	fprintf(f, "Patterns: %d\n", npatterns);
 	for (i=0;i<npatterns;i++) {
+		int count;
+		long drag;
 		struct hitpattern *h;
 		fprintf(f, "Pattern %d: %d %d %s\n", i, pattern[i]->beats_per_measure,
 			pattern[i]->beats_per_minute, pattern[i]->patname);
@@ -2300,6 +2421,16 @@ int save_to_file(char *filename)
 				h->h.beat, h->h.beats_per_measure);
 		}
 		fprintf(f, "END-OF-PATTERN\n");
+		count = 0;
+		for (j = 0;j<drumkit[kit].ninsts;j++)
+			if (pattern[i]->drag[j] != 0.0)
+				count++;
+		fprintf(f, "dragging count: %d\n", count);
+		for (j = 0;j<drumkit[kit].ninsts;j++)
+			if (pattern[i]->drag[j] != 0.0) {
+				drag = (long) (pattern[i]->drag[j] * 1000.0);
+				fprintf(f, "i:%d, d:%ld\n", j, drag);
+			}
 	}
 
 	fprintf(f, "Measures: %d\n", nmeasures);
@@ -2721,8 +2852,8 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");
 	strcpy(drumkitfile, "drumkits/generic.dk");
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
-	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
 	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
+	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
         while ((c = getopt(argc, argv, "k:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(device, optarg); break;
