@@ -1392,6 +1392,9 @@ void savedrumkitbox_file_selected(GtkWidget *widget,
 	save_drumkit_to_file(filename);
 }
 
+#define SAVE_SONG 0
+#define LOAD_SONG 1
+#define SAVE_DRUMKIT 2
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1402,42 +1405,43 @@ static struct file_dialog_descriptor {
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
 };
 	
-void make_file_dialogs()
+GtkWidget *make_file_dialog(int i)
 {
-	int i;
 	GtkWidget *w;
 	void *f;
 
-	for (i=0; i<sizeof(file_dialog) / sizeof(file_dialog[0]); i++) {
-		w = gtk_file_selection_new (file_dialog[i].title);
-		f = file_dialog[i].file_selected_function;
-		*(file_dialog[i].widget) = w;
-		g_signal_connect(G_OBJECT (w), "destroy",
-			G_CALLBACK (destroy_means_hide), NULL); /* FIXME, this is not correct */
-		g_signal_connect(G_OBJECT (GTK_FILE_SELECTION (w)->ok_button),
-			"clicked", G_CALLBACK (f), (gpointer) w);
-		g_signal_connect_swapped(G_OBJECT (GTK_FILE_SELECTION (w)->cancel_button),
-			"clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT (w));
-	}
+	if (i< 0 || i >= sizeof(file_dialog) / sizeof(file_dialog[0]))
+		return;
+
+	w = gtk_file_selection_new (file_dialog[i].title);
+	f = file_dialog[i].file_selected_function;
+	*(file_dialog[i].widget) = w;
+	g_signal_connect(G_OBJECT (w), "destroy",
+		G_CALLBACK (destroy_means_hide), NULL); /* FIXME, this is not correct */
+	g_signal_connect(G_OBJECT (GTK_FILE_SELECTION (w)->ok_button),
+		"clicked", G_CALLBACK (f), (gpointer) w);
+	g_signal_connect_swapped(G_OBJECT (GTK_FILE_SELECTION (w)->cancel_button),
+		"clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT (w));
+	gtk_widget_show(w);
+	return w;
 }
-    
 
 void save_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
-	gtk_widget_show(SaveBox);
+	make_file_dialog(SAVE_SONG);
 }
 
 void load_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
-	gtk_widget_show(LoadBox);
+	make_file_dialog(LOAD_SONG);
 }
 
 void save_drumkit_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
-	gtk_widget_show(SaveDrumkitBox);
+	make_file_dialog(SAVE_DRUMKIT);
 }
 
 void send_schedule(struct schedule_t *sched, int loop);
@@ -3044,9 +3048,7 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (arranger_window), "destroy", 
 		G_CALLBACK (destroy_event), NULL);
 
-	make_file_dialogs();
 	make_tempo_change_editor();
-
 
 	set_pattern_window_title();
 	set_arranger_window_title();
