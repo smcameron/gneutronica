@@ -179,7 +179,8 @@ int sched_note(struct schedule_t *s,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
 		int note_duration, /* have yet to figure units on this... */
-		unsigned char velocity
+		unsigned char velocity,
+		long drag
 		)
 #if 0
 int sched_note(struct schedule_t *s,
@@ -208,11 +209,13 @@ int sched_note(struct schedule_t *s,
 	note2->e.eventtype = NOTE_OFF;
 	note2->e.velocity = velocity;
 
-	when = (unsigned long long) ((double) measure_length * time);
+	when = (unsigned long long) ((double) measure_length * time) + drag;
 	usecs = when % 1000000;
 	secs = (when - usecs) / 1000000;
 	note->rtime.tv_sec = secs;
 	note->rtime.tv_usec = usecs;
+
+	
 #if 0
 	when += 1000000; /* for now, duration = 1 second, well, this is percussion mostly */
 	note2->e.note = noteval;

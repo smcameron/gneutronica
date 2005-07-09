@@ -57,7 +57,8 @@ int sched_note(struct schedule_t *s,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
 		int note_duration, /* have yet to figure units on this... */
-		unsigned char velocity
+		unsigned char velocity,
+		long drag
 		);
 int sched_noop(struct schedule_t *s,
 		struct timeval *measure_begins,

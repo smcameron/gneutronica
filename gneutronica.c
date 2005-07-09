@@ -18,6 +18,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
  */
+#define COPYRIGHT "(c) Copyright 2005, Stephen M. Cameron"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -47,6 +48,7 @@
 #define MINTEMPO 10
 #define MAXTEMPO 400
 #define DEFAULT_VELOCITY 100
+#define DRAGLIMIT 50.0
 
 #define PROGNAME "Gneutronica"
 #include "version.h"
@@ -206,10 +208,7 @@ struct pattern_struct {
 				 Note: the same pattern may be played back several times in a song
 			  	 at different tempos, so this is not the tempo within the context 
 				of a song. */
-	/* put stuff for drag/rush of instruments in here in the pattern.   Cmplicate it
-	   by the (reasonable) presumption it will be sparsely populated?  Or should I
-	   just brute force it and waste space? e.g. "double drag[MAXINSTS];" */
-
+	double drag[MAXINSTS];	/* amount of drag/rush as a percentage of a beat */
 	GtkWidget *copy_button;
 	GtkWidget *del_button;
 	GtkWidget *ins_button;
@@ -859,6 +858,11 @@ void redraw_measure_op_buttons()
 	gtk_widget_queue_draw(Insert_da);
 	gtk_widget_queue_draw(Delete_da);
 }
+void drag_spin_button_change(GtkSpinButton *spinbutton, struct instrument_struct *inst)
+{
+	int i = inst->instrument_num;
+	pattern[cpattern]->drag[i] = gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(spinbutton));
+}
 
 void integer_spin_button_change(GtkSpinButton *spinbutton, int *value)
 {
@@ -1348,6 +1352,8 @@ void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
 	unsigned long beats_per_minute, beats_per_measure;
 	struct hitpattern *this;
 	int rc, i;
+	long drag; /* microsecs */
+	long dragsecs;
 
 	/* printf("schedule_pattern called\n"); */
 	basetime.tv_usec = 0L;
@@ -1370,10 +1376,17 @@ void schedule_pattern(int kit, int cpattern, int tempo, struct timeval *base)
 	for (this = pattern[cpattern]->hitpattern; this != NULL; this = this->next) {
 		struct drumkit_struct *dk = &drumkit[this->h.drumkit];
 		struct instrument_struct *inst = &dk->instrument[this->h.instrument_num];
+
+		drag = (long) (pattern[cpattern]->drag[this->h.instrument_num] * 
+			(double) measurelength / (double) beats_per_measure / 100.0);
+		if (drag != 0L) {
+			printf("drag = %ld\n", drag);
+		}
 		/* printf("this->h.time = %g\n", this->h.time); */
 		rc = sched_note(&sched, &basetime, inst->midivalue, 
-			measurelength, this->h.time, 1000000, this->h.velocity);
+			measurelength, this->h.time, 1000000, this->h.velocity, drag);
 	}
+	/* This no-op is just so the next measure doesn't before this one is really over. */
 	rc = sched_noop(&sched, &basetime, 0, measurelength, 1.0, 1000000, 127); 
 	if (base != NULL)
 		*base = basetime;
@@ -1910,6 +1923,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num)
 	p->pattern_num = pattern_num;
 	p->beats_per_measure = 4;
 	p->beats_per_minute = 120;
+	memset(p->drag, 0, sizeof(p->drag[0]) * MAXINSTS);
 	sprintf(p->patname, "Pattern %d", pattern_num);
 	return p;
 }
@@ -2655,7 +2669,7 @@ int about_activate(GtkWidget *widget, gpointer data)
 	if (about_window == NULL) {
 		sprintf(about_msg, "\n\n%s v. %s\n\n"
 			"Gneutronica is a MIDI drum machine\n\n"
-			"(c) Copyright Stephen M. Cameron\n\n"
+			COPYRIGHT "\n\n"
 			"http://sourceforge.net/projects/gneutronica\n\n",
 			PROGNAME, VERSION);
 
@@ -2867,13 +2881,14 @@ int main(int argc, char *argv[])
 		inst->hidebutton = gtk_check_button_new();
 		inst->button = gtk_button_new_with_label(inst->name);
 		gtk_tooltips_set_tip(tooltips, inst->button, inst->type, NULL);
-		inst->drag_spin_button = gtk_spin_button_new_with_range(-10,  10, 0.1);
+		inst->drag_spin_button = gtk_spin_button_new_with_range(-DRAGLIMIT,  DRAGLIMIT, 0.1);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->drag_spin_button), 
 			(gdouble) 0);
+		g_signal_connect(G_OBJECT (inst->drag_spin_button), "value-changed", 
+				G_CALLBACK (drag_spin_button_change), inst);
 		gtk_tooltips_set_tip(tooltips, inst->drag_spin_button,
 			"Set percentage of a beat to drag (or rush) this instrument.  "
-			"Use negative numbers for rushing."
-			"(Sorry, this doesn't actually do anything yet.)", NULL);
+			"Use negative numbers for rushing.", NULL);
 		inst->volume_adjustment = gtk_adjustment_new((gdouble) DEFAULT_VELOCITY, 
 			0.0, 127.0, 1.0, 1.0, 0.0);
 		inst->volume_slider = gtk_hscale_new(GTK_ADJUSTMENT(inst->volume_adjustment));

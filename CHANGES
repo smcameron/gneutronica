@@ -29,3 +29,4 @@ gneutronica 0.22
 	* Added "snap to grid" checkbox which, when unchecked, allows arbitrary 
 	  placement of notes on the time axis.
 	* Added an about window.
+	* Implemented dragging/rushing per instrument per pattern.
