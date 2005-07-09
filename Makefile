@@ -1,4 +1,8 @@
 
+PROGRAM=gneutronica
+BINDIR=/usr/local/bin
+SHAREDIR=/usr/local/share/${PROGRAM}
+
 all:	gneutronica	
 
 gneutronica:	gneutronica.c sched.o
@@ -7,15 +11,15 @@ gneutronica:	gneutronica.c sched.o
 sched.o:	sched.c sched.h		
 
 install:	gneutronica
-	@echo "Installing /usr/local/bin/gneutronica and /usr/local/share/gneutronica/drumkits"
-	@cp gneutronica /usr/local/bin/gneutronica
-	@chmod +x /usr/local/bin/gneutronica
-	@mkdir -p /usr/local/share/gneutronica/drumkits
-	@cp drumkits/*.gdk /usr/local/share/gneutronica/drumkits 
+	echo "Installing ${BINDIR}/${PROGRAM} and ${SHAREDIR}/drumkits"
+	cp gneutronica ${BINDIR}/${PROGRAM} 
+	chmod +x ${BINDIR}/${PROGRAM}
+	mkdir -p ${SHAREDIR}/drumkits
+	cp drumkits/*.gdk drumkits/*.dk ${SHAREDIR}/drumkits 
 
 uninstall:
-	/bin/rm -f /usr/local/bin/gneutronica
-	/bin/rm -fr /usr/local/share/gneutronica/
+	/bin/rm -f ${BINDIR}/${PROGRAM}
+	/bin/rm -fr ${SHAREDIR} 
 
 clean:
 	/bin/rm -f gneutronica *.o

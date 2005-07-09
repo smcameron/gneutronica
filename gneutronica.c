@@ -2652,6 +2652,7 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/generic.dk");
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
+	strcpy(drumkitfile, "/usr/local/share/drumkits/general_midi_standard.dk");
         while ((c = getopt(argc, argv, "k:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(device, optarg); break;
@@ -2693,6 +2694,8 @@ int main(int argc, char *argv[])
 	
 	rc = read_drumkit(drumkitfile, &ndrumkits, drumkit);
 	if (rc != 0) {
+		fprintf(stderr, "Can't read drumkit file, "
+			"perhaps you need to specify '-k drumkitfile' option?\n");
 		exit(1);
 	}
 	kit = 0;
