@@ -31,3 +31,14 @@ gneutronica 0.22
 	* Added an about window.
 	* Implemented dragging/rushing per instrument per pattern.
 	* Now indicates transport location during playback. 
+
+gneutronica 0.23
+	* Now, if drumkit file isn't loaded successfully, the program continues
+	  with a generic default instead of bailing out.  Fixed default to be  
+	  general midi kit and not yamaha motif kit.
+	* Reorganized some of the code, pulled out variable and type decls into
+	  gneutronica.h using the GLOBAL/INIT trick from the book Graphics Gems.
+	  Made a home for old file format reading code that's separate from the
+	  gneutronica.c
+	* Added a proper set of pulldown menus, got rid of save/load buttons.
+

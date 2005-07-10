@@ -36,25 +36,12 @@
 
 #include <gtk/gtk.h>
 
+#define INSTANTIATE_GNEUTRONICA_GLOBALS
+#include "gneutronica.h"
 #include "sched.h"
+#include "old_fileformats.h"
 
-#define MAXMEASURES 1000
-#define MAXPATTERNS 1000
-#define MAXKITS 100
-#define MAXINSTS 128
-#define DRAW_WIDTH 600
-#define DRAW_HEIGHT 33 
-#define MAXTIMEDIVS 5
-#define MEASUREWIDTH 20
-#define MINTEMPO 10
-#define MAXTEMPO 400
-#define DEFAULT_VELOCITY 100
-#define DRAGLIMIT 50.0
-
-#define PROGNAME "Gneutronica"
 #include "version.h"
-
-struct schedule_t sched;
 
 /* commands to send player process */
 #define PLAY_ONCE 0
@@ -62,240 +49,113 @@ struct schedule_t sched;
 #define PLAYER_QUIT 2
 #define PERFORM_PATCH_CHANGE 4
 
-int midi_fd = -1;
-int player_process_fd = -1;
-int player_process_pid = -1;
+void print_hello()
+{
+	printf("hello\n");
+}
 
-struct hit_struct {
-	int pattern;
-	int instrument_num;
-	int drumkit;
-	unsigned char velocity;
-	double time; /* as a percentage of the measure */
-	int beat;
-	int beats_per_measure; /* this is a per-note value, used to position the note within a measure,
-				/* and does not really reflect tempo information */
+void load_button_clicked(GtkWidget *widget, gpointer data);
+void save_button_clicked(GtkWidget *widget, gpointer data);
+int about_activate(GtkWidget *widget, gpointer data);
+
+/* Main menu items.  Almost all of this menu code was taken verbatim from the 
+   gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
+   I tweaked it tweaked a bit for style and menu content, but that's about it.*/
+
+static GtkItemFactoryEntry menu_items[] = {
+	{ "/_File",         NULL,         NULL,           0, "<Branch>" },
+	/* { "/File/_New",     "<control>N", print_hello,    0, "<StockItem>", GTK_STOCK_NEW }, */
+	{ "/File/_Open",    "<control>O", load_button_clicked,    0, "<StockItem>", GTK_STOCK_OPEN },
+	{ "/File/_Save",    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
+	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
+	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
+	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
+	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
+	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
 };
 
-struct hitpattern {
-		struct hit_struct h;
-		struct hitpattern *next;
-};
+static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
 
-struct tempo_change_t {
-	int measure;
-	int beats_per_minute;
-};
+GtkWidget *main_menubar, *main_popup_button, *main_option_menu;
 
-struct shared_info_struct {
-	int measure;
-	int percent;
-} *transport_location = NULL;
-gint measure_transport_tag; /* tag for cancelling idle function */
+/* Returns a menubar widget made from the above menu */
+static GtkWidget *get_menubar_menu( GtkWidget  *window )
+{
+	GtkItemFactory *item_factory;
+	GtkAccelGroup *accel_group;
 
-int changing_tempo_measure = -1;
-int ntempochanges;
-struct tempo_change_t tempo_change[MAXMEASURES];
-struct tempo_change_t initial_change = { 0, 120 };
+	/* Make an accelerator group (shortcut keys) */
+	accel_group = gtk_accel_group_new ();
 
-struct division_struct {
-	int division;
-	char *color;
-	GtkWidget *spin; /* GtkSpinButton */
-} timediv[] = {
-	{  4, "red", NULL },
-	{ 16, "blue", NULL },
-	{  0, "green4", NULL },
-	{  0, "orange", NULL },
-	{  0, "purple4", NULL },
-};
+	/* Make an ItemFactory (that makes a menubar) */
+	item_factory = gtk_item_factory_new (GTK_TYPE_MENU_BAR, "<main>",
+				       accel_group);
 
-GtkWidget *tempolabel1, *tempolabel2, *tempospin1, *tempospin2;
-GtkWidget *song_name_entry, *song_name_label;
-GtkWidget *pattern_name_entry, *pattern_name_label;
-GtkWidget *SaveBox;
-GtkWidget *LoadBox;
-GtkWidget *SaveDrumkitBox;
-GtkWidget *quitbutton;
-GtkWidget *midi_setup_activate_button;
-GtkWidget *hide_instruments;
-GtkWidget *hide_volume_sliders;
-GtkWidget *snap_to_grid;
-GtkWidget *drumkit_vbox;
-GtkWidget *edit_instruments_toggle;
-GtkWidget *save_drumkit_button;
-GtkWidget *pattern_paste_button;
-GtkWidget *nextbutton, *prevbutton;
-GtkWidget *play_button;
-GtkWidget *play_selection_button;
-GtkTooltips *tooltips;
+	/* This function generates the menu items. Pass the item factory,
+	the number of items in the array, the array itself, and any
+	callback data for the the menu items. */
+	gtk_item_factory_create_items (item_factory, nmenu_items, menu_items, NULL);
 
-GtkWidget *TempoChWin;
-GtkWidget *TempoChvbox1;
-GtkWidget *TempoChhbox1;
-GtkWidget *TempoChhbox2;
-GtkWidget *TempoChOk;
-GtkWidget *TempoChCancel;
-GtkWidget *TempoChDelete;
-GtkWidget *TempoChLabel;
-GtkWidget *TempoChBPM;
-char TempoChMsg[255];
+	/* Attach the new accelerator group to the window. */
+	gtk_window_add_accel_group (GTK_WINDOW (window), accel_group);
 
-int pattern_in_copy_buffer = -1;
+	/* Finally, return the actual menu bar created by the item factory. */
+	return gtk_item_factory_get_widget (item_factory, "<main>");
+}
 
-int start_copy_measure = -1;
-int end_copy_measure = -1;
+/* Popup the menu when the popup button is pressed */
+static gboolean popup_cb( GtkWidget *widget,
+                          GdkEvent *event,
+                          GtkWidget *menu )
+{
+	GdkEventButton *bevent = (GdkEventButton *)event;
 
-/* Widgets for the top part of the arranger table */
-	/* Labels for the "buttons," below */
-	GtkWidget *TempoLabel;
-	GtkWidget *SelectButton;
-	GtkWidget *PasteLabel;
-	GtkWidget *InsertButton;
-	GtkWidget *DeleteButton;
-	GtkWidget *MeasureTransportLabel;
+	/* Only take button presses */
+	if (event->type != GDK_BUTTON_PRESS)
+		return FALSE;
 
-	/* drawing areas to hold the "buttons" for tempo/copy/paste/ins/del */ 
-	GtkWidget *Tempo_da;
-	GtkWidget *Copy_da;
-	GtkWidget *Paste_da;
-	GtkWidget *Insert_da;
-	GtkWidget *Delete_da;
-	GtkWidget *measure_transport_da;
-	GtkWidget *arr_loop_check_button;
+	/* Show the menu */
+	gtk_menu_popup (GTK_MENU(menu), NULL, NULL,
+		NULL, NULL, bevent->button, bevent->time);
 
+	return TRUE;
+}
 
-#define PSCROLLER_HEIGHT 100
-#define PSCROLLER_WIDTH (DRAW_WIDTH + 130) 
-GtkWidget *pattern_scroller;
-GtkWidget *window; /* Pattern editor window */
-GtkWidget *arranger_window;
-GtkWidget *arranger_box;
-#define ARRANGER_COLS 5
-#define ARRANGER_HEIGHT (MEASUREWIDTH) 
-#define ARRANGER_WIDTH (MAXMEASURES * MEASUREWIDTH)
-GtkWidget *arranger_scroller;
-GtkWidget *arranger_table;
+/* Same as with get_menubar_menu() but just return a button with a signal to
+   call a popup menu */
+GtkWidget *get_popup_menu( void )
+{
+	GtkItemFactory *item_factory;
+	GtkWidget *button, *menu;
 
-/* Midi setup window Allows seting Midi channel to transmit on,
-   and allows sending patch change messages. */
-GtkWidget *midi_setup_window;
-GtkWidget *midi_setup_vbox;
-GtkWidget *midi_setup_hbox1;
-GtkWidget *midi_setup_hbox2;
-GtkWidget *midi_setup_hbox3;
-GtkWidget *midi_bank_label;
-GtkWidget *midi_bank_spin_button;
-GtkWidget *midi_patch_label;
-GtkWidget *midi_patch_spin_button;
-GtkWidget *midi_channel_label;
-GtkWidget *midi_channel_spin_button;
-GtkWidget *midi_change_patch_button;
-GtkWidget *midi_setup_ok_button;
-GtkWidget *midi_setup_cancel_button;
+	/* Same as before but don't bother with the accelerators */
+	item_factory = gtk_item_factory_new (GTK_TYPE_MENU, "<main>", NULL);
+	gtk_item_factory_create_items (item_factory, nmenu_items, menu_items, NULL);
+	menu = gtk_item_factory_get_widget (item_factory, "<main>");
 
-/* "About" stuff */
-GtkWidget *about_button;
-GtkWidget *about_window = NULL;
-GtkWidget *about_vbox;
-GtkWidget *about_da;
-GtkWidget *about_label;
-GtkWidget *about_ok_button;
-GdkPixbuf *robotdrummer;
+	/* Make a button to activate the popup menu */
+	button = gtk_button_new_with_label ("Popup");
+	/* Make the menu popup when clicked */
+	g_signal_connect (G_OBJECT(button), "event", G_CALLBACK(popup_cb), 
+		(gpointer) menu);
 
-char window_title[255];
-char arranger_title[255];
-char songname[100];
+	return button;
+}
 
-struct pattern_struct {
-	char patname[40];
-	struct hitpattern *hitpattern;
-	struct division_struct timediv[MAXTIMEDIVS];
-	int pattern_num;
-	int beats_per_measure; /* this is tempo information for this pattern */
-	int beats_per_minute; /* this is tempo information for this pattern for single pattern playback
-				 Note: the same pattern may be played back several times in a song
-			  	 at different tempos, so this is not the tempo within the context 
-				of a song. */
-	double drag[MAXINSTS];	/* amount of drag/rush as a percentage of a beat */
-	GtkWidget *copy_button;
-	GtkWidget *del_button;
-	GtkWidget *ins_button;
-	GtkWidget *arr_button;
-	GtkWidget *arr_darea; /* drawing area */
-} **pattern = NULL;
+/* Same again but return an option menu */
+GtkWidget *get_option_menu( void )
+{
+	GtkItemFactory *item_factory;
+	GtkWidget *option_menu;
 
-int ndivisions = sizeof(timediv) / sizeof(struct division_struct);
+	/* Same again, not bothering with the accelerators */
+	item_factory = gtk_item_factory_new (GTK_TYPE_OPTION_MENU, "<main>", NULL);
+	gtk_item_factory_create_items (item_factory, nmenu_items, menu_items, NULL);
+	option_menu = gtk_item_factory_get_widget (item_factory, "<main>");
 
-#define MAXPATSPERMEASURE 20
-struct measure_struct {
-	int npatterns;
-	int pattern[MAXPATSPERMEASURE];
-} *measure = NULL;
-
-GdkColor whitecolor;
-GdkColor bluecolor;
-GdkColor blackcolor;
-GdkGC *gc = NULL;
-int ndrumkits = 0;
-int npatterns = 0;
-int cmeasure = 0;
-int cpattern = 0;
-int kit = 0;
-int nmeasures = 0;
-
-struct drumkit_struct {
-	char make[30];
-	char model[30];
-	char name[30];
-	int ninsts;
-	unsigned char midi_channel;
-	unsigned int midi_bank;
-	unsigned char midi_patch;
-	struct instrument_struct *instrument;
-} drumkit[MAXKITS];
-
-struct instrument_struct {
-	char name[40];
-	char type[40];
-	unsigned char midivalue;
-	int instrument_num;
-	struct hitpattern *hit;
-	GtkWidget *hidebutton;
-	GtkWidget *button;
-	GtkWidget *canvas;
-	GtkObject *volume_adjustment;
-	GtkWidget *volume_slider;
-	GtkWidget *drag_spin_button;
-	GtkWidget *name_entry;
-	GtkWidget *type_entry;
-	GtkWidget *midi_value_spin_button;
-}; 
-
-void note_on(int fd, unsigned char value, unsigned char volume);
-void note_off(int fd, unsigned char value, unsigned char volume);
-void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
-
-void int_note_on(int fd, unsigned char value, unsigned char volume);
-void int_note_off(int fd, unsigned char value, unsigned char volume);
-void int_send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
-
-#define EXTERNAL_DEVICE 0
-#define INTERNAL_DEVICE 1
-
-struct device_access_method {
-	void (*note_on)(int fd, unsigned char value, unsigned char volume);
-	void (*note_off)(int fd, unsigned char value, unsigned char volume);
-	void (*send_midi_patch_change)(int fd, unsigned short bank, unsigned char patch);
-} access_method[] = { 
-	{ note_on, note_off, send_midi_patch_change }, /* external MIDI device */
-	{ int_note_on, int_note_off, int_send_midi_patch_change }, /* internal MIDI device */
-};
-
-struct device_access_method *access_device = &access_method[EXTERNAL_DEVICE];
-
-int flatten_pattern(int ckit, int cpattern);
-int unflatten_pattern(int ckit, int cpattern);
+	return option_menu;
+}
+/*  . . . End of code copied from gtk tutorial. */
 
 int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct drumkit_struct *drumkit)
 {
@@ -1432,7 +1292,7 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 {
 	printf("Pattern stop button.\n");
 	kill(player_process_pid, SIGUSR1);
-	if (measure_transport_tag != -1) {
+	if (measure_transport_tag != -1 && measure_transport_tag != 0) {
 		g_source_remove(measure_transport_tag);
 		measure_transport_tag = -1;
 	}
@@ -2106,115 +1966,6 @@ int xpect(FILE *f, int *lc, char *line, char *value)
 	return 0;	
 }
 
-void init_measures();
-
-int load_from_file_version_1(FILE *f)
-{
-	char line[255];
-	int linecount;
-	int ninsts;
-	int i,j, rc;
-	int hidden;
-	int fileformatversion;
-
-
-	printf("Hmm, old file format version 1, will update on save.\n");
-	linecount = 1;
-	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
-	linecount++;
-	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Make:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Model:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Name:") == -1) return -1;
-
-	rc = fscanf(f, "Instruments: %d\n", &ninsts);
-	if (rc != 1)  {
-		printf("%d: error\n", linecount);
-		return -1;
-	}
-	linecount++;
-
-	for (i=0;i<ninsts;i++) {
-		fscanf(f, "Instrument %*d: '%*[^']%*c %d\n", &hidden);
-		/* this is questionable if drumkits don't match... */
-		if (i<drumkit[kit].ninsts) {
-			struct instrument_struct *inst = &drumkit[kit].instrument[i];
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
-				(gboolean) hidden);
-		}
-	}
-	rc = fscanf(f, "Patterns: %d\n", &npatterns);
-	for (i=0;i<npatterns;i++) {
-		struct hitpattern **h;
-		pattern[i] = pattern_struct_alloc(i);
-		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
-				&pattern[i]->beats_per_minute, pattern[i]->patname);
-		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
-		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
-			&pattern[i]->timediv[0].division,
-			&pattern[i]->timediv[1].division,
-			&pattern[i]->timediv[2].division,
-			&pattern[i]->timediv[3].division,
-			&pattern[i]->timediv[4].division);
-		if (rc != 5)
-			printf("Bad divisions...\n");
-		while (1) {
-			rc = fscanf(f, "%[^\n]%*c", line);
-			if (strcmp(line, "END-OF-PATTERN") == 0) {
-				/* printf("end of pattern\n"); fflush(stderr); */
-				break;
-			}
-			*h = malloc(sizeof(struct hitpattern));
-			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
-				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
-				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
-
-			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
-				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
-				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
-			/* Holy shit, scanf with %g doesn't actually work! */
-			if ((*h)->h.beats_per_measure == 0) {
-				printf("Corrupted file?  beats_per_measure was zero... Guessing 4.\n");
-				(*h)->h.beats_per_measure = 4;
-			}
-			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
-
-			/* printf("new time is %g\n", (*h)->h.time); */
-			if (rc != 6) 
-				printf("rc != 6!\n");
-			h = &(*h)->next;
-		}
-		make_new_pattern_widgets(i, i+1);
-	}
-	rc = fscanf(f, "Measures: %d\n", &nmeasures);
-	for (i=0;i<nmeasures;i++) {
-		fscanf(f, "m:%*d np:%d\n", &measure[i].npatterns);
-		if (measure[i].npatterns != 0) {
-			for (j=0;j<measure[i].npatterns;j++)
-				fscanf(f, "%d ", &measure[i].pattern[j]);
-			fscanf(f, "\n");
-		}
-		/* printf("m:%*d t:%d p:%d\n", measure[i].tempo, measure[i].pattern); */
-	}
-	rc = fscanf(f, "Tempo changes: %d\n", &ntempochanges);
-	for (i=0;i<ntempochanges;i++) {
-		fscanf(f, "m:%d bpm:%d\n", &tempo_change[i].measure,
-			&tempo_change[i].beats_per_minute);
-	}
-	fclose(f);
-
-	edit_pattern(0);
-/*
-	cpattern = 0;
-	unflatten_pattern(kit, cpattern);
-	for (i=0;i<drumkit[kit].ninsts; i++)
-		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas); */
-
-	return 0;
-}
-
 int load_from_file_version_2(FILE *f)
 {
 	char line[255];
@@ -2423,6 +2174,8 @@ int find_tempo(int measure)
 	}
 	return tempo;
 }
+
+void init_measures();
 
 int load_from_file(const char *filename)
 {
@@ -2937,10 +2690,11 @@ int about_activate(GtkWidget *widget, gpointer data)
 int main(int argc, char *argv[])
 {
 	GtkWidget *abox;
+	GtkWidget *menu_box;
 	GtkWidget *a_button_box;
 	GtkWidget *stop_button;
-	GtkWidget *save_button;
-	GtkWidget *load_button;
+	/* GtkWidget *save_button;
+	GtkWidget *load_button; */
 	GtkWidget *pattern_play_button;
 	GtkWidget *pattern_stop_button;
 	GtkWidget *pattern_clear_button;
@@ -3399,21 +3153,42 @@ int main(int argc, char *argv[])
 		"MIDI patch change messages.", NULL);
 	g_signal_connect(G_OBJECT (midi_setup_activate_button), "clicked",
 			G_CALLBACK (midi_setup_activate), NULL);
-
+#if 0
 	about_button = gtk_button_new_with_label("About Gneutronica");
 	g_signal_connect(G_OBJECT (about_button), "clicked",
 			G_CALLBACK (about_activate), NULL);
+#endif
 
 	abox = gtk_vbox_new(FALSE, 0);
+	menu_box = gtk_vbox_new(FALSE, 0);
 	a_button_box = gtk_hbox_new(FALSE, 0);
 	arranger_box = gtk_hbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER (arranger_window), abox);
+
+	/* Menu code taken from gtk tutorial . . .  */
+
+	/* Get the three types of menu.  Note: all three menus are */
+	/* separately created, so they are not the same menu */
+	main_menubar = get_menubar_menu(window);
+	main_popup_button = get_popup_menu();
+	main_option_menu = get_option_menu();
+
+	/* Pack it all together */
+	gtk_box_pack_start(GTK_BOX (menu_box), main_menubar, FALSE, TRUE, 0);
+	/* gtk_box_pack_end(GTK_BOX (menu_box), main_popup_button, FALSE, TRUE, 0);
+	gtk_box_pack_end(GTK_BOX (menu_box), main_option_menu, FALSE, TRUE, 0); */
+
+	/* . . . End menu code taken from gtk tutorial. */
+
+	gtk_box_pack_start(GTK_BOX(abox), menu_box, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(abox), arranger_box, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), arr_loop_check_button, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), midi_setup_activate_button, FALSE, FALSE, 0);
+#if 0
 	gtk_box_pack_start(GTK_BOX(arranger_box), about_button, FALSE, FALSE, 0);
+#endif
 	gtk_box_pack_start(GTK_BOX(abox), arranger_scroller, TRUE, TRUE, 0);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(arranger_scroller), 
 		arranger_table);
@@ -3426,14 +3201,13 @@ int main(int argc, char *argv[])
 		"Send selected measures to MIDI device for playback", NULL);
 	stop_button = gtk_button_new_with_label("Stop");
 	gtk_tooltips_set_tip(tooltips, stop_button, "Stop any MIDI playback in progress", NULL);
+#if 0
 	save_button = gtk_button_new_with_label("Save");
 	gtk_tooltips_set_tip(tooltips, save_button, "Save this song to a file", NULL);
 	load_button = gtk_button_new_with_label("Load");
 	gtk_tooltips_set_tip(tooltips, load_button, 
 		"Discard the current song and load another one from a file.", NULL);
-	quitbutton = gtk_button_new_with_label("Quit");
-	gtk_tooltips_set_tip(tooltips, quitbutton, 
-		"Discard the current song and quit Gneutronica.", NULL);
+#endif
 	gtk_box_pack_start(GTK_BOX(a_button_box), play_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (play_button), "clicked",
 			G_CALLBACK (arranger_play_button_clicked), NULL);
@@ -3443,15 +3217,14 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(a_button_box), stop_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (stop_button), "clicked",
 			G_CALLBACK (pattern_stop_button_clicked), NULL);
+#if 0
 	gtk_box_pack_start(GTK_BOX(a_button_box), save_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (save_button), "clicked", 
 			G_CALLBACK (save_button_clicked), NULL);
 	gtk_box_pack_start(GTK_BOX(a_button_box), load_button, TRUE, TRUE, 0);
 	g_signal_connect(G_OBJECT (load_button), "clicked", 
 			G_CALLBACK (load_button_clicked), NULL);
-	gtk_box_pack_start(GTK_BOX(a_button_box), quitbutton, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT (quitbutton), "clicked", 
-			G_CALLBACK (destroy_event), NULL);
+#endif
 	g_signal_connect(G_OBJECT (arranger_window), "delete_event", 
 		// G_CALLBACK (delete_event), NULL);
 		G_CALLBACK (destroy_event), NULL);
