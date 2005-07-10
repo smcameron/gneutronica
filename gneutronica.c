@@ -348,6 +348,44 @@ int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct dr
 	return 0;
 }
 
+int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
+{
+	struct drumkit_struct *dk;
+	int rc, i;
+
+	dk = &drumkit[*ndrumkits];
+	dk->ninsts = 127;
+	strcpy(dk->make, "No name");
+	strcpy(dk->model, "No name");
+	strcpy(dk->name, "No name");
+
+	if (dk->instrument != NULL)
+		free(dk->instrument);
+
+	dk->instrument = malloc(sizeof(struct instrument_struct)*MAXINSTS);
+	if (dk->instrument == NULL) {
+		fprintf(stderr, "Out of memory\n");
+		return -1;
+	}
+	memset(dk->instrument, 0, sizeof(struct instrument_struct)*MAXINSTS);
+
+	for (i=0;i<127;i++) {
+
+		/* No space in name so editing later is easier, double click instead of triple click
+		   to highlight and replace with real name. */
+		sprintf(dk->instrument[i].name, "Instrument%d", i);  
+		sprintf(dk->instrument[i].type, "description");
+		dk->instrument[i].midivalue = i;
+		dk->instrument[i].instrument_num = i;
+		dk->instrument[i].hit = NULL;
+		dk->instrument[i].button = NULL;
+		dk->instrument[i].hidebutton = NULL;
+		dk->instrument[i].canvas = NULL;
+	}
+	*ndrumkits++;
+	return 0;
+}
+
 int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 {
 	FILE *f;
@@ -2934,8 +2972,8 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");
 	strcpy(drumkitfile, "drumkits/generic.dk");
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
-	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
+	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
         while ((c = getopt(argc, argv, "k:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(device, optarg); break;
@@ -2979,7 +3017,8 @@ int main(int argc, char *argv[])
 	if (rc != 0) {
 		fprintf(stderr, "Can't read drumkit file, "
 			"perhaps you need to specify '-k drumkitfile' option?\n");
-		exit(1);
+		fprintf(stderr, "Proceeding anyway with a very generic default kit instead.\n");
+		make_default_drumkit(&ndrumkits, drumkit);
 	}
 	kit = 0;
 	dk = &drumkit[kit];
