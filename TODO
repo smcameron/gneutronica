@@ -1,0 +1,26 @@
+* figure out how to schedule note-off events
+
+* Make it work with the ALSA sequencer, instead of (or in addition to?) using
+the raw midi devices like it does now, so the MIDI events can be routed
+around to differnent places.
+
+* Autoconfiscate it.
+
+* Clean up some of the debugging output
+
+* Deleting and Inserting of patterns (the lack of this is not as bad as
+  it sounds, since it's measures, not patterns that control which patterns
+  get played in what order.)
+
+* Maybe redo the arrangement window as a single large drawing area,
+  or figure out how to make selection not so weird, and how to scroll
+  horizontally without scrolling the pattern names, and scroll vertically
+  without scrolling the stoff at the top.
+
+* export to MIDI file
+
+* better buttons for the top row of the arrangement window.
+
+* Anything else?
+
+
