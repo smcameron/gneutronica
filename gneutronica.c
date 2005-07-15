@@ -1667,6 +1667,16 @@ void nextbutton_clicked(GtkWidget *widget,
 }
 
 
+void instrument_clear_button_pressed(GtkWidget *widget, 
+	struct instrument_struct *inst)
+{
+	if (inst->hit != NULL) {
+		clear_hitpattern(inst->hit);
+		inst->hit = NULL;
+		gtk_widget_queue_draw(drumkit[kit].instrument[inst->instrument_num].canvas);
+	}
+}
+
 void hello(GtkWidget *widget,
 	struct instrument_struct *data)
 {
@@ -1730,6 +1740,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
 		if (vshidden) {
+			gtk_widget_hide(GTK_WIDGET(inst->clear_button));
 			gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
 			gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
 		}
@@ -1753,6 +1764,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
 			}
 			if (!vshidden) { /* otherwise, already hidden */
+				gtk_widget_hide(GTK_WIDGET(inst->clear_button));
 				gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
 				gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
 			}
@@ -1765,6 +1777,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_show(GTK_WIDGET(inst->midi_value_spin_button));
 			}
 			if (!vshidden) { /* otherwise, already hidden */
+				gtk_widget_show(GTK_WIDGET(inst->clear_button));
 				gtk_widget_show(GTK_WIDGET(inst->volume_slider));
 				gtk_widget_show(GTK_WIDGET(inst->drag_spin_button));
 			}
@@ -2811,7 +2824,7 @@ int main(int argc, char *argv[])
 		PSCROLLER_WIDTH, PSCROLLER_HEIGHT);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (pattern_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	table = gtk_table_new(dk->ninsts + 1,  8, FALSE);
+	table = gtk_table_new(dk->ninsts + 1,  9, FALSE);
 	gtk_box_pack_start(GTK_BOX(box1), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box1), middle_box, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(middle_box), pattern_scroller, TRUE, TRUE, 0);
@@ -2899,6 +2912,11 @@ int main(int argc, char *argv[])
 		inst->volume_adjustment = gtk_adjustment_new((gdouble) DEFAULT_VELOCITY, 
 			0.0, 127.0, 1.0, 1.0, 0.0);
 		inst->volume_slider = gtk_hscale_new(GTK_ADJUSTMENT(inst->volume_adjustment));
+		inst->clear_button = gtk_button_new_with_label("Clear");
+		gtk_tooltips_set_tip(tooltips, inst->clear_button, 
+			"Delete all the notes for this instrument in this pattern.", NULL);
+		g_signal_connect(G_OBJECT (inst->clear_button), "clicked",
+			G_CALLBACK(instrument_clear_button_pressed), (gpointer) inst);
 
 		inst->name_entry = gtk_entry_new();
 		gtk_tooltips_set_tip(tooltips, inst->name_entry, 
@@ -2945,6 +2963,8 @@ int main(int argc, char *argv[])
 		gtk_table_attach(GTK_TABLE(table), inst->drag_spin_button,
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->volume_slider,
+			col, col+1, i, i+1, 0, 0, 0, 0); col++;
+		gtk_table_attach(GTK_TABLE(table), inst->clear_button,
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->button, 
 			col, col+1, i, i+1,
@@ -3248,6 +3268,7 @@ int main(int argc, char *argv[])
 		gtk_widget_hide(inst->type_entry);
 		gtk_widget_hide(inst->midi_value_spin_button);
 		gtk_widget_hide(inst->volume_slider);
+		gtk_widget_hide(inst->clear_button);
 		gtk_widget_hide(inst->drag_spin_button);
 	}
 

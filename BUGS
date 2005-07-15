@@ -6,3 +6,11 @@ Known bugs:
   'Save' again, the second save will crash the program immediately.
   THIS BUG FIXED in v. 0.21
 
+* Getting this message... not sure what it means:
+	(gneutronica:6635): Gtk-CRITICAL **: file gtkmenu.c: line 1588 
+	(gtk_menu_set_accel_path): assertion 
+	`accel_path[0] == '<' && strchr (accel_path, '/')' failed
+  Started happenning when I put in the pull down menu code.  If you know
+  how to fix it, let me know.  <smcameron@users.sourceforge.net>
+
+

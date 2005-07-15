@@ -42,3 +42,7 @@ gneutronica 0.23
 	  gneutronica.c
 	* Added a proper set of pulldown menus, got rid of save/load buttons.
 
+gneutronica 0.24
+	* Added button to each instrument to clear that instrument's notes from 
+	  the current pattern.
+

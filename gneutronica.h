@@ -130,6 +130,7 @@ struct instrument_struct {
 	GtkObject *volume_adjustment;
 	GtkWidget *volume_slider;
 	GtkWidget *drag_spin_button;
+	GtkWidget *clear_button;
 	GtkWidget *name_entry;
 	GtkWidget *type_entry;
 	GtkWidget *midi_value_spin_button;
