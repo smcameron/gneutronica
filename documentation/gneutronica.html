@@ -151,6 +151,18 @@ you click very close to the horizontal line for an instrument, the note will be
 very quiet, and the further above the line you click, the louder the note will be.
 Changing the volume of already placed notes is as easy as clicking on the note
 a little bit higher, or lower to raise or lower the volume for that note.
+Since MIDI note volume (velocity, more precisely) has a range of 0-127, this 
+method of setting the volume, though while quite convenient, is not as precise
+as one might one, since the area of pixels in which you click the mouse is only
+about 30 pixels high, you don't get the full 0-127 values, but only a
+down-sampled 30 values.  There is a "Volume Zoom" feature which allows you
+to expand the height of the area for the current instrument by a preset
+amount.  Using this, you get the same convenience of single-click
+placement of notes in both time and velocity, and you get the needed 
+precision, and as each instrument is automatically expanded and contracted
+as you place notes, you still get to see plenty of instruments onscreen 
+at once. 
+
 
 <p><b>To delete a note,</b> click on it with the right or middle mouse buttons.
 You can also use the "Clear" button that's next to each instrument to delete 

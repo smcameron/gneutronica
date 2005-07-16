@@ -1030,12 +1030,20 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	int rc;
 	unsigned char velocity = DEFAULT_VELOCITY;
 	int change_velocity = (event->button == 1);
+	int height;
 
+	if (current_instrument != data->instrument_num)
+		height = DRAW_HEIGHT;
+	else {
+		height = (int) (((double) 
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+				(double) DRAW_HEIGHT / (double) 100.0) + 1;
+	}
 
 	/* 1st mouse button chooses velocity based on vertical position, like a graph, 
 	   2nd mouse button uses the default velocity set by the volume slider */	
 	if (change_velocity)
-		velocity = 127 - (unsigned char) (((double) event->y / (double) DRAW_HEIGHT) * 127.0);
+		velocity = 127 - (unsigned char) (((double) event->y / (double) height) * 127.0);
 	else
 		velocity = (unsigned char) gtk_range_get_value(GTK_RANGE(data->volume_slider));
 
@@ -1050,6 +1058,21 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	} else if (event->button == 3)
 		remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
 			kit, data->instrument_num, cpattern);
+	if (current_instrument != data->instrument_num) {
+		int i;
+		int prev = current_instrument;
+		int newheight;
+
+		newheight = (int) (((double) 
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+				(double) DRAW_HEIGHT / (double) 100.0) + 1;
+		
+		current_instrument = data->instrument_num;
+		gtk_widget_set_size_request(w, DRAW_WIDTH+1, newheight);
+		gtk_widget_set_size_request(drumkit[kit].instrument[prev].canvas, 
+			DRAW_WIDTH+1, DRAW_HEIGHT+1);
+		gtk_widget_queue_draw(drumkit[kit].instrument[prev].canvas);
+	}
 	gtk_widget_queue_draw(w);
 	return TRUE;
 }
@@ -1206,19 +1229,31 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	GdkColor color, bg;
 	float divs, zero;
 	struct hitpattern *this;
+	int height;
 
+	if (current_instrument == instrument->instrument_num) {
+		height = (int) (((double) 
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+				(double) DRAW_HEIGHT / (double) 100.0) + 1;
+		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
+	} else {
+		height = DRAW_HEIGHT+1;
+		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
+	}
 	gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &whitecolor, FALSE, FALSE);
 	gdk_gc_set_background(gc, &whitecolor);
 	
-	/* gdk_draw_line(w->window, gc, 0,DRAW_HEIGHT / 2, DRAW_WIDTH, DRAW_HEIGHT / 2); */
-	/* gdk_draw_line(w->window, gc, 0,0, DRAW_WIDTH, DRAW_HEIGHT);
-	gdk_draw_line(w->window, gc, 0,DRAW_HEIGHT, DRAW_WIDTH, 0); */
-	gdk_draw_line(w->window, gc, 0,DRAW_HEIGHT, DRAW_WIDTH, DRAW_HEIGHT); 
-	gdk_draw_line(w->window, gc, 0,0, 0, DRAW_HEIGHT);
-	gdk_draw_line(w->window, gc, DRAW_WIDTH,0, DRAW_WIDTH, DRAW_HEIGHT);
+/*	gdk_draw_line(w->window, gc, 0,height / 2, DRAW_WIDTH, height / 2);
+	gdk_draw_line(w->window, gc, 0,0, DRAW_WIDTH, height);
+	gdk_draw_line(w->window, gc, 0,height, DRAW_WIDTH, 0); */
+
+	gdk_draw_line(w->window, gc, 0, height-1, DRAW_WIDTH, height-1); 
+	gdk_draw_line(w->window, gc, 0,0, 0, height);
+	gdk_draw_line(w->window, gc, DRAW_WIDTH,0, DRAW_WIDTH, height);
 
 	// for (i=0;i<ndivisions;i++) {
 	for (i=ndivisions-1;i>=0;i--) {
+		int k;
 		divs =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
 		zero = divs - 0.0;
 		if (zero < 0) 
@@ -1226,13 +1261,19 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		if (zero <= 0.000001) /* not using this one */
 			continue;
 
-		diff = (double) DRAW_WIDTH / divs;
+		// diff = (double) DRAW_WIDTH / divs;
+		diff = 0.0;
 		memset(&color, 0, sizeof(color));
 		gdk_color_parse(timediv[i].color, &color);
 		gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &color, FALSE, FALSE);
 		gdk_gc_set_foreground(gc, &color);
 		for (j=0;j<divs;j++) {
-			gdk_draw_line(w->window, gc, (int) diff, 0, (int) diff, DRAW_HEIGHT);
+			gdk_draw_line(w->window, gc, (int) diff, 0, (int) diff, height);
+			if (current_instrument == instrument->instrument_num && height > 60) {
+				for (k=0;k<10;k++)
+					gdk_draw_line(w->window, gc, (int) (diff - 3), (height / 10) * k, 
+						(int) (diff + 3), (height / 10) * k);
+			}
 			diff += (double) DRAW_WIDTH / divs;
 		}
 		gdk_colormap_free_colors(gtk_widget_get_colormap(w), &color, 1);
@@ -1250,10 +1291,10 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	for (this = instrument->hit; this != NULL; this = this->next) {
 		double x1,y1,x2,y2;
 
-		y1 = (DRAW_HEIGHT / 2)-5;
+		y1 = (height / 2)-5;
 		x1 = this->h.time * DRAW_WIDTH /* - 5 */ ;
-		y1 = DRAW_HEIGHT - (int) (((double) DRAW_HEIGHT * (double) this->h.velocity) / 127.0);
-		y2 = DRAW_HEIGHT;
+		y1 = height - (int) (((double) height * (double) this->h.velocity) / 127.0);
+		y2 = height;
 		x2 = x1 + 10;
 		/* g_print("x1=%g, y1=%g, x2=%g, y2=%g\n", x1, y1, x2, y2); */
 		gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y2);
@@ -2844,6 +2885,13 @@ int about_activate(GtkWidget *widget, gpointer data)
 				G_CALLBACK (about_ok_callback), NULL);
 	}
 	gtk_widget_show_all(about_window);
+	return TRUE;
+}
+
+int volume_magnifier_changed(GtkWidget *widget, gpointer data)
+{
+	gtk_widget_queue_draw(drumkit[kit].instrument[current_instrument].canvas);
+	return TRUE;
 }
 
 int main(int argc, char *argv[])
@@ -2859,7 +2907,10 @@ int main(int argc, char *argv[])
 	GtkWidget *pattern_clear_button;
 	GtkWidget *box1, *box2, *middle_box, *linebox;
 	GtkWidget *topbox;
+	GtkWidget *checkvbox;
 	GtkWidget *table;
+	GtkWidget *misctable;
+	GtkWidget *volume_zoom_label;
 
 	struct drumkit_struct *dk;
 	unsigned char shared_buf[4096];
@@ -2959,6 +3010,7 @@ int main(int argc, char *argv[])
 
 	box1 = gtk_vbox_new(FALSE, 0);
 	topbox = gtk_hbox_new(FALSE, 0);
+	checkvbox = gtk_vbox_new(FALSE,0);
 	box2 = gtk_hbox_new(FALSE, 0);
 	middle_box = gtk_hbox_new(FALSE, 0);
 	linebox = gtk_vbox_new(FALSE, 0);
@@ -2979,13 +3031,13 @@ int main(int argc, char *argv[])
 	/* gtk_box_pack_start(GTK_BOX(box1), table, TRUE, TRUE, 0); */
 	gtk_box_pack_start(GTK_BOX(box1), box2, FALSE, FALSE, 0);
 
-	hide_instruments = gtk_check_button_new_with_label("Hide unchecked\ninstruments");
+	hide_instruments = gtk_check_button_new_with_label("Hide unchecked instruments");
 	g_signal_connect(G_OBJECT (hide_instruments), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	gtk_tooltips_set_tip(tooltips, hide_instruments, 
 		"Hide the instruments below which do not have a "
 		"check beside them to reduce visual clutter.", NULL);
-	hide_volume_sliders = gtk_check_button_new_with_label("Hide instrument\nattributes");
+	hide_volume_sliders = gtk_check_button_new_with_label("Hide instrument attributes");
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hide_volume_sliders), TRUE);
 	g_signal_connect(G_OBJECT (hide_volume_sliders), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
@@ -3011,14 +3063,17 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (edit_instruments_toggle), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	pattern_name_label = gtk_label_new("Pattern:");
+	gtk_label_set_justify(GTK_LABEL(pattern_name_label), GTK_JUSTIFY_RIGHT);
 	pattern_name_entry = gtk_entry_new();
 	gtk_tooltips_set_tip(tooltips, pattern_name_entry, 
 		"Assign a name to this pattern.", NULL);
 	tempolabel1 = gtk_label_new("Beats/Min");
+	gtk_label_set_justify(GTK_LABEL(tempolabel1), GTK_JUSTIFY_RIGHT);
 	tempospin1 = gtk_spin_button_new_with_range(10, 400, 1);
 	gtk_tooltips_set_tip(tooltips, tempospin1, "Controls tempo only for single pattern playback, "
 			"does not affect the tempo in the context of the song.", NULL);
 	tempolabel2 = gtk_label_new("Beats/Measure");
+	gtk_label_set_justify(GTK_LABEL(tempolabel2), GTK_JUSTIFY_RIGHT);
 	tempospin2 = gtk_spin_button_new_with_range(1,  400, 1);
 	gtk_tooltips_set_tip(tooltips, tempospin2, "Controls tempo for single pattern playback, "
 			"and DOES affect the tempo in the context of the song."
@@ -3026,19 +3081,40 @@ int main(int argc, char *argv[])
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) 120);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) 4);
 
-	gtk_box_pack_start(GTK_BOX(topbox), hide_instruments, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(topbox), hide_volume_sliders, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(topbox), snap_to_grid, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), checkvbox, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(checkvbox), hide_instruments, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(checkvbox), hide_volume_sliders, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(checkvbox), snap_to_grid, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), drumkit_vbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), save_drumkit_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), edit_instruments_toggle, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(topbox), pattern_name_label, TRUE, TRUE, 0);
+
+	misctable = gtk_table_new(2, 3, FALSE);
+	gtk_box_pack_start(GTK_BOX(topbox), misctable, TRUE, TRUE, 0);
+	/* gtk_box_pack_start(GTK_BOX(topbox), pattern_name_label, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), pattern_name_entry, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), tempolabel1, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), tempospin1, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), tempolabel2, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(topbox), tempospin2, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), tempospin2, TRUE, TRUE, 0); */
+	gtk_table_attach(GTK_TABLE(misctable), pattern_name_label, 0, 1, 0, 1, 0, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(misctable), pattern_name_entry, 1, 2, 0, 1, GTK_FILL, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(misctable), tempolabel1, 0, 1, 1, 2, 0, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(misctable), tempospin1, 1, 2, 1, 2, GTK_FILL, 0,1,1);
+	gtk_table_attach(GTK_TABLE(misctable), tempolabel2, 0, 1, 2, 3, 0, 0, 0,0);
+	gtk_table_attach(GTK_TABLE(misctable), tempospin2, 1, 2, 2, 3, GTK_FILL, 0, 1,1);
 
+	volume_zoom_label= gtk_label_new("Volume Zoom");
+	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) 100.0, 
+			100.0, 600.0, 10.0, 1.0, 0.0);
+	volume_magnifier = gtk_hscale_new(GTK_ADJUSTMENT(volume_magnifier_adjustment));
+	gtk_tooltips_set_tip(tooltips, volume_magnifier, "Controls how much the volume scale is magnified"
+		" for the current instrument from no magnification to 6x.  It allows note volumes to be"
+		" more precisely specified.", NULL);
+	gtk_box_pack_start(GTK_BOX(topbox), volume_zoom_label, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), volume_magnifier, TRUE, TRUE, 0);
+	g_signal_connect(G_OBJECT (volume_magnifier), "value-changed", 
+				G_CALLBACK (volume_magnifier_changed), NULL);
 
 	for (i=0;i<dk->ninsts;i++) {
 		int col;

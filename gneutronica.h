@@ -34,9 +34,10 @@
 #define MAXKITS 100
 #define MAXINSTS 128
 #define DRAW_WIDTH 600
-#define DRAW_HEIGHT 33 
+#define DRAW_HEIGHT 25
+#define MAGNIFIED_DRAW_HEIGHT 130 
 #define MAXTIMEDIVS 5
-#define MEASUREWIDTH 20
+#define MEASUREWIDTH 20 
 #define MINTEMPO 10
 #define MAXTEMPO 400
 #define DEFAULT_VELOCITY 100
@@ -223,6 +224,9 @@ GLOBAL GtkWidget *play_button;
 GLOBAL GtkWidget *play_selection_button;
 GLOBAL GtkTooltips *tooltips;
 
+GLOBAL GtkObject *volume_magnifier_adjustment;
+GLOBAL GtkWidget *volume_magnifier;
+
 GLOBAL GtkWidget *TempoChWin;
 GLOBAL GtkWidget *TempoChvbox1;
 GLOBAL GtkWidget *TempoChhbox1;
@@ -309,6 +313,7 @@ GLOBAL int INIT(cmeasure, 0);
 GLOBAL int INIT(cpattern, 0);
 GLOBAL int INIT(kit, 0);
 GLOBAL int INIT(nmeasures, 0);
+GLOBAL int INIT(current_instrument,0);
 
 GLOBAL void note_on(int fd, unsigned char value, unsigned char volume);
 GLOBAL void note_off(int fd, unsigned char value, unsigned char volume);
