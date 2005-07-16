@@ -46,3 +46,5 @@ gneutronica 0.24
 	* Added button to each instrument to clear that instrument's notes from 
 	  the current pattern.
 
+	* Added capability to import the patterns from another song.
+

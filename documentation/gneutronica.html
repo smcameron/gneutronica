@@ -1,7 +1,8 @@
 <html>
-<title>Gneutronica Documentation (such as it is)
+<title>Gneutronica Documentation (such as it is)</title>
 <body>
 <h1><p align=center>Gneutronica -- a MIDI drum machine for Linux</h1>
+<p align=center><a href="http://sourceforge.net/projects/gneutronica/">Download Source Code</a>.
 <p align=center><img src="gneutronica_robot.png">
 <p align=center><font size=-1>Last Updated Jul 9, 2005, by Stephen Cameron</font>
 <hr>
@@ -152,6 +153,9 @@ Changing the volume of already placed notes is as easy as clicking on the note
 a little bit higher, or lower to raise or lower the volume for that note.
 
 <p><b>To delete a note,</b> click on it with the right or middle mouse buttons.
+You can also use the "Clear" button that's next to each instrument to delete 
+all the notes for that instrument in that pattern. This button
+will only be visible if the "Hide Instrument Attributes" checkbox is not checked.
 
 <p>There is another way to control the volume of notes.  There is a volume
 slider to the left of each instrument.  This sets a default volume.  Whenever
@@ -230,6 +234,22 @@ editor window to jump to that pattern, which is convenient for navigating
 (rather than pressing "<b>Next Pattern</b>" or 
 "<b>Previous Pattern</b>" pattern buttons repeatedly to
 scroll through them all.
+
+<h2>Saving and Loading songs and patterns</h2>
+<p>Under the <b>File</b> menu in the arranger window, you will
+find the following options:
+<ul>
+<li><b>Open</b>: Loads an existing Gneutronica song file into memory.  The current
+song is discarded from memory.
+<li><b>Save</b>: Save the current song to a file.
+<li><b>Save As</b>: Save the current song to a file. (Right now, "Save As" and "Save" 
+are pretty much identical.)
+<li><b>Import Patterns</b>:  This allows you to load just the patterns from an existing
+song, but not the arrangement.  It does not discard the current song, it just adds the
+patterns fron another song to the current song.  In order for this to work nicely,
+the drumkits the two songs use must be the same, or at least similar in that they have
+instruments sharing the same roles in the same locations in the drum kit.  At some point
+there may be a feature to remap patterns from one drumkit to another, but not yet.
 
 <p><b>Some things Gneutronica doesn't do</b>
 

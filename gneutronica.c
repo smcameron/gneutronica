@@ -56,6 +56,7 @@ void print_hello()
 
 void load_button_clicked(GtkWidget *widget, gpointer data);
 void save_button_clicked(GtkWidget *widget, gpointer data);
+void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
@@ -69,6 +70,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/_Save",    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
 	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
+	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
 	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
 	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
@@ -1381,35 +1383,45 @@ void schedule_measures(int start, int end)
 int load_from_file(const char *filename);
 
 void loadbox_file_selected(GtkWidget *widget,
-	GtkFileSelection *SaveBox)
+	GtkFileSelection *FileBox)
 {
 	const char *filename;
-	filename = gtk_file_selection_get_filename(SaveBox);
-	gtk_widget_hide(GTK_WIDGET(SaveBox));
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
 	load_from_file(filename);
 }
 
 void savebox_file_selected(GtkWidget *widget,
-	GtkFileSelection *SaveBox)
+	GtkFileSelection *FileBox)
 {
 	const char *filename;
-	filename = gtk_file_selection_get_filename(SaveBox);
-	gtk_widget_hide(GTK_WIDGET(SaveBox));
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
 	save_to_file(filename);
 }
 
 void savedrumkitbox_file_selected(GtkWidget *widget,
-	GtkFileSelection *SaveBox)
+	GtkFileSelection *FileBox)
 {
 	const char *filename;
-	filename = gtk_file_selection_get_filename(SaveBox);
-	gtk_widget_hide(GTK_WIDGET(SaveBox));
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
 	save_drumkit_to_file(filename);
+}
+
+void import_patterns_file_selected(GtkWidget *widget,
+	GtkFileSelection *FileBox)
+{
+	const char *filename;
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
+	import_patterns_from_file(filename);
 }
 
 #define SAVE_SONG 0
 #define LOAD_SONG 1
 #define SAVE_DRUMKIT 2
+#define IMPORT_PATTERNS 3
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1418,6 +1430,7 @@ static struct file_dialog_descriptor {
 	{ "Save Song", &SaveBox, (void *) savebox_file_selected, },
 	{ "Load Song", &LoadBox, (void *) loadbox_file_selected, },
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
+	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
 };
 	
 GtkWidget *make_file_dialog(int i)
@@ -1439,6 +1452,12 @@ GtkWidget *make_file_dialog(int i)
 		"clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT (w));
 	gtk_widget_show(w);
 	return w;
+}
+
+void import_patterns_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	make_file_dialog(IMPORT_PATTERNS);
 }
 
 void save_button_clicked(GtkWidget *widget,
@@ -2189,6 +2208,133 @@ int find_tempo(int measure)
 }
 
 void init_measures();
+
+int import_patterns_v2(FILE *f)
+{
+	char line[255];
+	int linecount;
+	int ninsts;
+	int i,j,count, rc;
+	int hidden;
+	int fileformatversion;
+	int fake_ninsts;
+	int newpatterns;
+
+	linecount = 1;
+	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
+	linecount++;
+	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Make:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Model:") == -1) return -1;
+	if (xpect(f, &linecount, line, "Drumkit Name:") == -1) return -1;
+
+	rc = fscanf(f, "Instruments: %d\n", &fake_ninsts);
+	if (rc != 1)  {
+		printf("%d: error\n", linecount);
+		return -1;
+	}
+	linecount++;
+
+	/* skip all the instrumets . . . may want to add drumkit remapping code here */
+	for (i=0;i<fake_ninsts;i++)
+		fscanf(f, "Instrument %*d: '%*[^']%*c %*d\n");
+
+	rc = fscanf(f, "Patterns: %d\n", &newpatterns);
+	for (i=npatterns;i<npatterns+newpatterns;i++) {
+		struct hitpattern **h;
+		pattern[i] = pattern_struct_alloc(i);
+		h = &pattern[i]->hitpattern;
+		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
+		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
+			&pattern[i]->timediv[0].division,
+			&pattern[i]->timediv[1].division,
+			&pattern[i]->timediv[2].division,
+			&pattern[i]->timediv[3].division,
+			&pattern[i]->timediv[4].division);
+		if (rc != 5)
+			printf("Bad divisions...\n");
+		while (1) {
+			rc = fscanf(f, "%[^\n]%*c", line);
+			if (strcmp(line, "END-OF-PATTERN") == 0) {
+				/* printf("end of pattern\n"); fflush(stderr); */
+				break;
+			}
+			*h = malloc(sizeof(struct hitpattern));
+			(*h)->next = NULL;
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
+				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
+				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
+			/* Holy shit, scanf with %g doesn't actually work! */
+			if ((*h)->h.beats_per_measure == 0) {
+				printf("Corrupted file?  beats_per_measure was zero... Guessing 4.\n");
+				(*h)->h.beats_per_measure = 4;
+			}
+			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+
+			/* printf("new time is %g\n", (*h)->h.time); */
+			if (rc != 6) 
+				printf("rc != 6!\n");
+			h = &(*h)->next;
+		}
+		rc = fscanf(f, "dragging count: %d\n", &count);
+		for (j=0;j<count;j++) {
+			int ins;
+			long drag;
+			fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			pattern[i]->drag[ins] = (double) (drag / 1000.0);
+		}
+		make_new_pattern_widgets(i, i+1);
+	}
+	fclose(f);
+	npatterns += newpatterns;
+	return 0;
+}
+
+int import_patterns_from_file(const char *filename)
+{
+	/* imports the patterns from another song into the current song. */
+	FILE *f;
+	char line[255];
+	int linecount;
+	int ninsts;
+	int i,j, rc;
+	int hidden;
+	int fileformatversion;
+
+	printf("Import patterns from: %s\n", filename);
+
+	f = fopen(filename, "r");
+	if (f == NULL) {
+		printf("Nope\n");
+		return -1;
+	}
+	rc = fscanf(f, "Gneutronica file format version: %d\n", &fileformatversion);
+	if (rc != 1) {
+		printf("File does not appear to be a %s file.\n",
+			PROGNAME);
+		return -1;
+	}
+
+	switch (fileformatversion) {
+		case 1: printf("\n\nSorry, can't import patterns from this old file format\n");
+			printf("(version %d).\n\n", fileformatversion); 
+			printf("Load this song file into %s, then save it to a new file,\n", PROGNAME);
+			printf("and then import the patterns from the new file.\n\n\n"); 
+			break;
+		case 2: rc = import_patterns_v2(f);
+			break;
+		default: printf("Unsupported file format version: %d\n", 
+			fileformatversion);
+			return -1;
+	}
+	return rc;
+}
 
 int load_from_file(const char *filename)
 {
