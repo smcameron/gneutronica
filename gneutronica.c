@@ -1737,17 +1737,21 @@ void instrument_clear_button_pressed(GtkWidget *widget,
 	}
 }
 
-void hello(GtkWidget *widget,
+void instrument_button_pressed(GtkWidget *widget,
 	struct instrument_struct *data)
 {
 	unsigned char velocity;
 
 	velocity = (unsigned char) gtk_range_get_value(GTK_RANGE(data->volume_slider));
 	if (data != NULL) {
+		int prev = current_instrument;
 		printf("%s\n", data->name);
 		/* should be changed to *schedule* a noteon + noteoff */
 		if (midi_fd >= 0)
 			access_device->note_on(midi_fd, data->midivalue, velocity);
+		current_instrument = data->instrument_num;
+		gtk_widget_queue_draw(drumkit[kit].instrument[prev].canvas);
+		gtk_widget_queue_draw(data->canvas);
 	}
 }
 
@@ -3169,7 +3173,7 @@ int main(int argc, char *argv[])
 
 		inst->canvas = gtk_drawing_area_new();
 		g_signal_connect(G_OBJECT (inst->button), "clicked", 
-				G_CALLBACK (hello), inst);
+				G_CALLBACK (instrument_button_pressed), inst);
 		g_signal_connect(G_OBJECT (inst->canvas), "expose_event",
 				G_CALLBACK (canvas_event), inst);
 		gtk_widget_add_events(inst->canvas, GDK_BUTTON_PRESS_MASK); 
