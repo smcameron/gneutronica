@@ -157,11 +157,15 @@ as one might one, since the area of pixels in which you click the mouse is only
 about 30 pixels high, you don't get the full 0-127 values, but only a
 down-sampled 30 values.  There is a "Volume Zoom" feature which allows you
 to expand the height of the area for the current instrument by a preset
-amount.  Using this, you get the same convenience of single-click
+amount.  You can see this in action above for the instrument "HHPclRkStSW" (hey, that's
+what Yamaha called it -- it's a Hi hat.)  
+Using this, you get the same convenience of single-click
 placement of notes in both time and velocity, and you get the needed 
 precision, and as each instrument is automatically expanded and contracted
 as you place notes, you still get to see plenty of instruments onscreen 
-at once. 
+at once.  Explaining it is more difficult than using, if you just move the
+"Volume Zoom" slider around and watch the screen, and click on a few notes,
+you'll immediately see how it works.
 
 
 <p><b>To delete a note,</b> click on it with the right or middle mouse buttons.
@@ -193,6 +197,18 @@ will use just a few instruments, but the drumkits typically contain very many
 instruments, which can lead to a lot of superflous scrolling around.  By checking
 the boxes next to the instruments you are actually using, and checking the "Hide
 unchecked instruments" box, you can reduce this scrolling.
+
+<p>Some additional features are available if the "Hide Instrument Attributes"
+checkbox is not checked.  In that case, there will be a "spinbox" at the
+extreme left hand side of each instrument row in the pattern window.  This
+controls "drag" or "rushing" of an instrument.  You set the percentage of
+a beat you wish the instrument to "drag" behind the "correct" time.  If you
+use a negative number, you get negative drag, or, rushing, the instrument 
+will play "too soon," compared to correct time.
+<p>Next to the drag control is the default volume control, a simple slider
+which sets the default volume for notes.  (See more above about setting
+the volume of notes.)  After the default volume control is a button to
+clear all the notes of that instrument from a pattern.
 
 <h1>Arranging patterns into a song</h1>
 <p>Here is the arranger window:
@@ -262,19 +278,23 @@ patterns fron another song to the current song.  In order for this to work nicel
 the drumkits the two songs use must be the same, or at least similar in that they have
 instruments sharing the same roles in the same locations in the drum kit.  At some point
 there may be a feature to remap patterns from one drumkit to another, but not yet.
-
+</ul>
 <p><b>Some things Gneutronica doesn't do</b>
 
 <ul>
 <li>Interconnect with Jack.  (I don't really know if it even makes sense for a MIDI app.)
 <li>Talk to soundcard based MIDI "devices" (soundfonts).  Probably not hard to make that 
-work.
+work.  If you use virtual midi devices, it may actually work already.  If you find this
+to be the case, please write me and let me know a few details. 
+<smcameron@users.sourceforge.net>
 <li>Do any sort of sample-based playback.  It's strictly MIDI.
 <li>Export or import MIDI files.  It talks the MIDI protocol, not 
 the MIDI file format.  Producing MIDI files seems like it would be
 useful, so I suppose that might be something to work on one day.  
+I looked into some info about MIDI file formats, and this actually
+seems fairly easy, so this will probably be done fairly soon.
 Reading MIDI input from a keyboard or drumpads seems 
-extremely unlikely to ever occur.
+extremely unlikely to ever occur, however.
 <li>... probably some other stuff.
 </ul>
 
