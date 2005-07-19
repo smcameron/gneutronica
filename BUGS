@@ -13,4 +13,8 @@ Known bugs:
   Started happenning when I put in the pull down menu code.  If you know
   how to fix it, let me know.  <smcameron@users.sourceforge.net>
 
+* It appears that "rushing" (using negative drag) on an instrument
+  does not actually work.
+
+
 
