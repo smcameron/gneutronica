@@ -22,8 +22,13 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <malloc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "sched.h"
+#include "midi_file.h"
 
 #define SEC 1000000
 #define MAXEVENTS 100000
@@ -63,6 +68,18 @@ int rtime_to_atime(struct timeval *basetime,
 		basetime->tv_sec, basetime->tv_usec,
 		rtime->tv_sec, rtime->tv_usec,
 		atime->tv_sec, atime->tv_usec); */
+}
+
+int msdiff(struct timeval *tm, struct timeval *prevtm)
+{
+	long long diff;
+	int answer;
+
+	diff = (long long) 1000000 * (long long) (tm->tv_sec - prevtm->tv_sec);
+	diff = diff - (long long) prevtm->tv_usec + (long long) tm->tv_usec;
+	diff = diff / (long long) 1000;
+	answer = (int) diff;
+	return answer;
 }
 
 int wait_for(struct timeval *tm)
@@ -330,5 +347,50 @@ void set_transport_meter(int *measure, int *percent)
 {
 	pmeasure = measure;
 	ppercent = percent;
+}
+
+void write_midi_event(int fd, struct event *e)
+{
+	switch (e->e.eventtype) {
+	case NOTE_ON: 
+	case NOTE_OFF: 
+		write_note(fd, &e->rtime, 
+			e->e.eventtype, e->e.note, e->e.velocity);
+		break;
+	case NO_OP:
+		break;
+	default:
+		printf("Unknown event type %d\n", e->e.eventtype);
+		break;
+	}
+	
+}
+
+void write_sched_to_midi_file(struct schedule_t *sched, const char *filename)
+{
+	int fd, i;
+	int currpos;
+	printf("write_sched_to_midi file was called\n");
+
+	fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	if (fd < 0) {
+		fprintf(stderr, "Can't open %s, %s\n", filename, strerror(errno));
+		return;
+	}
+	printf("fd = %d\n", fd);
+	write_MThd(fd);
+	write_MTrk(fd);
+	for (i=0;i<sched->nevents;i++)
+		write_midi_event(fd, sched->e[i]);
+
+	/* figure Mtrk size, and fixup file */
+	currpos = lseek(fd, 0L, SEEK_CUR);
+	printf("currpos - 22 = %d\n", currpos -22);
+	currpos = htonl(currpos - 22L); 
+
+	lseek(fd, 18L, SEEK_SET);
+	write(fd, &currpos, 4); 
+	close(fd);
+	return;
 }
 

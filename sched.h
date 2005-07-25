@@ -74,10 +74,11 @@ int sched_noop(struct schedule_t *s,
 		int measure, /* transport location */
 		int percent
 		);
-
+int msdiff(struct timeval *tm, struct timeval *prevtm);
 void free_schedule(struct schedule_t *s);
 void print_schedule(struct schedule_t *s);
 
 void set_transport_meter(int *measure, int *percent);
+void write_sched_to_midi_file(struct schedule_t *sched, const char *filename);
 
 #endif

@@ -211,6 +211,7 @@ GLOBAL GtkWidget *SaveBox;
 GLOBAL GtkWidget *LoadBox;
 GLOBAL GtkWidget *SaveDrumkitBox;
 GLOBAL GtkWidget *ImportPatternsBox;
+GLOBAL GtkWidget *export_to_midi_box;
 GLOBAL GtkWidget *midi_setup_activate_button;
 GLOBAL GtkWidget *hide_instruments;
 GLOBAL GtkWidget *hide_volume_sliders;

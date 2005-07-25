@@ -58,6 +58,7 @@ void load_button_clicked(GtkWidget *widget, gpointer data);
 void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
+void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -71,6 +72,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
+	{ "/File/_Export Song to MIDI file (doesn't quite work yet)", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
 	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
@@ -1421,6 +1423,25 @@ void schedule_measures(int start, int end)
 	}
 }
 
+int export_to_midi_file(const char *filename)
+{
+	printf("Export to midi file %s\n", filename);
+	int start, end;
+
+	start = 0;
+	end = nmeasures;
+
+	if (start < 0 || end < start)
+		return;
+
+	flatten_pattern(kit, cpattern);
+	schedule_measures(start, end);
+	/* print_schedule(&sched); */
+	write_sched_to_midi_file(&sched, filename);
+	free_schedule(&sched);
+	return TRUE;
+}
+
 int load_from_file(const char *filename);
 
 void loadbox_file_selected(GtkWidget *widget,
@@ -1459,10 +1480,20 @@ void import_patterns_file_selected(GtkWidget *widget,
 	import_patterns_from_file(filename);
 }
 
+void export_to_midi(GtkWidget *widget,
+	GtkFileSelection *FileBox)
+{
+	const char *filename;
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
+	export_to_midi_file(filename);
+}
+
 #define SAVE_SONG 0
 #define LOAD_SONG 1
 #define SAVE_DRUMKIT 2
 #define IMPORT_PATTERNS 3
+#define EXPORT_TO_MIDI 4
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1472,6 +1503,7 @@ static struct file_dialog_descriptor {
 	{ "Load Song", &LoadBox, (void *) loadbox_file_selected, },
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
 	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
+	{ "Export Song to MIDI file", &export_to_midi_box, (void *) export_to_midi, },
 };
 	
 GtkWidget *make_file_dialog(int i)
@@ -1493,6 +1525,12 @@ GtkWidget *make_file_dialog(int i)
 		"clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT (w));
 	gtk_widget_show(w);
 	return w;
+}
+
+void export_midi_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	make_file_dialog(EXPORT_TO_MIDI);
 }
 
 void import_patterns_button_clicked(GtkWidget *widget,

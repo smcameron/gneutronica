@@ -50,3 +50,5 @@ gneutronica 0.24
 
 	* Added "volume zoom" capability
 
+	* Added ability to export song to MIDI file.  It's still broken though.
+

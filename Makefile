@@ -12,11 +12,14 @@ documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.
 version.h:	versionnumber.txt
 	@echo '#define VERSION "'`cat versionnumber.txt`'"' > version.h
 
-gneutronica:	gneutronica.c old_fileformats.o sched.o version.h gneutronica.h
+gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
+		version.h gneutronica.h midi_file.h
 	gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
-		gneutronica.c `pkg-config --cflags --libs gtk+-2.0` 
+		midi_file.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0` 
 
-sched.o:	sched.c sched.h		
+sched.o:	sched.c sched.h	midi_file.h
+
+midi_file.o:	midi_file.c midi_file.h
 
 old_fileformats.o:	old_fileformats.c old_fileformats.h gneutronica.h
 		gcc -g -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
