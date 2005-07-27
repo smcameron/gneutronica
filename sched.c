@@ -78,6 +78,7 @@ int msdiff(struct timeval *tm, struct timeval *prevtm)
 	diff = (long long) 1000000 * (long long) (tm->tv_sec - prevtm->tv_sec);
 	diff = diff - (long long) prevtm->tv_usec + (long long) tm->tv_usec;
 	diff = diff / (long long) 1000;
+	/* printf("diff = %lld\n", diff); */
 	answer = (int) diff;
 	return answer;
 }
@@ -353,9 +354,11 @@ void write_midi_event(int fd, struct event *e)
 {
 	switch (e->e.eventtype) {
 	case NOTE_ON: 
-	case NOTE_OFF: 
 		write_note(fd, &e->rtime, 
-			e->e.eventtype, e->e.note, e->e.velocity);
+			0x90, e->e.note, e->e.velocity);
+	 // 0x90 | (drumkit[kit].midi_channel & 0x0f)
+		break;
+	case NOTE_OFF: 
 		break;
 	case NO_OP:
 		break;
@@ -370,22 +373,20 @@ void write_sched_to_midi_file(struct schedule_t *sched, const char *filename)
 {
 	int fd, i;
 	int currpos;
-	printf("write_sched_to_midi file was called\n");
 
 	fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd < 0) {
 		fprintf(stderr, "Can't open %s, %s\n", filename, strerror(errno));
 		return;
 	}
-	printf("fd = %d\n", fd);
 	write_MThd(fd);
 	write_MTrk(fd);
 	for (i=0;i<sched->nevents;i++)
 		write_midi_event(fd, sched->e[i]);
 
+	write_end_of_track(fd);	
 	/* figure Mtrk size, and fixup file */
 	currpos = lseek(fd, 0L, SEEK_CUR);
-	printf("currpos - 22 = %d\n", currpos -22);
 	currpos = htonl(currpos - 22L); 
 
 	lseek(fd, 18L, SEEK_SET);

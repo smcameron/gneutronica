@@ -72,7 +72,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
-	{ "/File/_Export Song to MIDI file (doesn't quite work yet)", NULL,         export_midi_button_clicked,    0, "<Item>" },
+	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
 	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
@@ -1425,7 +1425,6 @@ void schedule_measures(int start, int end)
 
 int export_to_midi_file(const char *filename)
 {
-	printf("Export to midi file %s\n", filename);
 	int start, end;
 
 	start = 0;

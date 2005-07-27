@@ -1,3 +1,23 @@
+/* 
+    (C) Copyright 2005, Stephen M. Cameron.
+
+    This file is part of Gneutronica.
+
+    Gneutronica is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Gneutronica is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Gneutronica; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -14,19 +34,18 @@ static void write_weird_midi_int(int fd, unsigned int value)
 	unsigned char *x;
 	int count;
 
-	printf("Writing %d: ", value);
+	/* printf("Writing %d: ", value); */
 
 	while ( (value >>= 7) ) {
 		buf <<= 8;
 		buf |= ((value & 0x7F) | 0x80);
 	}
-	// buf = htonl(buf); /* put it in big endian order, big bytes first */
 
 	count = 0;
 	x = (unsigned char *) &buf;
 	while (1) {
 		write(fd, x, 1);
-		printf(" 0x%02x", *x);
+		/* printf(" 0x%02x", *x); */
 		if (*x & 0x80) {
 			x++;
 			count++;
@@ -35,7 +54,7 @@ static void write_weird_midi_int(int fd, unsigned int value)
 		} else
 			break;
 	}
-	printf("\n");
+	/* printf("\n"); */
 }
 
 int write_MThd(int fd)
@@ -67,6 +86,8 @@ int write_MThd(int fd)
 int write_end_of_track(int fd)
 {
 	char eot[] = { 0xFF,0x2F,0x00 };
+	unsigned long ms = 0;
+	write_weird_midi_int(fd, ms);
 	return (write(fd, eot, 3) != 3);
 }
 
@@ -110,8 +131,9 @@ write_note(int fd, struct timeval *tm, unsigned char opcode,
 {
 	unsigned long ms;
 	ms = msdiff(tm, &prevtime);
-	printf("ms = %ld\n", ms);
 	write_weird_midi_int(fd, ms);
+
+	/* printf("writing opcode/note/velocity: %02x %02x %02x\n", opcode, note, velocity); */
 	write(fd, &opcode, 1);
 	write(fd, &note, 1);
 	write(fd, &velocity, 1); 

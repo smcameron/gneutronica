@@ -17,7 +17,9 @@ around to differnent places.
   horizontally without scrolling the pattern names, and scroll vertically
   without scrolling the stoff at the top.
 
-* export to MIDI file
+* export to MIDI file (done)
+
+* make MIDI file use ticks/quarternote and not SMTPE based timing?
 
 * better buttons for the top row of the arrangement window.
 
