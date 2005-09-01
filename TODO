@@ -1,3 +1,19 @@
+* Would be nice to be able to make a pattern with a large no. of divisions
+  so you can compose a drum pattern to go with, say, a guitar riff of
+  an unknown number of beats (too lazy to count) and then when you've 
+  got it down and there's some extra unused space on the right hand 
+  side of the measure which is unused...  Well it would be nice if there
+  was a way shorten the measure by truncating some portion off the RHS,
+  so that the composition of the drums automatically counts the beats,
+  instead of having to count the beats ahead of time, and THEN compose
+  the drum beats, or, only too late find out you counted wrong, and have
+  to redo it in another pattern that's divided (you hope) correctly.
+
+* Need to have "Save" and "Save As" actually behave differntly, and
+  Save As needs to warn you if you're overwriting an existing file.  
+  In general, there are some error conditions which are handled by 
+  printfs, etc. which need error dialog windows.
+   
 * figure out how to schedule note-off events
 
 * Make it work with the ALSA sequencer, instead of (or in addition to?) using

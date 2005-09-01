@@ -16,5 +16,7 @@ Known bugs:
 * It appears that "rushing" (using negative drag) on an instrument
   does not actually work.
 
-
+* I have occasionially seen notes get dropped when multiple patterns are
+  played at the same time in the arrangement window.  Reselecting the 
+  patterns in a different order seems to avoid it sometimes.
 
