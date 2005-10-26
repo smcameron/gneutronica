@@ -407,6 +407,7 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct *p);
 static int arr_darea_button_press(GtkWidget *w, GdkEventButton *event, 
 		struct pattern_struct *data);
+void clear_hitpattern(struct hitpattern *p);
 
 void free_pattern(struct pattern_struct *p)
 {
@@ -425,6 +426,9 @@ void free_pattern(struct pattern_struct *p)
 	if (p->ins_button != NULL); 
 		gtk_widget_destroy(GTK_WIDGET(p->ins_button));
 		// gtk_object_unref(GTK_OBJECT(p->arr_button));
+
+	/* FIXME: shouldn't we call clear_hitpattern(p->hitpattern) here? */
+	clear_hitpattern(p->hitpattern);
 	free(p);
 }
 
@@ -464,11 +468,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 		"Make a backup first, of course.", NULL);
 	p->del_button = gtk_button_new_with_label("Del");
 	gtk_tooltips_set_tip(tooltips, p->del_button, 
-		"Delete this pattern.  Not yet implemented.  "
-		"If you really must delete a pattern, save the "
-		"song, and use vi or another text editor to "
-		"delete the pattern.  Make a backup first, of "
-		"course.", NULL);
+		"Delete this pattern.", NULL);
 	p->arr_darea = gtk_drawing_area_new();
 	gtk_tooltips_set_tip(tooltips, p->arr_darea, "Click to assign patterns to measures.", NULL);
 	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
@@ -1312,7 +1312,6 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 }
 
 void check_hitpatterns(char *x);
-void clear_hitpattern(struct hitpattern *p);
 
 void pattern_clear_button_clicked(GtkWidget *widget,
 	gpointer data)
@@ -1685,10 +1684,89 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
 	struct pattern_struct *data)
 {
-	
-	printf("delete pattern, not implemented yet.\n");
+	int i, j, k;	
+	struct pattern_struct *p;
+	int slot;
+
+
+	printf("delete pattern %d\n", data->pattern_num);
 	/* this involves shuffling things around in a gtk_table... not sure how. */
 
+	slot = 6 + data->pattern_num;
+
+	/* Get rid of all the GTK junk for the specified row . . . */
+
+	gtk_container_remove(GTK_CONTAINER (arranger_table), data->ins_button);
+	gtk_container_remove(GTK_CONTAINER (arranger_table), data->del_button);
+	gtk_container_remove(GTK_CONTAINER (arranger_table), data->copy_button);
+	gtk_container_remove(GTK_CONTAINER (arranger_table), data->arr_button);
+	gtk_container_remove(GTK_CONTAINER (arranger_table), data->arr_darea);
+
+	/* Scoot all the GTK junk below the specified row up one row */
+
+	for (i=data->pattern_num; i<npatterns-1;i++) {
+		p = pattern[i+1];
+
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->ins_button,
+			"left_attach", 0, "right_attach", 1, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->del_button,
+			"left_attach", 1, "right_attach", 2, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->copy_button,
+			"left_attach", 2, "right_attach", 3, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->arr_button,
+			"left_attach", 3, "right_attach", 4, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->arr_darea,
+			"left_attach", 4, "right_attach", 5, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_widget_show(p->ins_button);
+		gtk_widget_show(p->del_button);
+		gtk_widget_show(p->copy_button);
+		gtk_widget_show(p->arr_button);
+		gtk_widget_show(p->arr_darea);
+		slot++;
+	} 
+
+	/* Adjust all measures to remove references to the deleted pattern */
+
+	for (i=0;i<nmeasures;i++) {
+		for (j=0;j < measure[i].npatterns;) {
+			if ( measure[i].pattern[j] == data->pattern_num ) {
+				/* delete this entry */
+				for (k = j; k< measure[i].npatterns-1; k++)
+					measure[i].pattern[k] = measure[i].pattern[k+1];
+				measure[i].npatterns--;
+				continue;
+			} else if ( measure[i].pattern[j] > data->pattern_num )
+				measure[i].pattern[j]--;
+			j++;
+		}
+	}
+
+	/* Adjust the pattern struct */
+	for (i=data->pattern_num;i < npatterns-1; i++) {
+		pattern[i] = pattern[i+1];
+		pattern[i]->pattern_num = i;
+	}
+
+	free_pattern(data);
+	npatterns--;
+	pattern[npatterns] = NULL;
+
+	if (cpattern >= npatterns)
+		cpattern = npatterns-1; 
+	if (cpattern < 0)
+		cpattern = 0;
+
+	edit_pattern(cpattern);
+	redraw_arranger();
+	gtk_widget_show_all(arranger_window);
+	gtk_widget_queue_draw(arranger_table);
+
+	return;
 }
 
 void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */

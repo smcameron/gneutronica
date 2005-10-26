@@ -54,3 +54,12 @@ gneutronica 0.25
 
 	* Added ability to export song to MIDI file.
 
+gneutronica 0.26
+
+	* Fixed problem that if all measures were deleted, segfault could result
+	  (kind of a hack, just prevented user from deleting all measures.)
+
+	* Fixed a memory leak
+
+	* Now can delete patterns.
+
