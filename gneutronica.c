@@ -1666,19 +1666,166 @@ void edit_pattern(int new_pattern)
 		gtk_widget_queue_draw(GTK_WIDGET(drumkit[kit].instrument[i].canvas));
 }
 
+struct pattern_struct *pattern_struct_alloc(int pattern_num);
+
 void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	struct pattern_struct *data)
 {
-	printf("insert pattern, not yet implemented.\n");
-	/* this involves shuffling things around in a gtk_table... not sure how. */
+	int i, j, k, slot;
+	int new_arranger_scroller_size;
+	int total_rows;
+	char msg[255];
+	struct pattern_struct *p;
+	int pn = data->pattern_num;
 
-	/* Hmmm.  It occurs to me I could do it easily by saving the song to a file, editing the file,
-	   then reading the file back in... ha ha.  Brute force. Same for deleting patterns. 
+	printf("insert pattern %d\n", data->pattern_num);
 
-	   So for now, if you *REALLY* must insert a pattern, or delete a pattern, save the
-	   file, crank up vi, and do it.  Really there should be no reason you
-	   should really need to delete/insert patterns though, apart from aesthetic ones.
-	*/
+
+	/* Allocate and init the new pattern */
+
+	p = pattern_struct_alloc(pn);
+	if (p == NULL)
+		return;
+	memset(p, 0, sizeof(*p));
+	p->pattern_num = data->pattern_num;
+	p->hitpattern = NULL;
+	sprintf(p->patname, "New%d", npatterns+1);
+
+	printf("Pattern allocated: %s\n", p->patname);
+
+	/* Make room and insert the new pattern */
+
+	for (i=npatterns;i>data->pattern_num;i--) {
+		printf("Moving pattern %d to %d\n", i-1, i);
+		pattern[i] = pattern[i-1];
+	}
+	printf("Storing new pattern in %d\n", pn);
+	pattern[data->pattern_num] = p;
+	data->pattern_num++;
+	npatterns++;
+
+	printf("npatterns = %d\n", npatterns);
+
+	/* Set up all the patterns GTK junk, */
+	/* this and code in make_new_pattern_widgets should be refactored */
+
+	p->arr_button = gtk_button_new_with_label(p->patname);
+	gtk_tooltips_set_tip(tooltips, p->arr_button, "Edit this pattern.  Click the boxes to the right to assign this pattern to measures.", NULL);
+	p->copy_button = gtk_button_new_with_label("Sel");
+	sprintf(msg, "Select this pattern (%s) for later pasting into another pattern", p->patname);
+	gtk_tooltips_set_tip(tooltips, p->copy_button, msg, NULL);
+	p->ins_button = gtk_button_new_with_label("Ins");
+	gtk_tooltips_set_tip(tooltips, p->ins_button, 
+		"Insert new pattern before this pattern.  ", NULL);
+	p->del_button = gtk_button_new_with_label("Del");
+	gtk_tooltips_set_tip(tooltips, p->del_button, 
+		"Delete this pattern.", NULL);
+	p->arr_darea = gtk_drawing_area_new();
+	gtk_tooltips_set_tip(tooltips, p->arr_darea, "Click to assign patterns to measures.", NULL);
+	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
+			G_CALLBACK (arr_darea_event), p);
+	gtk_widget_add_events(p->arr_darea, GDK_BUTTON_PRESS_MASK); 
+	gtk_widget_add_events(p->arr_darea, GDK_BUTTON_RELEASE_MASK); 
+	gtk_widget_add_events(p->arr_darea, GDK_DRAG_ENTER); 
+	gtk_widget_add_events(p->arr_darea, GDK_DRAG_LEAVE); 
+	//g_signal_connect(G_OBJECT (p->arr_darea), "button-release-event",
+	g_signal_connect(G_OBJECT (p->arr_darea), "button-release-event",
+			G_CALLBACK (arr_darea_clicked), p);
+	g_signal_connect(G_OBJECT (p->arr_darea), "button-press-event",
+			G_CALLBACK (arr_darea_button_press), p);
+	gtk_widget_set_size_request(p->arr_darea, ARRANGER_WIDTH, ARRANGER_HEIGHT);
+	new_arranger_scroller_size = (total_rows+2) * ARRANGER_HEIGHT;
+	if (new_arranger_scroller_size > 200)
+		new_arranger_scroller_size = 200;
+	gtk_widget_set_size_request (arranger_scroller, 750, new_arranger_scroller_size);
+
+	/* gtk_table_attach(GTK_TABLE(arranger_table), p->ins_button, 
+		0, 1, top, top+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->del_button, 
+		1, 2, top, top+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->copy_button, 
+		2, 3, top, top+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->arr_button, 
+		3, 4, top, top+1, GTK_FILL, 0, 0, 0); */
+	g_signal_connect(G_OBJECT (p->arr_button), "clicked",
+			G_CALLBACK (edit_pattern_clicked), p);
+		// 0, 1, top, top+1, GTK_FILL, GTK_FILL, 0, 0);
+	/* gtk_table_attach(GTK_TABLE(arranger_table), p->arr_darea, 
+		4, 5, top, top+1, 0,0,0,0); */
+	g_signal_connect(G_OBJECT (p->ins_button), "clicked",
+			G_CALLBACK (ins_pattern_button_pressed), p);
+	g_signal_connect(G_OBJECT (p->del_button), "clicked",
+			G_CALLBACK (del_pattern_button_pressed), p);
+	g_signal_connect(G_OBJECT (p->copy_button), "clicked",
+			G_CALLBACK (copy_pattern_button_pressed), p);
+
+
+	/* Adjust all the measures */
+
+	for (i=0;i<nmeasures;i++) {
+		for (j=0;j < measure[i].npatterns;j++) {
+			if (measure[i].pattern[j] >= pn)
+				measure[i].pattern[j]++;
+		}
+	}
+
+	/* Scoot all the GTk crap down one slot */
+
+	total_rows = npatterns + 6;
+	slot = total_rows-1;
+	gtk_table_resize(GTK_TABLE(arranger_table), total_rows, ARRANGER_COLS);
+	for (i=npatterns;i>pn+1;i--) {
+		printf("Moving pattern %d to slot %d\n", i-1, slot);
+		p = pattern[i-1];
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->ins_button,
+			"left_attach", 0, "right_attach", 1, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->del_button,
+			"left_attach", 1, "right_attach", 2, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->copy_button,
+			"left_attach", 2, "right_attach", 3, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->arr_button,
+			"left_attach", 3, "right_attach", 4, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->arr_darea,
+			"left_attach", 4, "right_attach", 5, 
+			"top_attach", slot, "bottom_attach", slot+1, NULL);
+		gtk_widget_show(p->ins_button);
+		gtk_widget_show(p->del_button);
+		gtk_widget_show(p->copy_button);
+		gtk_widget_show(p->arr_button);
+		gtk_widget_show(p->arr_darea);
+		slot--;
+	}
+
+	p = pattern[pn];
+	slot = pn + 6;
+
+	printf("Attaching new pattern %d to slot %d\n", pn, slot);
+
+	gtk_table_attach(GTK_TABLE(arranger_table), p->ins_button, 
+		0, 1, slot, slot+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->del_button, 
+		1, 2, slot, slot+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->copy_button, 
+		2, 3, slot, slot+1, 0, 0, 0, 0);
+	gtk_table_attach(GTK_TABLE(arranger_table), p->arr_button, 
+		3, 4, slot, slot+1, GTK_FILL, 0, 0, 0); 
+	gtk_table_attach(GTK_TABLE(arranger_table), p->arr_darea, 
+		4, 5, slot, slot+1, 0,0,0,0);
+	gtk_widget_show(p->ins_button);
+	gtk_widget_show(p->del_button);
+	gtk_widget_show(p->copy_button);
+	gtk_widget_show(p->arr_button);
+	gtk_widget_show(p->arr_darea);
+	gtk_widget_show_all(arranger_window);
+	gtk_widget_queue_draw(arranger_table);
+
+	cpattern = pn;
+	edit_pattern(cpattern);
+	redraw_arranger();
 }
 
 void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
@@ -1763,10 +1910,6 @@ void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
 
 	edit_pattern(cpattern);
 	redraw_arranger();
-	gtk_widget_show_all(arranger_window);
-	gtk_widget_queue_draw(arranger_table);
-
-	return;
 }
 
 void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */
