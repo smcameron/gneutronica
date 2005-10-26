@@ -20,3 +20,5 @@ Known bugs:
   played at the same time in the arrangement window.  Reselecting the 
   patterns in a different order seems to avoid it sometimes.
 
+* If you delete all the patterns, things get weird.  There's no way
+  to add a new pattern, and it'll segfault pretty soon.
