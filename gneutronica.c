@@ -831,17 +831,16 @@ void insert_measures_button(GtkWidget *widget, gpointer data)
 void delete_measures_button(GtkWidget *widget, gpointer data)
 {
 	int i, count;
-	if (nmeasures <= 0)
+	if (nmeasures <= 1) /* can't have zero measures. */
 		return;
 	if (start_copy_measure < 0 || 
 		end_copy_measure < 0 || 
 		end_copy_measure < start_copy_measure)
 		return;
 	count = end_copy_measure - start_copy_measure + 1;
-	if (count >= nmeasures) {
-		memset(&measure[0], 0, nmeasures);
-		nmeasures = 0;
-	} else {
+	if (count >= nmeasures)
+		return; /* Can't have zero measures */
+	else {
 		for (i=start_copy_measure;i<nmeasures-count;i++)
 			measure[i] = measure[i+count];
 	}
