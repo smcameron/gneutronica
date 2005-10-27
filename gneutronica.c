@@ -461,11 +461,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	gtk_tooltips_set_tip(tooltips, p->copy_button, msg, NULL);
 	p->ins_button = gtk_button_new_with_label("Ins");
 	gtk_tooltips_set_tip(tooltips, p->ins_button, 
-		"Insert new pattern before this pattern.  "
-		"Not yet implemented.  If you really must insert a "
-		"pattern, save the song and use vi or another text editor "
-		"to create a new empty pattern where you want it.  "
-		"Make a backup first, of course.", NULL);
+		"Insert new pattern before this pattern.",NULL);
 	p->del_button = gtk_button_new_with_label("Del");
 	gtk_tooltips_set_tip(tooltips, p->del_button, 
 		"Delete this pattern.", NULL);
@@ -1677,10 +1673,17 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	char msg[255];
 	struct pattern_struct *p;
 	int pn = data->pattern_num;
+	struct division_struct *divs;
 
-	printf("insert pattern %d\n", data->pattern_num);
+	flatten_pattern(kit, cpattern); /* save current pattern */
 
-
+#if 0
+	printf("insert pattern %d\n", data->pattern_num); */
+	printf("-- before ---\n");
+	for (i=0;i<npatterns;i++) 
+		printf(" --> %d:%d\n", i, pattern[i]->pattern_num);
+	printf("-----\n"); */
+#endif
 	/* Allocate and init the new pattern */
 
 	p = pattern_struct_alloc(pn);
@@ -1691,26 +1694,43 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	p->hitpattern = NULL;
 	sprintf(p->patname, "New%d", npatterns+1);
 
-	printf("Pattern allocated: %s\n", p->patname);
+	/* printf("Pattern allocated: %s\n", p->patname); */
 
 	/* Make room and insert the new pattern */
 
 	for (i=npatterns;i>data->pattern_num;i--) {
-		printf("Moving pattern %d to %d\n", i-1, i);
+		/* printf("Moving pattern %d to %d\n", i-1, i); */
 		pattern[i] = pattern[i-1];
+		pattern[i]->pattern_num = i;
 	}
-	printf("Storing new pattern in %d\n", pn);
-	pattern[data->pattern_num] = p;
-	data->pattern_num++;
+	/* printf("Storing new pattern in %d\n", pn); */
+	pattern[pn] = p;
 	npatterns++;
 
+	/* For the new pattern, copy the time divisions from the */
+	/* previous, next, or default pattern */
+	if (pn > 0) 
+		divs = pattern[pn-1]->timediv;
+	else if (pn < npatterns - 1)
+		divs = pattern[pn+1]->timediv;
+	else
+		divs = timediv;
+	for (i=0;i<ndivisions;i++)
+		pattern[pn]->timediv[i] = divs[i];
+#if 0
 	printf("npatterns = %d\n", npatterns);
-
+	printf("-- after ---\n");
+	for (i=0;i<npatterns;i++) 
+		printf(" --> %d:%d\n", i, pattern[i]->pattern_num);
+	printf("-----\n");
+#endif
 	/* Set up all the patterns GTK junk, */
 	/* this and code in make_new_pattern_widgets should be refactored */
 
 	p->arr_button = gtk_button_new_with_label(p->patname);
-	gtk_tooltips_set_tip(tooltips, p->arr_button, "Edit this pattern.  Click the boxes to the right to assign this pattern to measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->arr_button, "Edit this pattern.  "
+		"Click the boxes to the right to assign this "
+		"pattern to measures.", NULL);
 	p->copy_button = gtk_button_new_with_label("Sel");
 	sprintf(msg, "Select this pattern (%s) for later pasting into another pattern", p->patname);
 	gtk_tooltips_set_tip(tooltips, p->copy_button, msg, NULL);
@@ -1770,12 +1790,17 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	}
 
 	/* Scoot all the GTk crap down one slot */
+	/* This is how to insert items into a gtktable, */
+	/* Use gtk_table_resize to make it one slot bigger, then */
+	/* traverse from the highest item to insertion point, using */
+	/* gtk_container_child_set to scoot everything down one slot */
+	/* then use gtk_table_attach to attach the new item */
 
 	total_rows = npatterns + 6;
 	slot = total_rows-1;
 	gtk_table_resize(GTK_TABLE(arranger_table), total_rows, ARRANGER_COLS);
 	for (i=npatterns;i>pn+1;i--) {
-		printf("Moving pattern %d to slot %d\n", i-1, slot);
+		/* printf("Moving pattern %d to slot %d\n", i-1, slot); */
 		p = pattern[i-1];
 		gtk_container_child_set(GTK_CONTAINER (arranger_table), p->ins_button,
 			"left_attach", 0, "right_attach", 1, 
@@ -1803,7 +1828,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	p = pattern[pn];
 	slot = pn + 6;
 
-	printf("Attaching new pattern %d to slot %d\n", pn, slot);
+	/* printf("Attaching new pattern %d to slot %d\n", pn, slot); */
 
 	gtk_table_attach(GTK_TABLE(arranger_table), p->ins_button, 
 		0, 1, slot, slot+1, 0, 0, 0, 0);
@@ -1820,8 +1845,6 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	gtk_widget_show(p->copy_button);
 	gtk_widget_show(p->arr_button);
 	gtk_widget_show(p->arr_darea);
-	gtk_widget_show_all(arranger_window);
-	gtk_widget_queue_draw(arranger_table);
 
 	cpattern = pn;
 	edit_pattern(cpattern);
@@ -1836,12 +1859,16 @@ void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
 	int slot;
 
 
-	printf("delete pattern %d\n", data->pattern_num);
+	/* printf("delete pattern %d\n", data->pattern_num); */
 	/* this involves shuffling things around in a gtk_table... not sure how. */
 
 	slot = 6 + data->pattern_num;
 
 	/* Get rid of all the GTK junk for the specified row . . . */
+	/* This is how to delete a row in a gtktable.  Use gtk_container_remove */
+	/* to remove the item, then travers the table from the deleted row up */
+	/* to the highest item, and use gtk_container_child_set to scoot each */
+	/* remaining item one slot up in the table. */
 
 	gtk_container_remove(GTK_CONTAINER (arranger_table), data->ins_button);
 	gtk_container_remove(GTK_CONTAINER (arranger_table), data->del_button);

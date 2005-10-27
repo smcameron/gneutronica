@@ -17,8 +17,8 @@
 * figure out how to schedule note-off events
 
 * Make it work with the ALSA sequencer, instead of (or in addition to?) using
-the raw midi devices like it does now, so the MIDI events can be routed
-around to differnent places.
+  the raw midi devices like it does now, so the MIDI events can be routed
+  around to differnent places.
 
 * Autoconfiscate it.
 
@@ -26,7 +26,8 @@ around to differnent places.
 
 * Deleting and Inserting of patterns (the lack of this is not as bad as
   it sounds, since it's measures, not patterns that control which patterns
-  get played in what order.)
+  get played in what order.)  
+  Implemented this Oct 27, 2005
 
 * Maybe redo the arrangement window as a single large drawing area,
   or figure out how to make selection not so weird, and how to scroll

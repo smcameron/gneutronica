@@ -61,5 +61,5 @@ gneutronica 0.26
 
 	* Fixed a memory leak
 
-	* Now can delete patterns.
+	* Now can insert and delete patterns.
 
