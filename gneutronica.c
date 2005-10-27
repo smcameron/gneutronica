@@ -3341,7 +3341,12 @@ int main(int argc, char *argv[])
 	save_drumkit_button = gtk_button_new_with_label("Save Drum Kit");
 	gtk_tooltips_set_tip(tooltips, save_drumkit_button, 
 		"Save instrument names, types, and MIDI note "
-		"assignments into a file for later re-use.", NULL);
+		"assignments into a file for later re-use.  "
+		"Please consider sending your new drumkit file "
+		"to smcameron@users.sourceforge.net for inclusion with "
+		"future releases of Gneutronica.  Please include "
+		"the make and model of the MIDI device, and the name "
+		"of whatever preset you're using, if applicable.", NULL);
 	g_signal_connect(G_OBJECT (save_drumkit_button), "clicked", 
 			G_CALLBACK (save_drumkit_button_clicked), NULL);
 	edit_instruments_toggle = gtk_toggle_button_new_with_label("Edit Drum Kit");
