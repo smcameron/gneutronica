@@ -1709,12 +1709,19 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 
 	/* For the new pattern, copy the time divisions from the */
 	/* previous, next, or default pattern */
-	if (pn > 0) 
+	if (pn > 0) {
 		divs = pattern[pn-1]->timediv;
-	else if (pn < npatterns - 1)
+		pattern[pn]->beats_per_minute = pattern[pn-1]->beats_per_minute;
+		pattern[pn]->beats_per_measure = pattern[pn-1]->beats_per_measure;
+	} else if (pn < npatterns - 1) {
 		divs = pattern[pn+1]->timediv;
-	else
+		pattern[pn]->beats_per_minute = pattern[pn+1]->beats_per_minute;
+		pattern[pn]->beats_per_measure = pattern[pn+1]->beats_per_measure;
+	} else {
 		divs = timediv;
+		pattern[pn]->beats_per_minute = 120; 
+		pattern[pn]->beats_per_measure = 4; 
+	}
 	for (i=0;i<ndivisions;i++)
 		pattern[pn]->timediv[i] = divs[i];
 #if 0
