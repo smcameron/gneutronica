@@ -22,5 +22,7 @@
 #define __OLD_FILEFORMATS_H__
 
 extern int load_from_file_version_1(FILE *f);
+extern int load_from_file_version_2(FILE *f);
+extern int import_patterns_v2(FILE *f);
 
 #endif

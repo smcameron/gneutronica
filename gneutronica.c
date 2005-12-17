@@ -59,6 +59,7 @@ void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
+void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -74,6 +75,8 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
 	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
+	{ "/_Edit",         NULL,         NULL,           0, "<Branch>" },
+	{ "/Edit/_Remap drum kit for whole song via GM",    NULL, remap_drumkit_clicked, 0, "<Item>" },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
 	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
 };
@@ -161,12 +164,17 @@ GtkWidget *get_option_menu( void )
 }
 /*  . . . End of code copied from gtk tutorial. */
 
-int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct drumkit_struct *drumkit)
+int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits, 
+	struct drumkit_struct *drumkit, int format)
 {
 	struct drumkit_struct *dk;
 	int rc, line, n;
 	char cmd[255];
 
+	if (format == 1)
+		fprintf(stderr, "Drumkit file %s is old file format version %d\n" 
+			"and contains no instrument mapping info\n", 
+			filename, format);
 	line = 1;
 	dk = &drumkit[*ndrumkits];
 	dk->ninsts = 0;
@@ -189,12 +197,30 @@ int read_drumkit_fileformat_1(char *filename, FILE *f, int *ndrumkits, struct dr
 	n = 0;
 	line++;
 	while (!feof(f)) {
-		rc = fscanf(f, "%[^,]%*c %[^,]%*c %d\n", 
-			dk->instrument[n].name, 
-			dk->instrument[n].type,
-			&dk->instrument[n].midivalue);
-		if (rc != 3) {
-			fprintf(stderr, "Error in %s at line %d\n", filename, line);
+		switch(format) {
+		case 2: rc = fscanf(f, "%[^,]%*c %[^,]%*c %d %d\n", 
+				dk->instrument[n].name, 
+				dk->instrument[n].type,
+				&dk->instrument[n].midivalue,
+				&dk->instrument[n].gm_equivalent);
+			if (rc != 4) {
+				fprintf(stderr, "Error in %s at line %d\n", filename, line);
+				pclose(f);
+				return -1;
+			}
+			break;
+		case 1: rc = fscanf(f, "%[^,]%*c %[^,]%*c %d\n", 
+				dk->instrument[n].name, 
+				dk->instrument[n].type,
+				&dk->instrument[n].midivalue);
+			if (rc != 3) {
+				fprintf(stderr, "Error in %s at line %d\n", filename, line);
+				pclose(f);
+				return -1;
+			}
+			dk->instrument[n].gm_equivalent = -1;
+			break;
+		default:fprintf(stderr, "Error in %s at line %d\n", filename, line);
 			pclose(f);
 			return -1;
 		}
@@ -241,6 +267,7 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 		sprintf(dk->instrument[i].type, "description");
 		dk->instrument[i].midivalue = i;
 		dk->instrument[i].instrument_num = i;
+		dk->instrument[i].gm_equivalent = -1;
 		dk->instrument[i].hit = NULL;
 		dk->instrument[i].button = NULL;
 		dk->instrument[i].hidebutton = NULL;
@@ -275,7 +302,8 @@ int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 	}
 
 	switch (fileformat) {
-	case 1: rc = read_drumkit_fileformat_1(filename, f, ndrumkits, drumkit);
+	case 1: 
+	case 2: rc = read_drumkit_fileformat_1_or_2(filename, f, ndrumkits, drumkit, fileformat);
 		break;
 	default: printf("Unknown drumkit fileformat version %d\n", fileformat);
 		rc = -1;
@@ -288,7 +316,7 @@ save_drumkit_to_file(const char *filename)
 {
 	struct drumkit_struct *dk;
 	FILE *f;
-	int i, fileformat = 1;
+	int i, fileformat = 2;
 
 	printf("save_drumkit_to_file called\n");
 
@@ -301,10 +329,11 @@ save_drumkit_to_file(const char *filename)
 	fprintf(f, "Gneutronica drumkit file format %d\n", fileformat);
 	fprintf(f, "%s, %s, %s\n", dk->make, dk->model, dk->name);
 	for (i=0;i<dk->ninsts;i++) {
-		fprintf(f, "%s, %s, %d\n",  
+		fprintf(f, "%s, %s, %d %d\n",  
 			dk->instrument[i].name, 
 			dk->instrument[i].type,
-			dk->instrument[i].midivalue);
+			dk->instrument[i].midivalue,
+			dk->instrument[i].gm_equivalent);
 	}
 	fclose(f);
 }
@@ -432,6 +461,7 @@ void free_pattern(struct pattern_struct *p)
 	free(p);
 }
 
+void edit_pattern(int new_pattern);
 void edit_pattern_clicked(GtkWidget *widget,
 	struct pattern_struct *data);
 void ins_pattern_button_pressed(GtkWidget *widget,
@@ -1550,6 +1580,27 @@ void save_drumkit_button_clicked(GtkWidget *widget,
 	make_file_dialog(SAVE_DRUMKIT);
 }
 
+void remap_drumkit_song();
+void remap_drumkit_pattern(struct pattern_struct *p, int set_toggles);
+
+void remap_drumkit_clicked(GtkWidget *widget, /* this is for the menu item, remaps whole song */
+	gpointer data)
+{
+	/* printf("remap song drumkit menu pressed\n"); */
+	remap_drumkit_song();
+}
+
+void remap_drumkit_hit(struct hit_struct *h, int set_toggles);
+void remap_drumkit_button_clicked(GtkWidget *widget, /* this is for the pattern button item */
+	gpointer data)
+{
+	/* printf("remap pattern drumkit button pressed\n"); */
+	flatten_pattern(kit, cpattern);
+	remap_drumkit_pattern(pattern[cpattern], 1);
+	unflatten_pattern(kit, cpattern);
+	edit_pattern(cpattern);
+}
+
 void send_schedule(struct schedule_t *sched, int loop);
 void arranger_play_button_clicked(GtkWidget *widget,
 	gpointer data)
@@ -2100,6 +2151,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 			gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
 		}
 		if (editdrumkit) {
+			gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
 			gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
 			gtk_widget_hide(GTK_WIDGET(inst->name_entry));
 			gtk_widget_hide(GTK_WIDGET(inst->type_entry));
@@ -2117,6 +2169,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_hide(GTK_WIDGET(inst->name_entry));
 				gtk_widget_hide(GTK_WIDGET(inst->type_entry));
 				gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+				gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
 			}
 			if (!vshidden) { /* otherwise, already hidden */
 				gtk_widget_hide(GTK_WIDGET(inst->clear_button));
@@ -2130,6 +2183,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_show(GTK_WIDGET(inst->name_entry));
 				gtk_widget_show(GTK_WIDGET(inst->type_entry));
 				gtk_widget_show(GTK_WIDGET(inst->midi_value_spin_button));
+				gtk_widget_show(GTK_WIDGET(inst->gm_value_spin_button));
 			}
 			if (!vshidden) { /* otherwise, already hidden */
 				gtk_widget_show(GTK_WIDGET(inst->clear_button));
@@ -2176,6 +2230,81 @@ void clear_hitpattern(struct hitpattern *p)
 	return;
 }
 
+void remap_drumkit_hit(struct hit_struct *h, int set_toggles)
+{
+	int i;
+	int gm_equiv;
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct instrument_struct *inst;
+
+	/* printf("looking up gm equiv for %d -> %d\n",h->instrument_num, song_gm_map[h->instrument_num]); */
+	/* lookup instrument_num in the song_gm_map to find the gm equiv */
+	gm_equiv = song_gm_map[h->instrument_num];
+	if (gm_equiv == -1)
+		return; /* nothing we can do... */
+
+	/* look up the gm_equiv in the current drumkit to find the instrument */
+	for (i=0;i<dk->ninsts;i++) {
+		inst = &dk->instrument[i];
+		/* printf("%d ?= %d\n", inst->gm_equivalent, gm_equiv); */
+		if (inst->gm_equivalent == gm_equiv) {
+			/* printf("Found match, new instnum = %d\n", i); */
+			/* reassign the instrument_num */
+			h->instrument_num = i;
+			if (set_toggles)
+				gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
+					(gboolean) 1);
+			return;
+		}
+	}
+	/* printf("No match found for %d\n", h->instrument_num); */
+}
+
+void remap_drumkit_hitpattern (struct hitpattern *p, int set_toggles)
+{
+	struct hitpattern *h;
+	int i;
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct instrument_struct *inst;
+	int hidden = 0;
+
+	if (p == NULL)
+		return;
+
+	if (set_toggles)
+		for (i=0;i<dk->ninsts;i++) {
+			inst = &dk->instrument[i];
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
+				(gboolean) hidden);
+		}
+	for (h = p; h != NULL; h = h->next)
+		remap_drumkit_hit(&h->h, set_toggles);
+}
+
+void remap_drumkit_pattern(struct pattern_struct *p, int set_toggles)
+{
+	struct hitpattern *hp;
+
+	if (p->gm_converted)
+		return;
+
+	hp = p->hitpattern;
+	remap_drumkit_hitpattern(hp, set_toggles);
+	p->gm_converted = 1;
+}
+
+void remap_drumkit_song()
+{
+	int i;
+
+	flatten_pattern(kit, cpattern);
+	for (i=0;i<npatterns;i++) {
+		remap_drumkit_pattern(pattern[i], i == cpattern);
+	}
+	unflatten_pattern(kit, cpattern);
+	edit_pattern(cpattern);
+}
+
 int clear_kit_pattern(int ckit)
 {
 	/* clears all the recorded strikes for all instruments in the current pattern */
@@ -2189,6 +2318,7 @@ int clear_kit_pattern(int ckit)
 		}
 	}
 }
+
 
 int flatten_pattern(int ckit, int cpattern)
 {
@@ -2334,7 +2464,7 @@ int xpect(FILE *f, int *lc, char *line, char *value)
 	return 0;	
 }
 
-int load_from_file_version_2(FILE *f)
+int load_from_file_version_3(FILE *f)
 {
 	char line[255];
 	int linecount;
@@ -2342,15 +2472,39 @@ int load_from_file_version_2(FILE *f)
 	int i,j,count, rc;
 	int hidden;
 	int fileformatversion;
-
+	int gm_equiv;
+	char dkmake[100];
+	char dkmodel[100];
+	char dkname[100];
+	int same_drumkit;
 
 	linecount = 1;
 	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
 	linecount++;
+
 	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Make:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Model:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Name:") == -1) return -1;
+
+	rc = fscanf(f, "Drumkit Make:%[^\n]%*c", dkmake); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit make\n");
+	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit model\n");
+	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit name\n");
+
+	
+	
+	same_drumkit = (strcmp(drumkit[kit].make, dkmake) == 0 && 
+		strcmp(drumkit[kit].model, dkmodel) == 0 &&
+		strcmp(drumkit[kit].name, dkname) == 0);
+
+	/* printf("'%s','%s','%s'\n", dkmake, dkmodel, dkname);
+	printf(same_drumkit ? "Same drumkit\n" : "Different drumkit\n"); */
+
+	if (!same_drumkit)
+		printf("WARNING: Different drum kit for this song, remap to adjust to current drum kit...\n");
 
 	rc = fscanf(f, "Instruments: %d\n", &ninsts);
 	if (rc != 1)  {
@@ -2360,13 +2514,17 @@ int load_from_file_version_2(FILE *f)
 	linecount++;
 
 	for (i=0;i<ninsts;i++) {
-		fscanf(f, "Instrument %*d: '%*[^']%*c %d\n", &hidden);
+		fscanf(f, "Instrument %*d: '%*[^']%*c %d %d\n", &hidden, &gm_equiv);
 		/* this is questionable if drumkits don't match... */
 		if (i<drumkit[kit].ninsts) {
 			struct instrument_struct *inst = &drumkit[kit].instrument[i];
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
 				(gboolean) hidden);
+			song_gm_map[i] = inst->gm_equivalent; 
 		}
+		if (!same_drumkit)
+			song_gm_map[i] = gm_equiv;
+		/* printf("song_gm_map[%d] = %d\n", i, song_gm_map[i]); */
 	}
 	rc = fscanf(f, "Patterns: %d\n", &npatterns);
 	for (i=0;i<npatterns;i++) {
@@ -2384,6 +2542,7 @@ int load_from_file_version_2(FILE *f)
 			&pattern[i]->timediv[4].division);
 		if (rc != 5)
 			printf("Bad divisions...\n");
+		pattern[i]->gm_converted = 0;
 		while (1) {
 			rc = fscanf(f, "%[^\n]%*c", line);
 			if (strcmp(line, "END-OF-PATTERN") == 0) {
@@ -2545,24 +2704,41 @@ int find_tempo(int measure)
 
 void init_measures();
 
-int import_patterns_v2(FILE *f)
+int import_patterns_v3(FILE *f)
 {
 	char line[255];
 	int linecount;
 	int ninsts;
-	int i,j,count, rc;
+	int i,j,k,count, rc;
 	int hidden;
 	int fileformatversion;
 	int fake_ninsts;
 	int newpatterns;
+	char dkmake[100], dkmodel[100], dkname[100];
+	int same_drumkit;
+	int import_inst_map[MAXINSTS], gm;
 
 	linecount = 1;
 	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
 	linecount++;
 	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Make:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Model:") == -1) return -1;
-	if (xpect(f, &linecount, line, "Drumkit Name:") == -1) return -1;
+
+	rc = fscanf(f, "Drumkit Make:%[^\n]%*c", dkmake); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit make\n");
+	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit model\n");
+	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit name\n");
+
+	same_drumkit = (strcmp(drumkit[kit].make, dkmake) == 0 && 
+		strcmp(drumkit[kit].model, dkmodel) == 0 &&
+		strcmp(drumkit[kit].name, dkname) == 0);
+
+	if (!same_drumkit)
+		printf("Import file uses different drumkit... will attempt to remap.\n");
 
 	rc = fscanf(f, "Instruments: %d\n", &fake_ninsts);
 	if (rc != 1)  {
@@ -2571,9 +2747,8 @@ int import_patterns_v2(FILE *f)
 	}
 	linecount++;
 
-	/* skip all the instrumets . . . may want to add drumkit remapping code here */
 	for (i=0;i<fake_ninsts;i++)
-		fscanf(f, "Instrument %*d: '%*[^']%*c %*d\n");
+		fscanf(f, "Instrument %*d: '%*[^']%*c %*d %d\n", &import_inst_map[i]);
 
 	rc = fscanf(f, "Patterns: %d\n", &newpatterns);
 	for (i=npatterns;i<npatterns+newpatterns;i++) {
@@ -2602,6 +2777,16 @@ int import_patterns_v2(FILE *f)
 			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			gm = import_inst_map[(*h)->h.instrument_num];
+			if (gm != -1)
+				for (k=0;k<drumkit[kit].ninsts;k++) {
+					if (gm == drumkit[kit].instrument[k].gm_equivalent) {
+						/* printf("remapping %d to %d\n", (*h)->h.instrument_num, k); */
+						(*h)->h.instrument_num = k;
+						break;	
+					}
+				}
 
 			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
 				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
@@ -2665,6 +2850,8 @@ int import_patterns_from_file(const char *filename)
 			break;
 		case 2: rc = import_patterns_v2(f);
 			break;
+		case 3: rc = import_patterns_v3(f);
+			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
 			return -1;
@@ -2713,10 +2900,14 @@ int load_from_file(const char *filename)
 		return -1;
 	}
 
+	printf("FILEFORMAT is %d\n", fileformatversion);
+
 	switch (fileformatversion) {
 		case 1: rc = load_from_file_version_1(f);
 			break;
 		case 2: rc = load_from_file_version_2(f);
+			break;
+		case 3: rc = load_from_file_version_3(f);
 			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
@@ -2728,7 +2919,7 @@ int load_from_file(const char *filename)
 }
 
 
-int current_file_format_version = 2;
+int current_file_format_version = 3;
 int save_to_file(char *filename)
 {
 	int i,j;
@@ -2752,7 +2943,8 @@ int save_to_file(char *filename)
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
 		gboolean hidden = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(inst->hidebutton));
-		fprintf(f, "Instrument %d: '%s' %d\n", i, drumkit[kit].instrument[i].type, (int) hidden);
+		fprintf(f, "Instrument %d: '%s' %d %d\n", i, drumkit[kit].instrument[i].type, 
+				(int) hidden, drumkit[kit].instrument[i].gm_equivalent);
 	}
 
 	/* Save the patterns */
@@ -3243,8 +3435,18 @@ int main(int argc, char *argv[])
 	if (fd >= 0) {
 		unsigned char bankchange[] = { 0xb0, 0x00, 0x00 };
 		unsigned char patchchange[] = { 0xc0, 117};
+		struct stat statbuf;
 
-		midi_fd = fd;
+		/* Check to see that it's a device file at least... */
+		rc = fstat(fd, &statbuf);
+		if (rc < 0) {
+			printf("Can't stat MIDI device file %s, %s\n", device, strerror(errno));
+			close(fd);
+		} else if (!S_ISCHR(statbuf.st_mode)) {
+			printf("%s is not a character special device file\n", device);
+			close(fd);
+		} else
+			midi_fd = fd;
 
 		/* do some ioctl or something here to determine how to access 
 		   the device, then set access_device pointer to the correct
@@ -3257,8 +3459,10 @@ int main(int argc, char *argv[])
 		   midi devices, send me a patch. <smcameron@users.sourceforge.net>
 
 		 */
-	} else
-		printf("Can't open MIDI file %s, oh well, NO SOUND FOR YOU!!!\n", device);
+	} else {
+		printf("Can't open MIDI device file %s, oh well, NO SOUND FOR YOU!!!\n", device);
+		close(fd);
+	}
 	
 	player_process_pid = fork_player_process(device, &player_process_fd);
 	pattern = malloc(sizeof(struct pattern_struct *) * MAXPATTERNS);
@@ -3317,7 +3521,7 @@ int main(int argc, char *argv[])
 		PSCROLLER_WIDTH, PSCROLLER_HEIGHT);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (pattern_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	table = gtk_table_new(dk->ninsts + 1,  9, FALSE);
+	table = gtk_table_new(dk->ninsts + 1,  10, FALSE);
 	gtk_box_pack_start(GTK_BOX(box1), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box1), middle_box, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(middle_box), pattern_scroller, TRUE, TRUE, 0);
@@ -3358,6 +3562,12 @@ int main(int argc, char *argv[])
 			G_CALLBACK (save_drumkit_button_clicked), NULL);
 	edit_instruments_toggle = gtk_toggle_button_new_with_label("Edit Drum Kit");
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(edit_instruments_toggle), FALSE);
+	remap_drumkit_button = gtk_button_new_with_label("Remap drum kit");
+	gtk_tooltips_set_tip(tooltips, remap_drumkit_button, 
+		"Remap drum kit instruments for this pattern "
+		"via General MIDI to the current drumkit (sorta kinda works.)", NULL);
+	g_signal_connect(G_OBJECT (remap_drumkit_button), "clicked", 
+			G_CALLBACK (remap_drumkit_button_clicked), NULL);
 	gtk_tooltips_set_tip(tooltips, edit_instruments_toggle, 
 		"Assign names, types, and MIDI note numbers to instruments.", NULL);
 	g_signal_connect(G_OBJECT (edit_instruments_toggle), "toggled", 
@@ -3388,6 +3598,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(topbox), drumkit_vbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), save_drumkit_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(drumkit_vbox), edit_instruments_toggle, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(drumkit_vbox), remap_drumkit_button, TRUE, TRUE, 0);
 
 	misctable = gtk_table_new(2, 3, FALSE);
 	gtk_box_pack_start(GTK_BOX(topbox), misctable, TRUE, TRUE, 0);
@@ -3462,6 +3673,14 @@ int main(int argc, char *argv[])
 		gtk_tooltips_set_tip(tooltips, inst->midi_value_spin_button, 
 			"Assign the MIDI note for this instrument", NULL);
 
+		inst->gm_value_spin_button = gtk_spin_button_new_with_range(0, 127, 1);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->gm_value_spin_button), 
+			(gdouble) inst->gm_equivalent);
+		g_signal_connect(G_OBJECT (inst->gm_value_spin_button), "value-changed", 
+				G_CALLBACK (unsigned_char_spin_button_change), &inst->gm_equivalent);
+		gtk_tooltips_set_tip(tooltips, inst->gm_value_spin_button, 
+			"Assign the closest General MIDI note for this instrument for remapping", NULL);
+
 		gtk_widget_set_size_request(inst->volume_slider, 80, 33);
 		gtk_scale_set_digits(GTK_SCALE(inst->volume_slider), 0);
 		gtk_tooltips_set_tip(tooltips, inst->volume_slider, 
@@ -3498,6 +3717,8 @@ int main(int argc, char *argv[])
 		gtk_table_attach(GTK_TABLE(table), inst->type_entry,
 			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->midi_value_spin_button,
+			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
+		gtk_table_attach(GTK_TABLE(table), inst->gm_value_spin_button,
 			col, col+1, i, i+1, GTK_FILL, 0, 0, 0); col++;
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
@@ -3789,6 +4010,7 @@ int main(int argc, char *argv[])
 		gtk_widget_hide(inst->name_entry);
 		gtk_widget_hide(inst->type_entry);
 		gtk_widget_hide(inst->midi_value_spin_button);
+		gtk_widget_hide(inst->gm_value_spin_button);
 		gtk_widget_hide(inst->volume_slider);
 		gtk_widget_hide(inst->clear_button);
 		gtk_widget_hide(inst->drag_spin_button);

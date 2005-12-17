@@ -1,57 +1,57 @@
-Gneutronica drumkit file format 1
+Gneutronica drumkit file format 2
 Roland (BOSS), Dr. Rythym 660, Standrd 
-Laser, Laser, 27
-Thwack, Thwack, 28
-Scratch, Scratch, 29
-Scratch, Scratch, 30
-Stick, Stick, 31
-Woodblock, Woodblock, 32
-78 Beat Lo, 78 Beat Lo, 33
-78 Beat Hi, 78 Beat Hi, 34
-Bass Drum, Bass Drum, 35
-Bass Drum, Bass Drum, 36
-Rim Stick, Rim Stick, 37
-Snare, Snare, 38
-Hand Clap, Hand Clap, 39
-Snare, Snare, 40
-Tom Floor, Tom Floor, 41
-Closed Hihat, Closed Hihat, 42
-Tom Lo, Tom Lo, 43
-Pedal Hihat, Pedal Hihat, 44
+Laser, Laser, 27 27
+Thwack, Thwack, 28 28
+Scratch, Scratch, 29 29
+Scratch, Scratch, 30 30
+Stick, Stick, 31 31
+Woodblock, Woodblock, 32 32
+78 Beat Lo, 78 Beat Lo, 33 33
+78 Beat Hi, 78 Beat Hi, 34 34
+Bass Drum, Bass Drum, 35 35
+Bass Drum, Bass Drum, 36 36
+Rim Stick, Rim Stick, 37 37
+Snare, Snare, 38 38
+Hand Clap, Hand Clap, 39 39
+Snare, Snare, 40 40
+Tom Floor, Tom Floor, 41 41
+Closed Hihat, Closed Hihat, 42 42
+Tom Lo, Tom Lo, 43 43
+Pedal Hihat, Pedal Hihat, 44 44
 # Low Tom, Low Tom, 45
-Ride Cymbal, Ride Cymbal, 46
-Tom Mid, Tom Mid, 47
+Ride Cymbal, Ride Cymbal, 46 46 
+Tom Mid, Tom Mid, 47 47
 # Mid Tom, Mid Tom, 48
-Crash Cymbal, Crash Cymbal, 49
-Tom Hi, Tom Hi, 50
-Ride Cymbal, Ride Cymbal, 51
-China Cymbal, China Cymbal, 52
-Cymbal (Cup), Cymbal (Cup), 53
-Jingle Bells, Jingle Bells, 54
-Splash Cymbal, Splash Cymbal, 55
-Cowbell, Cowbell, 56
-Crash Cymbal, Crash Cymbal, 57
-Vibra Slap, Vibra Slap, 58
-Ride Cymbal, Ride Cymbal, 59
-Bongo Hi, Bongo Hi, 60
-Bongo Lo, Bongo Lo, 61
-Conga Hi Muted, Congo Hi Muted, 62
-Conga Hi, Conga Hi, 63
-Conga Low, Conga Low, 64
-Timbale Hi, Timbale Hi, 65
-Timbale Lo, Timbale Lo, 66
-Agogo Hi, Agogo HI, 67
-Agogo Lo, Agogo Lo, 68
-Cabasa, Cabasa, 69
-Maracas, Maracas, 70
-Short Whistle, Whistle, 71
-Long Whistle, Whistle, 72
-Guiro Short, Guiro Short, 73
-Guiro Long, Guiro Long, 74
-Claves, Claves, 75
-Woodblock Lo, Woodblock Lo, 76
-Woodblock Hi, Woodblock Hi, 77
-Cuica Hi, Cuica Hi, 78
-Cuica Lo, Cuica, 79
-Triangle Muted, Triangle Muted, 80
-Triangle, Triangle, 81
+Crash Cymbal, Crash Cymbal, 49 49
+Tom Hi, Tom Hi, 50 50
+Ride Cymbal, Ride Cymbal, 51 51
+China Cymbal, China Cymbal, 52 52
+Cymbal (Cup), Cymbal (Cup), 53 53
+Jingle Bells, Jingle Bells, 54 54
+Splash Cymbal, Splash Cymbal, 55 55
+Cowbell, Cowbell, 56 56
+Crash Cymbal, Crash Cymbal, 57 57
+Vibra Slap, Vibra Slap, 58 58
+Ride Cymbal, Ride Cymbal, 59 59
+Bongo Hi, Bongo Hi, 60 60
+Bongo Lo, Bongo Lo, 61 61
+Conga Hi Muted, Congo Hi Muted, 62 62
+Conga Hi, Conga Hi, 63 63
+Conga Low, Conga Low, 64 64
+Timbale Hi, Timbale Hi, 65 56
+Timbale Lo, Timbale Lo, 66 66
+Agogo Hi, Agogo HI, 67 67
+Agogo Lo, Agogo Lo, 68 68
+Cabasa, Cabasa, 69 69
+Maracas, Maracas, 70 70
+Short Whistle, Whistle, 71 71
+Long Whistle, Whistle, 72 72
+Guiro Short, Guiro Short, 73 73
+Guiro Long, Guiro Long, 74 74 
+Claves, Claves, 75 75
+Woodblock Lo, Woodblock Lo, 76 76
+Woodblock Hi, Woodblock Hi, 77 77
+Cuica Hi, Cuica Hi, 78 78
+Cuica Lo, Cuica, 79 79
+Triangle Muted, Triangle Muted, 80 80
+Triangle, Triangle, 81 81

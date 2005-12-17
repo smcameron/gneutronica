@@ -4,7 +4,7 @@
 <h1><p align=center>Gneutronica -- a MIDI drum machine for Linux</h1>
 <p align=center><a href="http://sourceforge.net/projects/gneutronica/">Download Source Code</a>.
 <p align=center><img src="gneutronica_robot.png">
-<p align=center><font size=-1>Last Updated Jul 9, 2005, by Stephen Cameron</font>
+<p align=center><font size=-1>Last Updated Dec 17, 2005, by Stephen Cameron</font>
 <hr>
 <h1>Introduction</h1>
 <p>Gneutronica is a simple MIDI drum machine program modeled to a large extent
@@ -89,21 +89,22 @@ specification file, which follows a simple format, a bunch of strings of charact
 seperated by commas.  The first line is used to identify the file format, in case
 it changes in the future.  The second line contains the manufacturer, make and 
 model, and subsequent lines
-specify instrments, with a pair of names, and a MIDI note number.  The first name
+specify instrments, with a pair of names, the MIDI note number, and the closest
+General MIDI note number for that instrument (for remapping purposes).  The first name
 will appear in buttons in Gneutronica, and the second in tooltip windows.   So the
 first name should be short enough to fit in a button, and the 2nd may be longer.
 <pre>
 Gneutronica drumkit file format 1
 Manufacture, Model, drumkit name
-Instrument 1, description of instrument 1, 1
-Instrument 2, description of instrument 2, 2
+Instrument 1, description of instrument 1, 1 1 
+Instrument 2, description of instrument 2, 2 2
 </pre>
 <p>However, that is the hard way, as now there is a drumkit editor.  Just click the
 "Edit Drum Kit" button on the pattern window, and you should see something like this:
 <p align=center><img src="drumkit_editor.png">
 <p>This will allow you to play the instruments by hitting the instrument button,
-hear it, and then type in the instrument name, type, and MIDI note number without
-having to think too hard abuot it.
+hear it, and then type in the instrument name, type, MIDI note number, and
+approximate GM MIDI note without having to think too hard abuot it.
 <p>BTW, if you make a new drumkit file for a new device, or a new preset on a device
 send it to me, (smcameron@users.sourceforge.net) and I'll include it in the next release.
 <h1>Making a pattern</h1>
@@ -210,6 +211,14 @@ which sets the default volume for notes.  (See more above about setting
 the volume of notes.)  After the default volume control is a button to
 clear all the notes of that instrument from a pattern.
 
+<p>The <b>Remap Drum Kit</b> button is useful only if you have loaded
+a song from a file which was originallly created with a different
+drumkit.  This button causes the instruments in the pattern to be
+remapped using General MIDI mappings as a common denominator.  This
+will sometimes give a decent approximation, but is unlikely to be
+a completely satisfactory mapping.  It's a good way to get a first
+approximation of a remapping which can then be tweaked by hand.
+
 <h1>Arranging patterns into a song</h1>
 <p>Here is the arranger window:
 <p align=center><img src="arranger_window.png">
@@ -277,13 +286,22 @@ song is discarded from memory.
 are pretty much identical.)
 <li><b>Import Patterns</b>:  This allows you to load just the patterns from an existing
 song, but not the arrangement.  It does not discard the current song, it just adds the
-patterns fron another song to the current song.  In order for this to work nicely,
+patterns fron another song to the current song.  In order for this to work perfectly,
 the drumkits the two songs use must be the same, or at least similar in that they have
-instruments sharing the same roles in the same locations in the drum kit.  At some point
-there may be a feature to remap patterns from one drumkit to another, but not yet.
+instruments sharing the same roles in the same locations in the drum kit.  If the drumkits
+are not the same, the imported pattern will try to use General MIDI mappings to reassign
+instruments from kit used in the song file to the kit currently in use in the running
+program.
 <li><b>Export song to MIDI File</b> Exports the song to the simplest possible 
 form of a MIDI file.
 </ul>
+<p>Under the <b>Edit</b> menu, there is one item, <b>Remap drum kit for whole song via GM</b>.
+If you start gneutronica with one drum kit, and load a song that was saved with a different
+drum kit, there is the possibility to use General MIDI mappings to try to reassign the
+instruments to appropriate roles for the drumkit in use.  This menu item causes gneutronica
+to attempt such a mapping for every pattern in the song.
+
+
 <p><b>Some things Gneutronica doesn't do</b>
 
 <ul>
@@ -301,6 +319,25 @@ drumpads seems extremely unlikely to ever occur, however.
 <p><b>BUGS:</b> You betcha.  It uses and abuses fscanf() for one thing...  For 
 another, it doesn't generally send any "Note off" messages during normal
 playback.
+
+<p><b>Some notes about v. 0.27</b> 
+<p>This version changes the file format of both the drumkit files and the song
+files slightly.  The program should still read the old files, however the GM
+remapping of instruments won't work right.  
+
+<p>First, you should upgrade your drumkit files.  If you've used the standard
+ones that came with gneutronica, then 0.27 comes with new versions of these
+drumkit files.  If you have your own custom drumkit files you should start
+gneutronica then "edit drumkit" and put in values for the General MIDI 
+values for each instrument, then save the drumkit.
+
+<p>To get your old song files be
+saved in the new format, you should start gneutronica with the -k option
+to specify whichever drumkit file you used for a song.  You should
+use the new version of the drumkit file which contains the General
+MIDI mappings.  Then open the song and then save it.  This will save 
+it with the new GM mappings, which will enable you to remap the song
+to use another drumkit if you need to at some point.
 
 </pre>
 </body>

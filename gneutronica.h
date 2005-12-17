@@ -89,6 +89,7 @@ struct pattern_struct {
 			  	 at different tempos, so this is not the tempo within the context 
 				of a song. */
 	double drag[MAXINSTS];	/* amount of drag/rush as a percentage of a beat */
+	int gm_converted;
 	GtkWidget *copy_button;
 	GtkWidget *del_button;
 	GtkWidget *ins_button;
@@ -119,11 +120,14 @@ struct drumkit_struct {
 
 GLOBAL struct drumkit_struct drumkit[MAXKITS];
 
+GLOBAL int song_gm_map[MAXINSTS];
+
 struct instrument_struct {
 	char name[40];
 	char type[40];
 	unsigned char midivalue;
 	int instrument_num;
+	int gm_equivalent; /* General MIDI equivalent */
 	struct hitpattern *hit;
 	GtkWidget *hidebutton;
 	GtkWidget *button;
@@ -135,6 +139,7 @@ struct instrument_struct {
 	GtkWidget *name_entry;
 	GtkWidget *type_entry;
 	GtkWidget *midi_value_spin_button;
+	GtkWidget *gm_value_spin_button;
 }; 
 
 GLOBAL void note_on(int fd, unsigned char value, unsigned char volume);
@@ -227,6 +232,7 @@ GLOBAL GtkTooltips *tooltips;
 
 GLOBAL GtkObject *volume_magnifier_adjustment;
 GLOBAL GtkWidget *volume_magnifier;
+GLOBAL GtkWidget *remap_drumkit_button;
 
 GLOBAL GtkWidget *TempoChWin;
 GLOBAL GtkWidget *TempoChvbox1;

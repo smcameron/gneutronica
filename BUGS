@@ -23,3 +23,8 @@ Known bugs:
 * If you delete all the patterns, things get weird.  There's no way
   to add a new pattern, and it'll segfault pretty soon.
   Fixed after v.0.25, Wed Oct 26 08:16:51 CDT 2005 
+
+* -d option will write over files.  If you forget and think 'd' stands
+  for drumkit instead of device, you can damage your drumkit files.
+  Not cool.  Should stat the file and make sure it's a device.
+  (fixed in 0.27)
