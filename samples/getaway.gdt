@@ -1,0 +1,572 @@
+Gneutronica file format version: 3
+Songname: 'Untitled Song'
+Comment:
+Drumkit Make: Yamaha
+Drumkit Model: Motif-R
+Drumkit Name: RockSt1 Kit
+Instruments: 73
+Instrument 0: 'click' 0 32
+Instrument 1: 'Snare-Brush' 0 22
+Instrument 2: 'Snare-Brush' 0 23
+Instrument 3: 'Snare-Brush' 0 24
+Instrument 4: 'Snare-Brush' 0 25
+Instrument 5: 'Snare-Roll' 0 25
+Instrument 6: 'Castanet' 0 82
+Instrument 7: 'Snare Drm' 0 88
+Instrument 8: 'Stick' 0 31
+Instrument 9: 'Bass Drum' 0 35
+Instrument 10: 'Snare Rim' 0 33
+Instrument 11: 'Bass Drum' 1 35
+Instrument 12: 'Bass Drum' 1 36
+Instrument 13: 'Snare Drum' 1 38
+Instrument 14: 'Snare Drum' 1 38
+Instrument 15: 'Hand Clap' 0 39
+Instrument 16: 'Snare Drum' 0 40
+Instrument 17: 'Tom Low' 1 41
+Instrument 18: 'Closed Hihat' 1 42
+Instrument 19: 'Tom Low' 1 43
+Instrument 20: 'Partly Closed Hihat' 1 44
+Instrument 21: 'Tom Mid' 1 45
+Instrument 22: 'Open Hihat' 0 46
+Instrument 23: 'Tom Mid' 0 47
+Instrument 24: 'High Mid' 0 48
+Instrument 25: 'Crash Cymbal' 1 49
+Instrument 26: 'High Mid' 1 50
+Instrument 27: 'Ride Cymbal' 1 51
+Instrument 28: 'China Cymbal' 1 52
+Instrument 29: 'Ride Cymbal (Cup)' 1 53
+Instrument 30: 'Tambourine' 0 54
+Instrument 31: 'Splash Cymbal' 1 55
+Instrument 32: 'Cowbell' 0 56
+Instrument 33: 'Crash Cymbal' 1 57
+Instrument 34: 'Vibraslap' 0 58
+Instrument 35: 'Ride Cymbal' 0 59
+Instrument 36: 'Bongo High' 0 60
+Instrument 37: 'Bongo Low' 0 61
+Instrument 38: 'CongaTip' 0 62
+Instrument 39: 'CongaSip' 0 63
+Instrument 40: 'CongaOp' 0 64
+Instrument 41: 'Timbale Hi' 0 65
+Instrument 42: 'Timbale Lo' 0 66
+Instrument 43: 'Agogo Hi' 0 67
+Instrument 44: 'Agogo Lo' 0 68
+Instrument 45: 'Cabasa' 0 69
+Instrument 46: 'Maracas' 0 70
+Instrument 47: 'Whistle' 0 71
+Instrument 48: 'Whistle' 0 72
+Instrument 49: 'Guiro' 0 73
+Instrument 50: 'Guiro' 0 74
+Instrument 51: 'Clave' 0 45
+Instrument 52: 'Woodblock' 0 76
+Instrument 53: 'Woodblock' 0 77
+Instrument 54: 'Cuica Hi' 0 78
+Instrument 55: 'Cuica Lo' 0 79
+Instrument 56: 'Triangle' 0 80
+Instrument 57: 'Triangle' 0 81
+Instrument 58: 'Shaker' 0 82
+Instrument 59: 'Sleigh Bell' 0 54
+Instrument 60: 'Bell Tree' 0 84
+Instrument 61: 'Snare Drum Flam' 1 85
+Instrument 62: 'Snare Drum' 1 86
+Instrument 63: 'Snare Drum Rim' 1 87
+Instrument 64: 'Snare Drum Mute' 1 88
+Instrument 65: 'Bass Drum' 0 89
+Instrument 66: 'Snare Drum Roll' 1 21
+Instrument 67: 'Bass Drum' 1 35
+Instrument 68: 'Snare Drum' 0 96
+Instrument 69: 'Bass Drum' 1 36
+Instrument 70: 'Snare Drum' 1 96
+Instrument 71: 'Bass Drum' 0 35
+Instrument 72: 'Bass Drum' 1 36
+Patterns: 18
+Pattern 0: 4 120 Toms
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 11 V: 118 B:0 BPM:4
+T: 0 DK: 0 I: 16 V: 99 B:0 BPM:4
+T: 0 DK: 0 I: 26 V: 104 B:0 BPM:4
+T: 0.0625 DK: 0 I: 11 V: 35 B:1 BPM:16
+T: 0.0625 DK: 0 I: 16 V: 24 B:1 BPM:16
+T: 0.125 DK: 0 I: 11 V: 69 B:1 BPM:8
+T: 0.125 DK: 0 I: 16 V: 48 B:1 BPM:8
+T: 0.125 DK: 0 I: 26 V: 76 B:1 BPM:8
+T: 0.1875 DK: 0 I: 11 V: 64 B:3 BPM:16
+T: 0.1875 DK: 0 I: 16 V: 52 B:3 BPM:16
+T: 0.1875 DK: 0 I: 26 V: 76 B:3 BPM:16
+T: 0.25 DK: 0 I: 11 V: 104 B:1 BPM:4
+T: 0.25 DK: 0 I: 19 V: 102 B:1 BPM:4
+T: 0.3125 DK: 0 I: 11 V: 30 B:5 BPM:16
+T: 0.375 DK: 0 I: 11 V: 65 B:3 BPM:8
+T: 0.375 DK: 0 I: 19 V: 62 B:3 BPM:8
+T: 0.4375 DK: 0 I: 11 V: 65 B:7 BPM:16
+T: 0.4375 DK: 0 I: 19 V: 57 B:7 BPM:16
+T: 0.5 DK: 0 I: 11 V: 99 B:1 BPM:2
+T: 0.5 DK: 0 I: 21 V: 112 B:1 BPM:2
+T: 0.5625 DK: 0 I: 11 V: 33 B:9 BPM:16
+T: 0.625 DK: 0 I: 11 V: 60 B:5 BPM:8
+T: 0.625 DK: 0 I: 21 V: 64 B:5 BPM:8
+T: 0.6875 DK: 0 I: 11 V: 58 B:11 BPM:16
+T: 0.6875 DK: 0 I: 21 V: 66 B:11 BPM:16
+T: 0.75 DK: 0 I: 11 V: 104 B:3 BPM:4
+T: 0.75 DK: 0 I: 16 V: 104 B:3 BPM:4
+T: 0.75 DK: 0 I: 17 V: 99 B:3 BPM:4
+T: 0.8125 DK: 0 I: 11 V: 30 B:13 BPM:16
+T: 0.875 DK: 0 I: 11 V: 60 B:7 BPM:8
+T: 0.875 DK: 0 I: 16 V: 55 B:7 BPM:8
+T: 0.875 DK: 0 I: 17 V: 59 B:7 BPM:8
+T: 0.9375 DK: 0 I: 11 V: 60 B:15 BPM:16
+T: 0.9375 DK: 0 I: 16 V: 52 B:15 BPM:16
+T: 0.9375 DK: 0 I: 17 V: 64 B:15 BPM:16
+END-OF-PATTERN
+dragging count: 0
+Pattern 1: 4 120 bass 1 2 3 4
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 11 V: 122 B:0 BPM:4
+T: 0.25 DK: 0 I: 11 V: 109 B:1 BPM:4
+T: 0.5 DK: 0 I: 11 V: 124 B:1 BPM:2
+T: 0.75 DK: 0 I: 11 V: 108 B:3 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 2: 4 120 Crash 1
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 33 V: 122 B:0 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 3: 4 120 Snare 3 & 4
+Divisions: 4 16 0 0 0
+T: 0.25 DK: 0 I: 64 V: 118 B:1 BPM:4
+T: 0.75 DK: 0 I: 64 V: 115 B:3 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 4: 4 120 half tom roll
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 11 V: 120 B:0 BPM:4
+T: 0.1875 DK: 0 I: 66 V: 113 B:3 BPM:16
+T: 0.25 DK: 0 I: 11 V: 116 B:1 BPM:4
+T: 0.25 DK: 0 I: 14 V: 111 B:1 BPM:4
+T: 0.5 DK: 0 I: 11 V: 116 B:1 BPM:2
+T: 0.5 DK: 0 I: 26 V: 122 B:1 BPM:2
+T: 0.5625 DK: 0 I: 26 V: 98 B:9 BPM:16
+T: 0.625 DK: 0 I: 26 V: 90 B:5 BPM:8
+T: 0.6875 DK: 0 I: 26 V: 90 B:11 BPM:16
+T: 0.75 DK: 0 I: 11 V: 109 B:3 BPM:4
+T: 0.75 DK: 0 I: 14 V: 104 B:3 BPM:4
+T: 0.75 DK: 0 I: 21 V: 125 B:3 BPM:4
+T: 0.8125 DK: 0 I: 21 V: 85 B:13 BPM:16
+T: 0.875 DK: 0 I: 21 V: 85 B:7 BPM:8
+T: 0.9375 DK: 0 I: 21 V: 83 B:15 BPM:16
+END-OF-PATTERN
+dragging count: 0
+Pattern 5: 4 120 Bass v2
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 11 V: 122 B:0 BPM:4
+T: 0.25 DK: 0 I: 11 V: 87 B:1 BPM:4
+T: 0.375 DK: 0 I: 11 V: 72 B:3 BPM:8
+T: 0.5 DK: 0 I: 11 V: 122 B:1 BPM:2
+T: 0.75 DK: 0 I: 11 V: 83 B:3 BPM:4
+T: 0.875 DK: 0 I: 11 V: 76 B:7 BPM:8
+END-OF-PATTERN
+dragging count: 0
+Pattern 6: 4 120 snare v2
+Divisions: 4 16 0 0 0
+T: 0.1875 DK: 0 I: 66 V: 112 B:3 BPM:16
+T: 0.25 DK: 0 I: 64 V: 118 B:1 BPM:4
+T: 0.3125 DK: 0 I: 64 V: 82 B:5 BPM:16
+T: 0.375 DK: 0 I: 64 V: 76 B:3 BPM:8
+T: 0.5 DK: 0 I: 25 V: 0 B:1 BPM:2
+T: 0.5 DK: 0 I: 64 V: 79 B:1 BPM:2
+T: 0.6875 DK: 0 I: 64 V: 69 B:11 BPM:16
+T: 0.75 DK: 0 I: 64 V: 121 B:3 BPM:4
+T: 0.875 DK: 0 I: 64 V: 87 B:7 BPM:8
+END-OF-PATTERN
+dragging count: 0
+Pattern 7: 4 120 hihat 8ths
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 20 V: 110 B:0 BPM:4
+T: 0.125 DK: 0 I: 20 V: 85 B:1 BPM:8
+T: 0.25 DK: 0 I: 20 V: 82 B:1 BPM:4
+T: 0.375 DK: 0 I: 20 V: 77 B:3 BPM:8
+T: 0.5 DK: 0 I: 20 V: 117 B:1 BPM:2
+T: 0.625 DK: 0 I: 20 V: 76 B:5 BPM:8
+T: 0.75 DK: 0 I: 20 V: 75 B:3 BPM:4
+T: 0.875 DK: 0 I: 20 V: 76 B:7 BPM:8
+END-OF-PATTERN
+dragging count: 0
+Pattern 8: 4 120 bass 1 2
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 11 V: 120 B:0 BPM:4
+T: 0.5 DK: 0 I: 11 V: 122 B:1 BPM:2
+END-OF-PATTERN
+dragging count: 0
+Pattern 9: 4 120 splash 2 4
+Divisions: 4 16 0 0 0
+T: 0.25 DK: 0 I: 31 V: 122 B:1 BPM:4
+T: 0.75 DK: 0 I: 31 V: 113 B:3 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 10: 3 120 tom triplets
+Divisions: 2 12 0 0 0
+T: 0 DK: 0 I: 28 V: 102 B:0 BPM:2
+T: 0.00333333 DK: 0 I: 12 V: 117 B:1 BPM:300
+T: 0.00333333 DK: 0 I: 14 V: 73 B:1 BPM:300
+T: 0.166667 DK: 0 I: 14 V: 66 B:1 BPM:6
+T: 0.166667 DK: 0 I: 17 V: 119 B:1 BPM:6
+T: 0.25 DK: 0 I: 21 V: 127 B:1 BPM:4
+T: 0.333333 DK: 0 I: 19 V: 122 B:1 BPM:3
+T: 0.335 DK: 0 I: 21 V: 111 B:67 BPM:200
+T: 0.336667 DK: 0 I: 20 V: 3 B:101 BPM:300
+T: 0.5 DK: 0 I: 12 V: 106 B:1 BPM:2
+T: 0.5 DK: 0 I: 33 V: 112 B:1 BPM:2
+T: 0.501667 DK: 0 I: 14 V: 56 B:301 BPM:600
+T: 0.666667 DK: 0 I: 17 V: 102 B:2 BPM:3
+T: 0.668333 DK: 0 I: 14 V: 61 B:401 BPM:600
+T: 0.75 DK: 0 I: 21 V: 117 B:3 BPM:4
+T: 0.833333 DK: 0 I: 19 V: 122 B:5 BPM:6
+T: 0.835 DK: 0 I: 26 V: 112 B:167 BPM:200
+END-OF-PATTERN
+dragging count: 0
+Pattern 11: 2 120 tom 1234
+Divisions: 4 16 0 0 0
+T: 0 DK: 0 I: 12 V: 117 B:0 BPM:4
+T: 0.00166667 DK: 0 I: 25 V: 107 B:1 BPM:600
+T: 0.25 DK: 0 I: 17 V: 112 B:1 BPM:4
+T: 0.5 DK: 0 I: 12 V: 123 B:1 BPM:2
+T: 0.5 DK: 0 I: 21 V: 102 B:1 BPM:2
+T: 0.75 DK: 0 I: 19 V: 112 B:3 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 12: 3 120 tom triplets 2
+Divisions: 2 24 0 0 0
+T: 0 DK: 0 I: 12 V: 121 B:0 BPM:2
+T: 0 DK: 0 I: 17 V: 122 B:0 BPM:2
+T: 0.166667 DK: 0 I: 17 V: 93 B:1 BPM:6
+T: 0.25 DK: 0 I: 21 V: 110 B:1 BPM:4
+T: 0.335 DK: 0 I: 21 V: 116 B:67 BPM:200
+T: 0.336667 DK: 0 I: 19 V: 125 B:101 BPM:300
+T: 0.5 DK: 0 I: 12 V: 127 B:1 BPM:2
+T: 0.5 DK: 0 I: 17 V: 119 B:1 BPM:2
+T: 0.666667 DK: 0 I: 17 V: 112 B:2 BPM:3
+T: 0.75 DK: 0 I: 21 V: 121 B:3 BPM:4
+T: 0.833333 DK: 0 I: 19 V: 92 B:5 BPM:6
+T: 0.836667 DK: 0 I: 21 V: 124 B:251 BPM:300
+END-OF-PATTERN
+dragging count: 0
+Pattern 13: 2 120 tom 1234-2
+Divisions: 2 24 0 0 0
+T: 0.00166667 DK: 0 I: 12 V: 124 B:1 BPM:600
+T: 0.246667 DK: 0 I: 17 V: 107 B:37 BPM:150
+T: 0.25 DK: 0 I: 21 V: 107 B:1 BPM:4
+T: 0.495 DK: 0 I: 18 V: 0 B:99 BPM:200
+T: 0.496667 DK: 0 I: 19 V: 117 B:149 BPM:300
+T: 0.498333 DK: 0 I: 12 V: 127 B:299 BPM:600
+T: 0.501667 DK: 0 I: 21 V: 124 B:301 BPM:600
+T: 0.748333 DK: 0 I: 21 V: 97 B:449 BPM:600
+T: 0.75 DK: 0 I: 26 V: 112 B:3 BPM:4
+END-OF-PATTERN
+dragging count: 0
+Pattern 14: 2 120 Pattern 14
+Divisions: 2 24 0 0 0
+T: 0.00166667 DK: 0 I: 12 V: 124 B:1 BPM:600
+T: 0.00333333 DK: 0 I: 25 V: 127 B:1 BPM:300
+T: 0.005 DK: 0 I: 28 V: 112 B:1 BPM:200
+T: 0.248333 DK: 0 I: 12 V: 92 B:149 BPM:600
+T: 0.495 DK: 0 I: 18 V: 0 B:99 BPM:200
+T: 0.496667 DK: 0 I: 25 V: 123 B:149 BPM:300
+T: 0.498333 DK: 0 I: 12 V: 127 B:299 BPM:600
+T: 0.5 DK: 0 I: 33 V: 127 B:1 BPM:2
+T: 0.748333 DK: 0 I: 12 V: 90 B:449 BPM:600
+END-OF-PATTERN
+dragging count: 0
+Pattern 15: 2 120 tom2
+Divisions: 2 24 0 0 0
+T: 0.00166667 DK: 0 I: 12 V: 124 B:1 BPM:600
+T: 0.00166667 DK: 0 I: 19 V: 119 B:1 BPM:600
+T: 0.00166667 DK: 0 I: 21 V: 111 B:1 BPM:600
+T: 0.161667 DK: 0 I: 19 V: 69 B:97 BPM:600
+T: 0.163333 DK: 0 I: 12 V: 60 B:49 BPM:300
+T: 0.166667 DK: 0 I: 18 V: 11 B:1 BPM:6
+T: 0.17 DK: 0 I: 21 V: 77 B:17 BPM:100
+T: 0.33 DK: 0 I: 19 V: 66 B:33 BPM:100
+T: 0.336667 DK: 0 I: 12 V: 56 B:101 BPM:300
+T: 0.336667 DK: 0 I: 21 V: 69 B:101 BPM:300
+T: 0.495 DK: 0 I: 18 V: 0 B:99 BPM:200
+T: 0.496667 DK: 0 I: 26 V: 117 B:149 BPM:300
+T: 0.498333 DK: 0 I: 12 V: 127 B:299 BPM:600
+T: 0.501667 DK: 0 I: 21 V: 122 B:301 BPM:600
+T: 0.66 DK: 0 I: 21 V: 93 B:33 BPM:50
+T: 0.666667 DK: 0 I: 12 V: 58 B:2 BPM:3
+T: 0.668333 DK: 0 I: 26 V: 95 B:401 BPM:600
+T: 0.828333 DK: 0 I: 21 V: 91 B:497 BPM:600
+T: 0.831667 DK: 0 I: 12 V: 57 B:499 BPM:600
+T: 0.835 DK: 0 I: 26 V: 92 B:167 BPM:200
+END-OF-PATTERN
+dragging count: 0
+Pattern 16: 2 120 Pattern 16
+Divisions: 2 24 0 0 0
+END-OF-PATTERN
+dragging count: 0
+Pattern 17: 2 120 Pattern 17
+Divisions: 2 24 0 0 0
+END-OF-PATTERN
+dragging count: 0
+Measures: 131
+m:0 np:2
+0 2 
+m:1 np:1
+1 
+m:2 np:1
+1 
+m:3 np:2
+1 3 
+m:4 np:2
+1 3 
+m:5 np:2
+3 1 
+m:6 np:2
+5 3 
+m:7 np:2
+1 6 
+m:8 np:2
+3 5 
+m:9 np:2
+1 3 
+m:10 np:2
+2 1 
+m:11 np:1
+1 
+m:12 np:1
+1 
+m:13 np:1
+1 
+m:14 np:1
+1 
+m:15 np:2
+1 6 
+m:16 np:2
+3 8 
+m:17 np:2
+3 8 
+m:18 np:1
+4 
+m:19 np:3
+2 3 8 
+m:20 np:2
+3 8 
+m:21 np:2
+3 8 
+m:22 np:2
+3 8 
+m:23 np:2
+1 6 
+m:24 np:2
+3 1 
+m:25 np:2
+3 5 
+m:26 np:2
+3 1 
+m:27 np:2
+3 5 
+m:28 np:3
+2 1 7 
+m:29 np:2
+1 7 
+m:30 np:2
+1 7 
+m:31 np:2
+1 7 
+m:32 np:2
+1 7 
+m:33 np:3
+1 6 7 
+m:34 np:3
+3 7 8 
+m:35 np:3
+3 7 8 
+m:36 np:1
+4 
+m:37 np:4
+2 3 7 8 
+m:38 np:3
+3 7 8 
+m:39 np:3
+3 7 8 
+m:40 np:3
+3 7 8 
+m:41 np:4
+6 7 8 9 
+m:42 np:4
+3 7 8 9 
+m:43 np:4
+3 5 7 9 
+m:44 np:4
+3 7 8 9 
+m:45 np:4
+3 5 7 9 
+m:46 np:2
+2 1 
+m:47 np:1
+1 
+m:48 np:1
+1 
+m:49 np:1
+1 
+m:50 np:2
+1 7 
+m:51 np:4
+6 7 8 9 
+m:52 np:4
+3 7 8 9 
+m:53 np:4
+3 7 8 9 
+m:54 np:2
+4 9 
+m:55 np:1
+12 
+m:56 np:1
+11 
+m:57 np:1
+10 
+m:58 np:1
+14 
+m:59 np:1
+12 
+m:60 np:1
+13 
+m:61 np:1
+10 
+m:62 np:1
+15 
+m:63 np:1
+12 
+m:64 np:1
+11 
+m:65 np:1
+12 
+m:66 np:1
+14 
+m:67 np:1
+12 
+m:68 np:1
+11 
+m:69 np:1
+10 
+m:70 np:1
+15 
+m:71 np:2
+0 2 
+m:72 np:1
+1 
+m:73 np:1
+1 
+m:74 np:2
+1 3 
+m:75 np:2
+1 3 
+m:76 np:2
+3 1 
+m:77 np:2
+5 3 
+m:78 np:2
+1 6 
+m:79 np:2
+3 5 
+m:80 np:2
+1 3 
+m:81 np:2
+2 1 
+m:82 np:1
+1 
+m:83 np:1
+1 
+m:84 np:1
+1 
+m:85 np:1
+1 
+m:86 np:2
+1 6 
+m:87 np:2
+3 8 
+m:88 np:2
+3 8 
+m:89 np:1
+4 
+m:90 np:3
+2 3 8 
+m:91 np:0
+m:92 np:2
+3 8 
+m:93 np:2
+3 8 
+m:94 np:2
+3 8 
+m:95 np:2
+1 6 
+m:96 np:2
+3 1 
+m:97 np:2
+3 5 
+m:98 np:2
+3 1 
+m:99 np:2
+3 5 
+m:100 np:3
+2 1 7 
+m:101 np:2
+1 7 
+m:102 np:2
+1 7 
+m:103 np:2
+1 7 
+m:104 np:2
+1 7 
+m:105 np:3
+1 6 7 
+m:106 np:3
+3 7 8 
+m:107 np:3
+3 7 8 
+m:108 np:1
+4 
+m:109 np:4
+2 3 7 8 
+m:110 np:3
+3 7 8 
+m:111 np:3
+3 7 8 
+m:112 np:3
+3 7 8 
+m:113 np:4
+6 7 8 9 
+m:114 np:4
+3 7 8 9 
+m:115 np:4
+3 5 7 9 
+m:116 np:4
+3 7 8 9 
+m:117 np:4
+3 5 7 9 
+m:118 np:2
+2 1 
+m:119 np:1
+1 
+m:120 np:1
+1 
+m:121 np:1
+1 
+m:122 np:2
+1 7 
+m:123 np:4
+6 7 8 9 
+m:124 np:4
+3 7 8 9 
+m:125 np:4
+3 7 8 9 
+m:126 np:2
+4 9 
+m:127 np:1
+0 
+m:128 np:1
+2 
+m:129 np:0
+m:130 np:0
+Tempo changes: 1
+m: 0 bpm: 162
