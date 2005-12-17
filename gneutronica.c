@@ -35,6 +35,7 @@
 #include <sys/mman.h>
 
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 
 #define INSTANTIATE_GNEUTRONICA_GLOBALS
 #include "gneutronica.h"
@@ -60,6 +61,8 @@ void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
+void destroy_event(GtkWidget *widget, gpointer data);
+void widget_exclude_keypress(GtkWidget *w);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -74,7 +77,8 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
 	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
-	{ "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT },
+	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
+	{ "/File/_Quit",    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT }, 
 	{ "/_Edit",         NULL,         NULL,           0, "<Branch>" },
 	{ "/Edit/_Remap drum kit for whole song via GM",    NULL, remap_drumkit_clicked, 0, "<Item>" },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
@@ -389,6 +393,7 @@ void make_tempo_change_editor()
 
 	TempoChLabel = gtk_label_new("Measure:xxx Beats/Minute:");
 	TempoChBPM = gtk_spin_button_new_with_range(MINTEMPO, MAXTEMPO, 1);
+	widget_exclude_keypress(TempoChBPM);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(TempoChBPM), (gdouble) 120);
 
 	TempoChOk = gtk_button_new_with_label("Ok");
@@ -1690,7 +1695,7 @@ void set_pattern_window_title()
 		sprintf(pattern_name, "Pattern %d", cpattern);
 	sprintf(window_title, "%s v. %s - Pattern Editor: %s", 
 		PROGNAME, VERSION, pattern_name);
-	gtk_window_set_title(GTK_WINDOW(window), window_title);
+	gtk_window_set_title(GTK_WINDOW(top_window), window_title);
 	gtk_entry_set_text(GTK_ENTRY(pattern_name_entry), pattern_name);
 }
 
@@ -2102,7 +2107,9 @@ void destroy_event(GtkWidget *widget,
 	gpointer data)
 {
 	/* g_print("destroy event!\n"); */
-	save_to_file("/tmp/zzz");
+
+	printf("\n\n\n\n\n\n      Gneutronica quits... your File is saved in /tmp/zzz.gdt\n\n\n\n\n\n");
+	save_to_file("/tmp/zzz.gdt");
 	kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
 	gtk_main_quit();
 }
@@ -3381,12 +3388,111 @@ int volume_magnifier_changed(GtkWidget *widget, gpointer data)
 	return TRUE;
 }
 
+/* This "exclude_keypress" stuff is used for ignoring keypresses when 
+   certain widgets have focus */
+
+void widget_exclude_keypress(GtkWidget *w)
+{
+	
+	if (n_exclude_keypress_widgets >= EXCLUDE_LIST_SIZE)
+		return;
+	exclude_keypress_list[n_exclude_keypress_widgets] = w;
+	n_exclude_keypress_widgets++;
+}
+
+int should_exclude_keypress(GtkWidget *w)
+{
+	int i;
+	for (i=0;i<n_exclude_keypress_widgets;i++)
+		if (exclude_keypress_list[i] == w)
+			return 1;
+	return 0;
+}
+
+static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
+{
+	char *x = (char *) data;
+	int mycontext;
+	GtkWidget *who_has_focus;
+	GtkWindow *this_window = NULL;
+
+#define ARRANGER_CONTEXT 1
+#define PATTERN_CONTEXT 2
+#define UNKNOWN_CONTEXT 3
+
+	mycontext = UNKNOWN_CONTEXT;
+
+	if (strcmp(x, "arranger") == 0) {
+		mycontext = ARRANGER_CONTEXT;
+		this_window = (GtkWindow *) arranger_window;
+	} else if (strcmp(x, "main_window") == 0) {
+		mycontext = PATTERN_CONTEXT;
+		this_window = (GtkWindow *) top_window;
+	}
+
+	if (this_window == NULL)
+		return FALSE;
+
+	who_has_focus = this_window->focus_widget;
+	if (who_has_focus != NULL && should_exclude_keypress(who_has_focus)) {
+		/* printf("Ignoring keypress due to widget with focus.\n"); */
+		return FALSE;
+	}
+#if 0
+	if (event->length > 0)
+		printf("The key event's string is `%s'\n", event->string);
+
+	printf("The name of this keysym is `%s'\n", 
+		gdk_keyval_name(event->keyval));
+#endif
+	switch (event->keyval)
+	{
+	case GDK_q:
+		destroy_event(widget, NULL);
+		return TRUE;	
+#if 0
+	case GDK_Home:
+		printf("The Home key was pressed.\n");
+		break;
+	case GDK_Up:
+		printf("The Up arrow key was pressed.\n");
+		break;
+#endif
+	case GDK_Right:
+	case GDK_period:
+	case GDK_greater:
+		if (mycontext == PATTERN_CONTEXT)
+			nextbutton_clicked(nextbutton, NULL);		
+		return TRUE;
+	case GDK_Left:
+	case GDK_comma:
+	case GDK_less:
+		if (mycontext == PATTERN_CONTEXT)
+			prevbutton_clicked(prevbutton, NULL);		
+		return TRUE;
+	case GDK_space:
+		pattern_stop_button_clicked(stop_button, NULL);
+		break;	
+	default:
+		break;
+	}
+
+	printf("Keypress: GDK_%s\n", gdk_keyval_name(event->keyval));
+#if 0
+	if (gdk_keyval_is_lower(event->keyval)) {
+		printf("A non-uppercase key was pressed.\n");
+	} else if (gdk_keyval_is_upper(event->keyval)) {
+		printf("An uppercase letter was pressed.\n");
+	}
+#endif
+	return FALSE;
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *abox;
 	GtkWidget *menu_box;
 	GtkWidget *a_button_box;
-	GtkWidget *stop_button;
 	/* GtkWidget *save_button;
 	GtkWidget *load_button; */
 	GtkWidget *pattern_play_button;
@@ -3495,17 +3601,19 @@ int main(int argc, char *argv[])
 	gdk_color_parse("blue", &bluecolor);
 	gdk_color_parse("black", &blackcolor);
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	top_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect(G_OBJECT (top_window), "key_press_event",
+			G_CALLBACK (key_press_cb), "main_window");
 
 	tooltips = gtk_tooltips_new();
 
-	g_signal_connect(G_OBJECT (window), "delete_event", 
+	g_signal_connect(G_OBJECT (top_window), "delete_event", 
 		// G_CALLBACK (delete_event), NULL);
 		G_CALLBACK (destroy_event), NULL);
-	g_signal_connect(G_OBJECT (window), "destroy", 
+	g_signal_connect(G_OBJECT (top_window), "destroy", 
 		G_CALLBACK (destroy_event), NULL);
 
-	gtk_container_set_border_width(GTK_CONTAINER (window), 15);
+	gtk_container_set_border_width(GTK_CONTAINER (top_window), 15);
 
 	box1 = gtk_vbox_new(FALSE, 0);
 	topbox = gtk_hbox_new(FALSE, 0);
@@ -3513,7 +3621,7 @@ int main(int argc, char *argv[])
 	box2 = gtk_hbox_new(FALSE, 0);
 	middle_box = gtk_hbox_new(FALSE, 0);
 	linebox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER (window), box1);
+	gtk_container_add(GTK_CONTAINER (top_window), box1);
 
 	pattern_scroller = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_set_border_width (GTK_CONTAINER (pattern_scroller), 10);
@@ -3575,16 +3683,19 @@ int main(int argc, char *argv[])
 	pattern_name_label = gtk_label_new("Pattern:");
 	gtk_label_set_justify(GTK_LABEL(pattern_name_label), GTK_JUSTIFY_RIGHT);
 	pattern_name_entry = gtk_entry_new();
+	widget_exclude_keypress(pattern_name_entry);
 	gtk_tooltips_set_tip(tooltips, pattern_name_entry, 
 		"Assign a name to this pattern.", NULL);
 	tempolabel1 = gtk_label_new("Beats/Min");
 	gtk_label_set_justify(GTK_LABEL(tempolabel1), GTK_JUSTIFY_RIGHT);
 	tempospin1 = gtk_spin_button_new_with_range(10, 400, 1);
+	widget_exclude_keypress(tempospin1);
 	gtk_tooltips_set_tip(tooltips, tempospin1, "Controls tempo only for single pattern playback, "
 			"does not affect the tempo in the context of the song.", NULL);
 	tempolabel2 = gtk_label_new("Beats/Measure");
 	gtk_label_set_justify(GTK_LABEL(tempolabel2), GTK_JUSTIFY_RIGHT);
 	tempospin2 = gtk_spin_button_new_with_range(1,  400, 1);
+	widget_exclude_keypress(tempospin2);
 	gtk_tooltips_set_tip(tooltips, tempospin2, "Controls tempo for single pattern playback, "
 			"and DOES affect the tempo in the context of the song."
 			"  Also affects the instrument drag/rush control.", NULL);
@@ -3635,6 +3746,7 @@ int main(int argc, char *argv[])
 		inst->button = gtk_button_new_with_label(inst->name);
 		gtk_tooltips_set_tip(tooltips, inst->button, inst->type, NULL);
 		inst->drag_spin_button = gtk_spin_button_new_with_range(-DRAGLIMIT,  DRAGLIMIT, 0.1);
+		widget_exclude_keypress(inst->drag_spin_button);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->drag_spin_button), 
 			(gdouble) 0);
 		g_signal_connect(G_OBJECT (inst->drag_spin_button), "value-changed", 
@@ -3652,6 +3764,7 @@ int main(int argc, char *argv[])
 			G_CALLBACK(instrument_clear_button_pressed), (gpointer) inst);
 
 		inst->name_entry = gtk_entry_new();
+		widget_exclude_keypress(inst->name_entry);
 		gtk_tooltips_set_tip(tooltips, inst->name_entry, 
 			"Assign a name to this instrument", NULL);
 		gtk_entry_set_text(GTK_ENTRY(inst->name_entry), inst->name);
@@ -3659,6 +3772,7 @@ int main(int argc, char *argv[])
 		      G_CALLBACK (instrument_name_entered), (gpointer) inst);
 
 		inst->type_entry = gtk_entry_new();
+		widget_exclude_keypress(inst->type_entry);
 		gtk_tooltips_set_tip(tooltips, inst->type_entry, 
 			"Assign a type to this instrument", NULL);
 		gtk_entry_set_text(GTK_ENTRY(inst->type_entry), inst->type);
@@ -3666,6 +3780,7 @@ int main(int argc, char *argv[])
 		      G_CALLBACK (instrument_type_entered), (gpointer) inst);
 
 		inst->midi_value_spin_button = gtk_spin_button_new_with_range(0, 127, 1);
+		widget_exclude_keypress(inst->midi_value_spin_button);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->midi_value_spin_button), 
 			(gdouble) inst->midivalue);
 		g_signal_connect(G_OBJECT (inst->midi_value_spin_button), "value-changed", 
@@ -3674,6 +3789,7 @@ int main(int argc, char *argv[])
 			"Assign the MIDI note for this instrument", NULL);
 
 		inst->gm_value_spin_button = gtk_spin_button_new_with_range(0, 127, 1);
+		widget_exclude_keypress(inst->gm_value_spin_button);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->gm_value_spin_button), 
 			(gdouble) inst->gm_equivalent);
 		g_signal_connect(G_OBJECT (inst->gm_value_spin_button), "value-changed", 
@@ -3726,6 +3842,7 @@ int main(int argc, char *argv[])
 
 	for (i=0;i<ndivisions;i++) {
 		timediv[i].spin = gtk_spin_button_new_with_range(0, 300, 1);
+		widget_exclude_keypress(timediv[i].spin);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(timediv[i].spin), (gdouble) timediv[i].division);
 		g_signal_connect(G_OBJECT(timediv[i].spin), "value-changed", 
 			G_CALLBACK(timediv_spin_change), &timediv[i]);
@@ -3779,6 +3896,8 @@ int main(int argc, char *argv[])
 
 	/* ---------------- arranger window ------------------ */
 	arranger_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	g_signal_connect(G_OBJECT (arranger_window), "key_press_event",
+			G_CALLBACK (key_press_cb), "arranger");
 	gtk_container_set_border_width(GTK_CONTAINER (arranger_window), 15);
 
 	/* 1 row, 2 colums, 1 row per pattern, will resize table as necc.
@@ -3905,6 +4024,7 @@ int main(int argc, char *argv[])
 
 	song_name_label = gtk_label_new("Song:");
 	song_name_entry = gtk_entry_new();
+	widget_exclude_keypress(song_name_entry);
 	g_signal_connect (G_OBJECT (song_name_entry), "activate",
 		      G_CALLBACK (song_name_entered), (gpointer) song_name_entry);
 	arr_loop_check_button = gtk_check_button_new_with_label("Loop");
@@ -3932,7 +4052,7 @@ int main(int argc, char *argv[])
 
 	/* Get the three types of menu.  Note: all three menus are */
 	/* separately created, so they are not the same menu */
-	main_menubar = get_menubar_menu(window);
+	main_menubar = get_menubar_menu(top_window);
 	main_popup_button = get_popup_menu();
 	main_option_menu = get_option_menu();
 
@@ -4002,7 +4122,7 @@ int main(int argc, char *argv[])
 	setup_midi_setup_window();
 	/* ---------------- start showing stuff ------------------ */
 	gtk_widget_show_all(arranger_window);
-	gtk_widget_show_all(window);
+	gtk_widget_show_all(top_window);
 	gc = gdk_gc_new(dk->instrument[0].canvas->window);
 
 	for (i=0;i<drumkit[kit].ninsts;i++) {

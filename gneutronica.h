@@ -271,7 +271,7 @@ GLOBAL int INIT(end_copy_measure, -1);
 #define PSCROLLER_HEIGHT 100
 #define PSCROLLER_WIDTH (DRAW_WIDTH + 130) 
 GLOBAL GtkWidget *pattern_scroller;
-GLOBAL GtkWidget *window; /* Pattern editor window */
+GLOBAL GtkWidget *top_window; /* Pattern editor window */
 GLOBAL GtkWidget *arranger_window;
 GLOBAL GtkWidget *arranger_box;
 #define ARRANGER_COLS 5
@@ -305,6 +305,7 @@ GLOBAL GtkWidget *about_da;
 GLOBAL GtkWidget *about_label;
 GLOBAL GtkWidget *about_ok_button;
 GLOBAL GdkPixbuf *robotdrummer;
+GLOBAL GtkWidget *stop_button;
 
 GLOBAL char window_title[255];
 GLOBAL char arranger_title[255];
@@ -333,6 +334,10 @@ GLOBAL struct pattern_struct *pattern_struct_alloc(int pattern_num);
 
 GLOBAL int flatten_pattern(int ckit, int cpattern);
 GLOBAL int unflatten_pattern(int ckit, int cpattern);
+
+#define EXCLUDE_LIST_SIZE 2000
+GLOBAL int INIT(n_exclude_keypress_widgets, 0);
+GLOBAL GtkWidget *exclude_keypress_list[EXCLUDE_LIST_SIZE];
 
 #endif /* __GNEUTRONICA_H__ */
 
