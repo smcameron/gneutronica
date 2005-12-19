@@ -1254,6 +1254,70 @@ static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct 
 	/* gtk_widget_queue_draw(w); */
 }
 
+static int hide_all_the_canvas_widgets(struct instrument_struct *inst)
+{
+	gtk_widget_hide(GTK_WIDGET(inst->clear_button));
+	gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+	gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
+	gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
+	gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+	gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+	gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+	gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
+	gtk_widget_hide(GTK_WIDGET(inst->button));
+}
+
+static void bring_back_right_widgets(struct instrument_struct *inst,
+	int vshidden, int unchecked_hidden, int editdrumkit)
+{
+	if (vshidden) {
+		gtk_widget_hide(GTK_WIDGET(inst->clear_button));
+		gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+		gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
+	}
+	if (editdrumkit) {
+		gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
+		gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+		gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+		gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+	}
+
+	if (unchecked_hidden)
+		gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
+	else
+		gtk_widget_show(GTK_WIDGET(inst->hidebutton));
+
+	if (unchecked_hidden && !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(inst->hidebutton))) {
+		gtk_widget_hide(GTK_WIDGET(inst->canvas));
+		gtk_widget_hide(GTK_WIDGET(inst->button));
+		if (!editdrumkit) { /* otherwise, already hidden */
+			gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+			gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+			gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+			gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
+		}
+		if (!vshidden) { /* otherwise, already hidden */
+			gtk_widget_hide(GTK_WIDGET(inst->clear_button));
+			gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
+			gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
+		}
+	} else {
+		gtk_widget_show(GTK_WIDGET(inst->canvas));
+		gtk_widget_show(GTK_WIDGET(inst->button));
+		if (!editdrumkit) {/* otherwise, already hidden */
+			gtk_widget_show(GTK_WIDGET(inst->name_entry));
+			gtk_widget_show(GTK_WIDGET(inst->type_entry));
+			gtk_widget_show(GTK_WIDGET(inst->midi_value_spin_button));
+			gtk_widget_show(GTK_WIDGET(inst->gm_value_spin_button));
+		}
+		if (!vshidden) { /* otherwise, already hidden */
+			gtk_widget_show(GTK_WIDGET(inst->clear_button));
+			gtk_widget_show(GTK_WIDGET(inst->volume_slider));
+			gtk_widget_show(GTK_WIDGET(inst->drag_spin_button));
+		}
+	}
+}
+
 static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
 {
 	int i,j; 
@@ -1262,15 +1326,33 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	float divs, zero;
 	struct hitpattern *this;
 	int height;
+	int automag_is_on;
+	int vshidden, unchecked_hidden, editdrumkit;
+
+	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
+	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
+	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
+	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
 
 	if (current_instrument == instrument->instrument_num) {
 		height = (int) (((double) 
 			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
 				(double) DRAW_HEIGHT / (double) 100.0) + 1;
+		if (automag_is_on)
+			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
-	} else {
+	} else if (!automag_is_on || abs(current_instrument - instrument->instrument_num) < 9) {
 		height = DRAW_HEIGHT+1;
+		if (automag_is_on)
+			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
+	} else {
+		/* height = 7; */
+		if (automag_is_on)
+			hide_all_the_canvas_widgets(instrument);
+		height = (double) 1.8 * (double) DRAW_HEIGHT / (abs(current_instrument - instrument->instrument_num) - 5 );
+		if (height < 1) height = 1;
+		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
 	}
 	gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &whitecolor, FALSE, FALSE);
 	gdk_gc_set_background(gc, &whitecolor);
@@ -1283,7 +1365,6 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	gdk_draw_line(w->window, gc, 0,0, 0, height);
 	gdk_draw_line(w->window, gc, DRAW_WIDTH,0, DRAW_WIDTH, height);
 
-	// for (i=0;i<ndivisions;i++) {
 	for (i=ndivisions-1;i>=0;i--) {
 		int k;
 		divs =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
@@ -1341,6 +1422,40 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		g_print("%s\n", instrument->name); */
 	return TRUE;
 }
+
+static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
+{
+#if 0
+	struct instrument_struct *inst;
+	int old_inst;
+
+	old_inst = current_instrument;
+	current_instrument =  instrument->instrument_num;
+	inst = &drumkit[kit].instrument[old_inst];
+	canvas_event(inst->canvas, NULL, inst);
+	/* printf("Enter event for instrument %d\n", instrument->instrument_num); */
+	inst = &drumkit[kit].instrument[current_instrument];
+	canvas_event(inst->canvas, NULL, inst);
+#endif
+	int i;
+
+	if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag)))
+		return 0;
+	if (abs(current_instrument - instrument->instrument_num) <= 4) 
+		return 0;
+
+	if (current_instrument < instrument->instrument_num)
+		current_instrument++;
+	else if (current_instrument > instrument->instrument_num)
+		current_instrument--;
+	
+	for (i=0;i<drumkit[kit].ninsts;i++) {
+		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+		canvas_event(inst->canvas, NULL, inst);
+	}
+	return 0;
+}
+
 
 void check_hitpatterns(char *x);
 
@@ -2152,6 +2267,8 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+		bring_back_right_widgets(inst, vshidden, unchecked_hidden, editdrumkit);
+#if 0
 		if (vshidden) {
 			gtk_widget_hide(GTK_WIDGET(inst->clear_button));
 			gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
@@ -2198,6 +2315,7 @@ void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
 				gtk_widget_show(GTK_WIDGET(inst->drag_spin_button));
 			}
 		}
+#endif
 	}
 }
 
@@ -3503,6 +3621,7 @@ int main(int argc, char *argv[])
 	GtkWidget *checkvbox;
 	GtkWidget *table;
 	GtkWidget *misctable;
+	GtkWidget *magbox;
 	GtkWidget *volume_zoom_label;
 
 	struct drumkit_struct *dk;
@@ -3726,6 +3845,12 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(misctable), tempolabel2, 0, 1, 2, 3, 0, 0, 0,0);
 	gtk_table_attach(GTK_TABLE(misctable), tempospin2, 1, 2, 2, 3, GTK_FILL, 0, 1,1);
 
+	magbox = gtk_table_new(2, 3, FALSE);
+	gtk_box_pack_start(GTK_BOX(topbox), magbox, TRUE, TRUE, 0);
+	automag = gtk_check_button_new_with_label("AutoMag");
+	g_signal_connect(G_OBJECT (automag), "toggled", 
+				G_CALLBACK (hide_instruments_button_callback), NULL);
+	gtk_tooltips_set_tip(tooltips, automag, "Turns on automagnifcation..., uh...  You'll see. ;-)", NULL);
 	volume_zoom_label= gtk_label_new("Volume Zoom");
 	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) 100.0, 
 			100.0, 600.0, 10.0, 1.0, 0.0);
@@ -3733,8 +3858,13 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, volume_magnifier, "Controls how much the volume scale is magnified"
 		" for the current instrument from no magnification to 6x.  It allows note volumes to be"
 		" more precisely specified.", NULL);
-	gtk_box_pack_start(GTK_BOX(topbox), volume_zoom_label, TRUE, TRUE, 0);
+	gtk_table_attach(GTK_TABLE(magbox), volume_zoom_label, 0, 1, 0, 1, 0, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(magbox), volume_magnifier, 1, 2, 0, 1, GTK_FILL, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(magbox), automag, 1, 2, 1, 2, GTK_FILL, 0, 1,1);
+	
+	/* gtk_box_pack_start(GTK_BOX(topbox), volume_zoom_label, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), volume_magnifier, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(topbox), automag, TRUE, TRUE, 0); */
 	g_signal_connect(G_OBJECT (volume_magnifier), "value-changed", 
 				G_CALLBACK (volume_magnifier_changed), NULL);
 
@@ -3807,6 +3937,9 @@ int main(int argc, char *argv[])
 				G_CALLBACK (instrument_button_pressed), inst);
 		g_signal_connect(G_OBJECT (inst->canvas), "expose_event",
 				G_CALLBACK (canvas_event), inst);
+		gtk_widget_add_events(inst->canvas, GDK_ENTER_NOTIFY_MASK); 
+		g_signal_connect(G_OBJECT (inst->canvas), "enter-notify-event",
+				G_CALLBACK (canvas_enter), inst);
 		gtk_widget_add_events(inst->canvas, GDK_BUTTON_PRESS_MASK); 
 		gtk_widget_add_events(inst->canvas, GDK_BUTTON_RELEASE_MASK); 
 		g_signal_connect(G_OBJECT (inst->canvas), "button-release-event",
