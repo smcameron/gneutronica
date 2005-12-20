@@ -63,3 +63,22 @@ gneutronica 0.26
 
 	* Now can insert and delete patterns.
 
+gneutronica 0.27
+
+	* Can now remap a song or a pattern's drumkit to another drumkit using 
+	  General MIDI as a lowest common denominator.  (Works, sorta kinda... 
+	  better than nothing.)
+
+	* added experimental user interface changes automag and autocrunch.
+	  They don't really work as well as I was hoping they would, esp.
+	  autocrunch.  Automag by itself is alright.
+
+	* Deleting and inserting measures now adjusts tempo changes 
+	  accordingly. (bugfix)
+
+	* Starts off with windows maximized.  (Use alt-tab to switch between windows, 
+	  or whatever method your window manager provides, or unmaximize, or start 
+	  it with the -m option if you don't like the default maximizing behavior.)
+
+	* Some hotkey support. 'q' quits.
+

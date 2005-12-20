@@ -40,6 +40,18 @@
 
 * better buttons for the top row of the arrangement window.
 
+* Would like to add hotkeys to the drawing areas for the instruments,
+  so that I could position the mouse in *any* instruments area, and then
+  press, e.g. the 'b' key and have it place a note at the spot indicated
+  for whatever the mouse location was, but in some "default bass drum"
+  instrument, likewise, 's' for snare, maybe '1', '2', '3', '4', for toms,
+  'c' for crash, etc.  so you could quickly compose using the keyboard to
+  select instruments in a random access way, using the mouse to select 
+  time and velocity, and in this way select instrument/time/velocity all
+  in one keystroke without a lot of needless scrolling around.
+
+  However, I can't figure out how to get the key_press_events into
+  the drawing_area.
 * Anything else?
 
 

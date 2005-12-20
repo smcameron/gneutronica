@@ -28,3 +28,11 @@ Known bugs:
   for drumkit instead of device, you can damage your drumkit files.
   Not cool.  Should stat the file and make sure it's a device.
   (fixed in 0.27)
+
+* Deleting and inserting measures doesn't adjust tempo changes accordingly.
+  (fixed in 0.27)
+
+* finer control than integer amounts of Beats Per Minute is needed.  The
+  difference between 1 BPM and 2 BPM is huge, but there is no way to have
+  1.5 BPM.
+

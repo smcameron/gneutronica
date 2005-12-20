@@ -234,6 +234,7 @@ GLOBAL GtkObject *volume_magnifier_adjustment;
 GLOBAL GtkWidget *volume_magnifier;
 GLOBAL GtkWidget *remap_drumkit_button;
 GLOBAL GtkWidget *automag;
+GLOBAL GtkWidget *autocrunch;
 
 GLOBAL GtkWidget *TempoChWin;
 GLOBAL GtkWidget *TempoChvbox1;

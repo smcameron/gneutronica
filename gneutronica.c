@@ -872,8 +872,42 @@ void delete_measures_button(GtkWidget *widget, gpointer data)
 	if (count >= nmeasures)
 		return; /* Can't have zero measures */
 	else {
+		int new_tempo = -1;
 		for (i=start_copy_measure;i<nmeasures-count;i++)
 			measure[i] = measure[i+count];
+		/* figure the new tempo, which will be the last tempo */
+		/* change in the deleted region  */ 
+		for (i=0;i<ntempochanges;i++) {
+			if (tempo_change[i].measure < start_copy_measure ||  
+				tempo_change[i].measure > end_copy_measure)
+				continue;		
+			new_tempo = tempo_change[i].beats_per_minute;
+		}
+		/* remove all the tempo changes in the range */
+		for (i=0;i<ntempochanges;) {
+			if (tempo_change[i].measure < start_copy_measure || 
+				tempo_change[i].measure > end_copy_measure) {
+				i++;
+				continue;		
+			}
+			remove_tempo_change(i); /* Note, do not increment i here, we deleted the measure instead */
+		}
+
+		/* Adjust tempo changes beyond the deleted range by count measures */
+		for (i=0;i<ntempochanges;i++)
+			if (tempo_change[i].measure > end_copy_measure)
+				tempo_change[i].measure -= count; 
+		/* Insert the new tempo, if any */
+		if (new_tempo != -1) {
+			/* see if there's already a tempo change there (if there was one just beyond
+			   the deleted range that fell into place */
+			int found = 0;
+			for (i=0;i<ntempochanges;i++)
+				if (tempo_change[i].measure == start_copy_measure)
+					found=1;
+			if (!found)
+				insert_tempo_change(start_copy_measure, new_tempo);
+		}
 	}
 	nmeasures -= count;
 	start_copy_measure = end_copy_measure = -1;
@@ -949,6 +983,9 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 			return TRUE;
 		for (i=nmeasures;i>m;i--)
 			measure[i] = measure[i-1];
+		for (i=0;i<ntempochanges;i++)
+			if (tempo_change[i].measure >= m)
+				tempo_change[i].measure++;
 		measure[m].npatterns = 0;
 		nmeasures++;
 		if (start_copy_measure > -1 && start_copy_measure > m)
@@ -961,12 +998,35 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 		}
 		redraw_arranger();
 	} else if (w == Delete_da) { 
-		int i;
+		int i, delete_tempo_change = 0;
+		int this_measure_tempo = -1;
 		/* printf("Delete clicked, measure = %d\n", m); */
 		if (nmeasures <= 0)
 			return TRUE;
 		for (i=m;i<nmeasures-1;i++)
 			measure[i] = measure[i+1];
+
+		/* see if this measure has a tempo change */
+		for (i=0;i<ntempochanges;i++)
+			if (tempo_change[i].measure == m) {
+				this_measure_tempo = i;
+				break;
+			}
+
+		/* Adjust tempo changes */
+		for (i=0;i<ntempochanges;i++) {
+			/* If another tempo change gets moved on top of one for the measure 
+			   being deleted, then remove the one for the deleted measure */
+			if (tempo_change[i].measure == m+1) {
+				/* only delete it if the next one is obliterating an existing tempo change */
+				if (this_measure_tempo != -1)
+					delete_tempo_change=this_measure_tempo + 1; /* plus 1 so it won't be zero */
+			}
+			if (tempo_change[i].measure > m)
+				tempo_change[i].measure--;
+		}
+		if (delete_tempo_change)
+			remove_tempo_change(delete_tempo_change-1); /* minus 1 to undo above plus 1 */
 		nmeasures--;
 		if (m == start_copy_measure || m == end_copy_measure) {
 			start_copy_measure = -1;
@@ -1053,6 +1113,11 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 		}
 	}
 	return TRUE;
+}
+
+static int canvas_key_pressed(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
+{
+	printf("canvas key pressed\n");
 }
 
 static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
@@ -1327,9 +1392,11 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	struct hitpattern *this;
 	int height;
 	int automag_is_on;
+	int autocrunch_is_on;
 	int vshidden, unchecked_hidden, editdrumkit;
 
 	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
+	autocrunch_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (autocrunch));
 	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
 	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
 	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
@@ -1338,17 +1405,17 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		height = (int) (((double) 
 			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
 				(double) DRAW_HEIGHT / (double) 100.0) + 1;
-		if (automag_is_on)
+		if (autocrunch_is_on)
 			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
-	} else if (!automag_is_on || abs(current_instrument - instrument->instrument_num) < 9) {
+	} else if (!autocrunch_is_on || abs(current_instrument - instrument->instrument_num) < 9) {
 		height = DRAW_HEIGHT+1;
-		if (automag_is_on)
+		if (autocrunch_is_on)
 			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
 	} else {
 		/* height = 7; */
-		if (automag_is_on)
+		if (autocrunch_is_on)
 			hide_all_the_canvas_widgets(instrument);
 		height = (double) 1.8 * (double) DRAW_HEIGHT / (abs(current_instrument - instrument->instrument_num) - 5 );
 		if (height < 1) height = 1;
@@ -1416,6 +1483,7 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		// gdk_draw_line(w->window, gc, (int) x2, (int) y2, (int) x2, (int) y1);
 		// gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y1);
 		gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x2, (int) y2);
+		gdk_draw_line(w->window, gc, (int) x1-8, (int) y1, (int) x1+8, (int) y1);
 	}
 
 	/* if (instrument != NULL) 
@@ -1438,21 +1506,44 @@ static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	canvas_event(inst->canvas, NULL, inst);
 #endif
 	int i;
+	struct instrument_struct *inst;
+	int old_inst;
+	int automag_is_on, autocrunch_is_on;
 
-	if (!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag)))
-		return 0;
-	if (abs(current_instrument - instrument->instrument_num) <= 4) 
+	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
+	autocrunch_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (autocrunch));
+
+	if (!automag_is_on && !autocrunch_is_on)
 		return 0;
 
-	if (current_instrument < instrument->instrument_num)
-		current_instrument++;
-	else if (current_instrument > instrument->instrument_num)
-		current_instrument--;
-	
-	for (i=0;i<drumkit[kit].ninsts;i++) {
-		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+	if (autocrunch_is_on && abs(current_instrument - instrument->instrument_num) <= 4) 
+		return 0;
+
+	if (!autocrunch_is_on && automag_is_on) {
+		old_inst = current_instrument; 
+		current_instrument =  instrument->instrument_num;
+		inst = &drumkit[kit].instrument[old_inst];
 		canvas_event(inst->canvas, NULL, inst);
+		/* printf("Enter event for instrument %d\n", instrument->instrument_num); */
+		inst = &drumkit[kit].instrument[current_instrument];
+		canvas_event(inst->canvas, NULL, inst);
+		return 0;
 	}
+
+	if (automag_is_on) {
+		if (current_instrument < instrument->instrument_num)
+			current_instrument++;
+		else if (current_instrument > instrument->instrument_num)
+			current_instrument--;
+	}
+
+	if (autocrunch_is_on) {	
+		for (i=0;i<drumkit[kit].ninsts;i++) {
+			struct instrument_struct *inst = &drumkit[kit].instrument[i];
+			canvas_event(inst->canvas, NULL, inst);
+		}
+	}
+	
 	return 0;
 }
 
@@ -3506,6 +3597,7 @@ int volume_magnifier_changed(GtkWidget *widget, gpointer data)
 	return TRUE;
 }
 
+
 /* This "exclude_keypress" stuff is used for ignoring keypresses when 
    certain widgets have focus */
 
@@ -3623,6 +3715,7 @@ int main(int argc, char *argv[])
 	GtkWidget *misctable;
 	GtkWidget *magbox;
 	GtkWidget *volume_zoom_label;
+	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
 	unsigned char shared_buf[4096];
@@ -3650,10 +3743,11 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
 	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
-        while ((c = getopt(argc, argv, "k:d:")) != -1) {
+        while ((c = getopt(argc, argv, "mk:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(device, optarg); break;
                 case 'k': strcpy(drumkitfile, optarg); break;
+		case 'm': maximize_windows = 0; break;
                 }
         }
 	fd = open(device, O_RDWR);
@@ -3850,7 +3944,10 @@ int main(int argc, char *argv[])
 	automag = gtk_check_button_new_with_label("AutoMag");
 	g_signal_connect(G_OBJECT (automag), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
-	gtk_tooltips_set_tip(tooltips, automag, "Turns on automagnifcation..., uh...  You'll see. ;-)", NULL);
+	autocrunch = gtk_check_button_new_with_label("AutoCrunch");
+	g_signal_connect(G_OBJECT (autocrunch), "toggled", 
+				G_CALLBACK (hide_instruments_button_callback), NULL);
+	gtk_tooltips_set_tip(tooltips, autocrunch, "Turns on experimental UI feature...  You'll see. ;-)", NULL);
 	volume_zoom_label= gtk_label_new("Volume Zoom");
 	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) 100.0, 
 			100.0, 600.0, 10.0, 1.0, 0.0);
@@ -3861,6 +3958,7 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(magbox), volume_zoom_label, 0, 1, 0, 1, 0, 0, 1,1);
 	gtk_table_attach(GTK_TABLE(magbox), volume_magnifier, 1, 2, 0, 1, GTK_FILL, 0, 1,1);
 	gtk_table_attach(GTK_TABLE(magbox), automag, 1, 2, 1, 2, GTK_FILL, 0, 1,1);
+	gtk_table_attach(GTK_TABLE(magbox), autocrunch, 1, 2, 2, 3, GTK_FILL, 0, 1,1);
 	
 	/* gtk_box_pack_start(GTK_BOX(topbox), volume_zoom_label, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(topbox), volume_magnifier, TRUE, TRUE, 0);
@@ -3944,6 +4042,13 @@ int main(int argc, char *argv[])
 		gtk_widget_add_events(inst->canvas, GDK_BUTTON_RELEASE_MASK); 
 		g_signal_connect(G_OBJECT (inst->canvas), "button-release-event",
 				G_CALLBACK (canvas_clicked), inst);
+
+		/* Hmm, this doesn't seem to work... can't get key press events in canvas...? */
+		widget_exclude_keypress(inst->canvas); /* filter */
+		gtk_widget_add_events(inst->canvas, GDK_KEY_PRESS); /* so we have have hotkeys */
+		g_signal_connect(G_OBJECT (inst->canvas), "key-press-event", 
+				G_CALLBACK (canvas_key_pressed), inst);
+
 		gtk_widget_set_size_request(inst->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
 		// gtk_widget_set_usize(canvas, 400, 10);
 
@@ -4254,6 +4359,10 @@ int main(int argc, char *argv[])
 
 	setup_midi_setup_window();
 	/* ---------------- start showing stuff ------------------ */
+	if (maximize_windows) {
+		gtk_window_maximize((GtkWindow *) top_window);
+		gtk_window_maximize((GtkWindow *) arranger_window);
+	}
 	gtk_widget_show_all(arranger_window);
 	gtk_widget_show_all(top_window);
 	gc = gdk_gc_new(dk->instrument[0].canvas->window);
@@ -4270,6 +4379,7 @@ int main(int argc, char *argv[])
 	}
 
 	flatten_pattern(kit, cpattern);
+
 	gtk_main();
 
 	if (fd > 0) 

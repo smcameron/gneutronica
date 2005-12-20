@@ -2,7 +2,7 @@
 .SH NAME
 PROGRAMNAME \- a MIDI drum machine application 
 .SH SYNOPSIS
-.B PROGRAMNAME [ -d device ] [ -k drumkit ] 
+.B PROGRAMNAME [ -d device ] [ -k drumkit ] [ -m ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .PP
@@ -21,6 +21,11 @@ Specify a drumkit file.  There are a number of drumkit files included
 with PROGRAMNAME in /usr/local/share/PROGRAMNAME/drumkits corresponding
 to various devices, or you may create your own drumkit files for your
 particular devices.
+.TP
+\fB\-m\fR
+Do not maximize the windows at startup.  By default, the windows are maximized
+to occupy the entire screen. (You can switch between the two windows with alt-tab, 
+or whatever method your window manager provides for this purpose.)
 .SH FILES
 /dev/snd/midi* 
 /usr/local/share/PROGRAMNAME/drumkits/* 
