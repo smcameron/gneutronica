@@ -1432,6 +1432,14 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	gdk_draw_line(w->window, gc, 0,0, 0, height);
 	gdk_draw_line(w->window, gc, DRAW_WIDTH,0, DRAW_WIDTH, height);
 
+	if (instrument_in_copy_buffer == instrument->instrument_num) {
+		/* probably could do something better with color... */
+		gdk_draw_line(w->window, gc, 0, height-3, DRAW_WIDTH, height-3); 
+		gdk_draw_line(w->window, gc, 0, 3, DRAW_WIDTH, 3); 
+		gdk_draw_line(w->window, gc, 2,0, 2, height);
+		gdk_draw_line(w->window, gc, DRAW_WIDTH-2,0, DRAW_WIDTH-2, height);
+	}
+
 	for (i=ndivisions-1;i>=0;i--) {
 		int k;
 		divs =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
@@ -1444,6 +1452,8 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		// diff = (double) DRAW_WIDTH / divs;
 		diff = 0.0;
 		memset(&color, 0, sizeof(color));
+
+		/* Does this color crap really have to be done EVERY time? cache it somehow? */
 		gdk_color_parse(timediv[i].color, &color);
 		gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &color, FALSE, FALSE);
 		gdk_gc_set_foreground(gc, &color);
@@ -2217,6 +2227,105 @@ void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */
 		data->patname);
 	gtk_tooltips_set_tip(tooltips, pattern_paste_button, msg, NULL);
 	redraw_arranger();
+}
+
+void copy_current_instrument_hit_pattern()
+{
+	int previous = instrument_in_copy_buffer;
+	instrument_in_copy_buffer = current_instrument;
+	gtk_widget_queue_draw(drumkit[kit].instrument[instrument_in_copy_buffer].canvas);
+	if (previous != -1) 
+		gtk_widget_queue_draw(drumkit[kit].instrument[previous].canvas);
+	printf("Recorded instrument %d\n", current_instrument);
+}
+
+void paste_current_instrument_hit_pattern()
+{
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct hitpattern *h;
+	struct instrument_struct *from, *to;
+
+	printf("Paste current instrument... %d into %d\n", instrument_in_copy_buffer, current_instrument);
+
+	/* Something to copy from? */
+	if (instrument_in_copy_buffer < 0 || instrument_in_copy_buffer >= dk->ninsts)
+		return;
+
+	/* Something to copy to? */
+	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+		return;
+
+	/* Copy the hit pattern ... */
+ 	from = &dk->instrument[instrument_in_copy_buffer];
+ 	to = &dk->instrument[current_instrument];
+	for (h = from->hit; h != NULL; h=h->next)
+		lowlevel_add_hit(&to->hit, kit, cpattern, to->instrument_num, 
+			h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+	gtk_widget_queue_draw(GTK_WIDGET(to->canvas));
+	return;
+}
+
+void paste_all_current_instrument_hit_pattern()
+{
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct hitpattern *h;
+	struct instrument_struct *from, *to;
+	int i;
+
+	printf("Paste all current instrument... %d into %d\n", instrument_in_copy_buffer, current_instrument);
+
+	/* Something to copy from? */
+	if (instrument_in_copy_buffer < 0 || instrument_in_copy_buffer >= dk->ninsts)
+		return;
+
+	/* Something to copy to? */
+	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+		return;
+
+	flatten_pattern(kit, cpattern); /* save current pattern */
+
+	for (i=0;i<npatterns;i++) {
+		unflatten_pattern(kit, i); /* load next pattern */
+		/* Copy the hit pattern ... */
+		from = &dk->instrument[instrument_in_copy_buffer];
+		to = &dk->instrument[current_instrument];
+		for (h = from->hit; h != NULL; h=h->next)
+			lowlevel_add_hit(&to->hit, kit, i, to->instrument_num, 
+				h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+		flatten_pattern(kit, i);
+	}
+	unflatten_pattern(kit, cpattern);
+	to = &dk->instrument[current_instrument];
+	gtk_widget_queue_draw(GTK_WIDGET(to->canvas));
+	return;
+}
+
+void clear_all_current_instrument_hit_pattern()
+{
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct instrument_struct *inst;
+	int i;
+
+	printf("Clear all current instrument... %d\n", current_instrument);
+
+	/* Something to clear? */
+	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+		return;
+
+	flatten_pattern(kit, cpattern); /* save current pattern */
+
+	for (i=0;i<npatterns;i++) {
+		unflatten_pattern(kit, i); /* load next pattern */
+		inst = &dk->instrument[current_instrument];
+		clear_hitpattern(inst->hit);
+		inst->hit = NULL;
+		flatten_pattern(kit, i);
+	}
+
+	unflatten_pattern(kit, cpattern);
+	inst = &dk->instrument[current_instrument];
+	gtk_widget_queue_draw(GTK_WIDGET(inst->canvas));
+	return;
 }
 
 void edit_pattern_clicked(GtkWidget *widget, /* this is the "pattern name" button in the arranger window */
@@ -3683,6 +3792,29 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case GDK_space:
 		pattern_stop_button_clicked(stop_button, NULL);
 		break;	
+	case GDK_c:
+		if (mycontext == PATTERN_CONTEXT)
+			copy_current_instrument_hit_pattern();
+		return TRUE;
+	case GDK_x:
+		if (mycontext == PATTERN_CONTEXT &&
+			current_instrument >= 0 && 
+			current_instrument < drumkit[kit].ninsts)
+			instrument_clear_button_pressed(NULL, 
+				&drumkit[kit].instrument[current_instrument]);
+		return TRUE;
+	case GDK_p:
+		if (mycontext == PATTERN_CONTEXT)
+			paste_current_instrument_hit_pattern();
+		return TRUE;
+	case GDK_P:
+		if (mycontext == PATTERN_CONTEXT)
+			paste_all_current_instrument_hit_pattern();
+		return TRUE;
+	case GDK_X:
+		if (mycontext == PATTERN_CONTEXT)
+			clear_all_current_instrument_hit_pattern();
+		return TRUE;
 	default:
 		break;
 	}

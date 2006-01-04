@@ -29,6 +29,7 @@ or whatever method your window manager provides for this purpose.)
 .SH FILES
 /dev/snd/midi* 
 /usr/local/share/PROGRAMNAME/drumkits/* 
+/tmp/zzz.gdt
 .SH AUTHOR
 Written by Stephen M. Cameron 
 .SH "REPORTING BUGS"

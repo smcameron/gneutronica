@@ -248,6 +248,7 @@ GLOBAL GtkWidget *TempoChBPM;
 GLOBAL char TempoChMsg[255];
 
 GLOBAL int INIT(pattern_in_copy_buffer, -1);
+GLOBAL int INIT(instrument_in_copy_buffer, -1);
 
 GLOBAL int INIT(start_copy_measure,-1);
 GLOBAL int INIT(end_copy_measure, -1);

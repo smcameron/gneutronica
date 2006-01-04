@@ -220,6 +220,43 @@ will sometimes give a decent approximation, but is unlikely to be
 a completely satisfactory mapping.  It's a good way to get a first
 approximation of a remapping which can then be tweaked by hand.
 
+<p>There are now some hotkeys.  'q' quits gneutronica and saves
+your file in /tmp/zzz.gdt.
+
+<p>Additionally there are some hotkeys meant to help with swapping
+out instruments.  Suppose you like a song, but want to swap out
+the snare drum sound for another.  One way would be to edit the
+drumkit file and change the snare drum sound in there without
+changing any of your patterns.  But you may not want to have song
+specific drumkits lying around.
+
+<p>These hotkeys are best used with automag turned on, and volume
+zoom set so you can see which is the "current" instrument easily.
+
+<ul>
+<li>'c' marks the current instrument for later copy operations.
+<li>'p' copies the hits from the instrument previously marked by 'c'
+to the current instrument for the current pattern.
+<li>'x' clears the current instrument for the current pattern.
+<li>'P' cycles through all the patterns in a song, and copies 
+     the hits from the instrument previously marked with 'c'
+     to the current instrument for each pattern.
+<li>'X' cycles through all the patterns in a song, and clears 
+     the current instrument for each pattern. 
+</ul>
+
+So for instance, to swap out a snare drum sound SNARE1 with 
+a new sound, SNARE2, you'd do the following:
+
+<ol>
+<li>Turn on automag and move the volume zoom slider a bit to the right.
+<li>Move the mouse over the SNARE1 row, and press 'c'.
+<li>Move the mouse over the SNARE2 row, and press 'P' (shift p to get
+whole song, lowercase p for just this pattern.)
+<li>Move the mouse over the SNARE1 row, and press 'X' (shift X for
+the whole song, lowercase x for just this pattern.)
+</ol>
+
 <h1>Arranging patterns into a song</h1>
 <p>Here is the arranger window:
 <p align=center><img src="arranger_window.png">

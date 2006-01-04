@@ -82,3 +82,19 @@ gneutronica 0.27
 
 	* Some hotkey support. 'q' quits.
 
+gneutronica 0.28
+
+	* Added hotkeys 'c', 'p', 'x', 'P', and 'X' in the pattern window.
+	  These are all designed for the purpose of changing an instrument.
+          (e.g. you like the pattern, but want to try a different snare drum
+           sound.  These are best used with automag and volume zoom enabled
+           (leave autocrunch turned off.))
+
+	  c - marks current instrument for copying.
+	  p - (lowercase p) copies (pastes) previously marked instrument's hits
+              into current instrument in the current pattern.
+	  x - (lowercase x) clears current instrument (like the 'Clear' button by each instrument).
+	  P - (shift-p) copies (pastes) previously marked instruments hits
+              into current instrument FOR THE ENTIRE SONG.
+	  X - (shift-x) clears current instrument FOR THE ENTIRE SONG.
+
