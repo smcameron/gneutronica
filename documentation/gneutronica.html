@@ -53,13 +53,12 @@ Using drumkit: Generic Generic Generic
 <h1>(Some ramblings about) Getting Started</h1>
 <p>The first thing you need to do to get started with Gneutronica is to get your
 MIDI device hooked up to your computer and able to make sound.  I'm going to
-assume you've gotten that far.  As of this writing, I'm pretty sure that 
-soundcard based MIDI devices, softsynths, etc. don't work with Gneutronica, 
-though I expect it would be easy to modify the program to get them to work.  I have tried Gneutronica
-with a Yamaha Motif Rack, connected by USB, and a Kurzweil PC88, and a Roland (BOSS)
-Dr. Rhythm 660 drum machine, the latter two connected via USB through an M-audio (or
-Midiman) MidiSport 2x2 USB to MIDI converter.  (Getting the Midisport to work with 
-Fedora core 3 and 4 wasn't too bad, the worst part was getting the necessary 
+assume you've gotten that far.  
+I have tried Gneutronica with a Yamaha Motif Rack, connected by USB, and a 
+Kurzweil PC88, and a Roland (BOSS) Dr. Rhythm 660 drum machine, the latter two 
+connected via USB through an M-audio (or Midiman) MidiSport 2x2 USB to MIDI 
+converter.  (Getting the Midisport to work with Fedora core 3 and 4 wasn't too 
+bad, the worst part was getting the necessary 
 firmware image.)
 For the BOSS DR-660 drum machine, I had to change the settings
 to make it receive on MIDI channel 1 instead of 10.  I'm not sure why, and I've
@@ -76,6 +75,9 @@ from the front panel of the device is currently necessary.  (However, I just
 added a "Midi Setup" button with the ability to send bank and patch change messages,
 but it's not yet well tested, so I'm not completely sure it's all working right.
 Eventually it should work.)
+
+<p>I have also gotten Gneutronica to work with a softsynth (fluidsynth) by using
+alsa-virmidi to route the MIDI data.  More on that below.
 
 <p>Once you have your device connected and fired up, you need to start Gneutronica.
 By default, it will use /dev/snd/midi1 as the MIDI device it talks to.  This can be
@@ -339,16 +341,148 @@ drum kit, there is the possibility to use General MIDI mappings to try to reassi
 instruments to appropriate roles for the drumkit in use.  This menu item causes gneutronica
 to attempt such a mapping for every pattern in the song.
 
+<h2>Using Gneutronica with softsynths such as fluidsynth</h2>
+Using alsa-virmidi, you can uee softsynths.
+
+<ol>
+<li>As root, "modprobe snd_virmidi"
+<li>Start your softsynth.
+<pre>
+[scameron@zuul ~]$ fluidsynth
+fluidsynth: ALSA driver: Using format s16, rw, interleaved
+
+fluidsynth version 1.0.6
+Copyright (C) 2000-2002 Peter Hanappe and others.
+FLUID Synth comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it
+under certain conditions; see the COPYING file for details.
+SoundFont(R) is a registered trademark of E-mu Systems, Inc.
+
+Type 'help' to get information on the shell commands.
+
+> load /home/scameron/soundfonts/tr808.sf2
+fluidsynth: warning: Failed to pin the sample data to RAM; swapping is possible.loaded SoundFont has ID 1
+></pre>
+<li>Run "amidi -l" to see your midi devices.  On my system, I see:
+<pre>
+[root@zuul ~]# modprobe snd_virmidi
+[root@zuul ~]# amidi -l
+Device    Name
+hw:0,0    Audigy MPU-401 (UART)
+hw:0,1    Audigy MPU-401 #2
+hw:0,2    Emu10k1 Synth MIDI (16 subdevices)
+hw:0,3    Emu10k1 Synth MIDI (16 subdevices)
+hw:1,0,0  MOTIF-R MIDI 1
+hw:1,0,1  MOTIF-R MIDI 2
+hw:1,0,2  MOTIF-R MIDI 3
+hw:1,0,3  MOTIF-R MIDI 4
+hw:1,0,4  MOTIF-R MIDI 5
+hw:1,0,5  MOTIF-R MIDI 6
+hw:1,0,6  MOTIF-R MIDI 7
+hw:1,0,7  MOTIF-R MIDI 8
+hw:2,0    Virtual Raw MIDI (16 subdevices)
+hw:2,1    Virtual Raw MIDI (16 subdevices)
+hw:2,2    Virtual Raw MIDI (16 subdevices)
+hw:2,3    Virtual Raw MIDI (16 subdevices)
+</pre>
+The lines beginning with "hw:2..." are my virtual midi devices, and
+the '2' means it's the 3rd device (0 and 1 are the 1st and 2nd).  This
+matches the 2 in /dev/snd/midiC2D0
+<li>Run "aconnect -lo" to see a list of output connections.  On my
+system, I see:
+<pre>
+[scameron@zuul tr808]$ aconnect -lo
+client 64: 'Audigy MPU-401 (UART)' [type=kernel]
+    0 'Audigy MPU-401 (UART)'
+   32 'Audigy MPU-401 #2'
+client 65: 'Emu10k1 WaveTable' [type=kernel]
+    0 'Emu10k1 Port 0  '
+    1 'Emu10k1 Port 1  '
+    2 'Emu10k1 Port 2  '
+    3 'Emu10k1 Port 3  '
+client 72: 'MOTIF-R' [type=kernel]
+    0 'MOTIF-R MIDI 1  '
+    1 'MOTIF-R MIDI 2  '
+    2 'MOTIF-R MIDI 3  '
+    3 'MOTIF-R MIDI 4  '
+    4 'MOTIF-R MIDI 5  '
+    5 'MOTIF-R MIDI 6  '
+    6 'MOTIF-R MIDI 7  '
+    7 'MOTIF-R MIDI 8  '
+client 80: 'Virtual Raw MIDI 2-0' [type=kernel]
+    0 'VirMIDI 2-0     '
+client 81: 'Virtual Raw MIDI 2-1' [type=kernel]
+    0 'VirMIDI 2-1     '
+client 82: 'Virtual Raw MIDI 2-2' [type=kernel]
+    0 'VirMIDI 2-2     '
+client 83: 'Virtual Raw MIDI 2-3' [type=kernel]
+    0 'VirMIDI 2-3     '
+client 128: 'FLUID Synth (17540)' [type=user]
+    0 'Synth input port (17540:0)'
+[scameron@zuul tr808]$
+</pre>
+Note the last entry, "client 128" which is "FLUID Synth,"
+my running softsynth.
+<li>Connect one of the virtual raw MIDI ports to the software
+synth.  In this case, I'm going to connect client 80
+(which is /dev/snd/midiC2D0) to client 128 (the softsynth).
+(Note the bolded lines.)
+<pre>
+<b>[root@zuul ~]# aconnect 80:0 128:0</b>
+[root@zuul ~]# aconnect -lo
+client 64: 'Audigy MPU-401 (UART)' [type=kernel]
+    0 'Audigy MPU-401 (UART)'
+   32 'Audigy MPU-401 #2'
+client 65: 'Emu10k1 WaveTable' [type=kernel]
+    0 'Emu10k1 Port 0  '
+    1 'Emu10k1 Port 1  '
+    2 'Emu10k1 Port 2  '
+    3 'Emu10k1 Port 3  '
+client 72: 'MOTIF-R' [type=kernel]
+    0 'MOTIF-R MIDI 1  '
+    1 'MOTIF-R MIDI 2  '
+    2 'MOTIF-R MIDI 3  '
+    3 'MOTIF-R MIDI 4  '
+    4 'MOTIF-R MIDI 5  '
+    5 'MOTIF-R MIDI 6  '
+    6 'MOTIF-R MIDI 7  '
+    7 'MOTIF-R MIDI 8  '
+client 80: 'Virtual Raw MIDI 2-0' [type=kernel]
+    0 'VirMIDI 2-0     '
+<b>        Connecting To: 128:0</b>
+client 81: 'Virtual Raw MIDI 2-1' [type=kernel]
+    0 'VirMIDI 2-1     '
+client 82: 'Virtual Raw MIDI 2-2' [type=kernel]
+    0 'VirMIDI 2-2     '
+client 83: 'Virtual Raw MIDI 2-3' [type=kernel]
+    0 'VirMIDI 2-3     '
+client 128: 'FLUID Synth (17540)' [type=user]
+    0 'Synth input port (17540:0)'
+<b>        Connected From: 80:0</b>
+[root@zuul ~]#
+</pre>
+clients 80,81,82,and 83 are the virtual midi devices and correspond
+to /dev/snd/midiC2D0, /dev/snd/midiC2D1, /dev/snd/midiC2D2, 
+and /dev/snd/midiC2D3, respectively.  The idea is you connect
+one of these nodes up to the input of the fluid synth, then
+let gneutronica send to this node, and it will get routed to
+the softsynth.
+<li>Now, start Gneutronica so as to send MIDI to the 
+virtual midi device corresponding to client 80. (/dev/snd/midiC2D0)
+
+<pre>
+[scameron@zuul ~]$ gneutronica -d /dev/snd/midiC2D0
+</pre>
+
+Now, gneutronica should be driving the softsynth, just use it as
+you normally would.
+</ol>
+
 
 <p><b>Some things Gneutronica doesn't do</b>
 
 <ul>
 <li>Interconnect with Jack.  (I don't really know if it even makes sense for a MIDI app.)
-<li>Talk to soundcard based MIDI "devices" (soundfonts).  Probably not hard to make that 
-work.  If you use virtual midi devices, it may actually work already.  If you find this
-to be the case, please write me and let me know a few details. 
-<smcameron@users.sourceforge.net>
-<li>Do any sort of sample-based playback.  It's strictly MIDI.
 <li>Import MIDI files.  Reading MIDI input from a keyboard or 
 drumpads seems extremely unlikely to ever occur, however.
 <li>... probably some other stuff.

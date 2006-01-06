@@ -93,8 +93,11 @@ gneutronica 0.28
 	  c - marks current instrument for copying.
 	  p - (lowercase p) copies (pastes) previously marked instrument's hits
               into current instrument in the current pattern.
-	  x - (lowercase x) clears current instrument (like the 'Clear' button by each instrument).
+	  x - (lowercase x) clears current instrument (like the 'Clear' 
+              button by each instrument).
 	  P - (shift-p) copies (pastes) previously marked instruments hits
               into current instrument FOR THE ENTIRE SONG.
 	  X - (shift-x) clears current instrument FOR THE ENTIRE SONG.
+
+	* Added documentation about using alsa-virmidi to control softsynths.
 

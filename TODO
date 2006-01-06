@@ -52,6 +52,11 @@
 
   However, I can't figure out how to get the key_press_events into
   the drawing_area.
+
+* Better interfacing with softsynths via JACK, or maybe MIDIshare, or
+  possibly embed fluidsynth?    Right now alsa-virmidi works to route
+  midi to softsynths.
+
 * Anything else?
 
 
