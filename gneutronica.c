@@ -82,7 +82,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/_Edit",         NULL,         NULL,           0, "<Branch>" },
 	{ "/Edit/_Remap drum kit for whole song via GM",    NULL, remap_drumkit_clicked, 0, "<Item>" },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
-	{ "/_Help/About",   NULL,         about_activate, 0, "<Item>" },
+	{ "/_Help/About",   NULL,         (void *) about_activate, 0, "<Item>" },
 };
 
 static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
