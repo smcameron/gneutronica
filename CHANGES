@@ -104,4 +104,6 @@ gneutronica 0.28
 gneutronica 0.29
 
 	* Added "scramble" feature
+	* Added ability to cram extra space into a measure at the
+	  beginning or at the end.
 

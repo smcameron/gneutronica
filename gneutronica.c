@@ -2400,6 +2400,80 @@ void nextbutton_clicked(GtkWidget *widget,
 #endif
 }
 
+void adjust_space(double add, double multiply)
+{
+	int i;
+	struct pattern_struct *p = pattern[cpattern];
+	struct hitpattern *hp;
+	struct hitpattern *h;
+	struct hit_struct *hit;
+
+	flatten_pattern(kit, cpattern);
+
+	for (h = p->hitpattern; h != NULL; h = h->next) {
+		hit = &h->h;
+		hit->time = hit->time * multiply + add;
+		hit->beat = (int) (hit->time * DRAW_WIDTH);
+		hit->beats_per_measure = DRAW_WIDTH;
+		reduce_fraction(&hit->beat, &hit->beats_per_measure);
+	}
+	unflatten_pattern(kit, cpattern);
+	for (i=0;i<drumkit[kit].ninsts; i++)
+		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
+}
+
+int check_num_denom_ok(double *numerator, double *denominator)
+{
+	*numerator =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(add_space_numerator_spin));
+	*denominator =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(add_space_denominator_spin));
+
+	if (*denominator < 0.9999) {
+		printf("denominator too small\n");
+		return 0;
+	}
+	if (*numerator < 0.0001) {
+		printf("numerator too small\n");
+		return 0;
+	}
+	if (abs(*numerator - *denominator) < 0.0001) {
+		printf("numerator too close to denominator\n");
+		return 0;
+	}
+	return 1;
+}
+
+void add_space_before_button_pressed(GtkWidget *widget,
+	void *whatever)
+{
+	double numerator, denominator;
+	double add, multiply;
+
+	if (!check_num_denom_ok(&numerator,&denominator))
+		return;
+
+	add = numerator/denominator;
+	multiply = (1 - numerator/denominator);
+	adjust_space(add, multiply);
+}
+
+void add_space_after_button_pressed(GtkWidget *widget,
+	void *whatever)
+{
+	double numerator, denominator;
+	double add, multiply;
+
+	numerator =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(add_space_numerator_spin));
+	denominator =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(add_space_denominator_spin));
+	printf("Add space after pressed, %g/%g\n", numerator, denominator);
+
+	if (!check_num_denom_ok(&numerator,&denominator))
+		return;
+
+	add = 0.0;
+	multiply = (1 - numerator/denominator);
+	adjust_space(add, multiply);
+}
+
 void scramble_button_pressed(GtkWidget *widget,
 	void *whatever)
 {
@@ -4341,6 +4415,26 @@ int main(int argc, char *argv[])
 			2, 3, i, i+1); */
 		gtk_box_pack_start(GTK_BOX(linebox), timediv[i].spin, FALSE, FALSE, 0);
 	}
+	add_space_before_button = gtk_button_new_with_label("Add Space before");
+	gtk_box_pack_start(GTK_BOX(linebox), add_space_before_button, FALSE, FALSE, 0);
+	gtk_tooltips_set_tip(tooltips, add_space_before_button,
+			"Adds space at the beginning of the measure, crunching all the notes to the right.",
+			NULL);
+	add_space_numerator_spin = gtk_spin_button_new_with_range(1, 400, 1);
+	g_signal_connect(G_OBJECT (add_space_before_button), "clicked",
+		G_CALLBACK(add_space_before_button_pressed), (gpointer) NULL);
+	widget_exclude_keypress(add_space_numerator_spin);
+	gtk_box_pack_start(GTK_BOX(linebox), add_space_numerator_spin, FALSE, FALSE, 0);
+	add_space_denominator_spin = gtk_spin_button_new_with_range(1, 400, 1);
+	widget_exclude_keypress(add_space_denominator_spin);
+	gtk_box_pack_start(GTK_BOX(linebox), add_space_denominator_spin, FALSE, FALSE, 0);
+	add_space_after_button = gtk_button_new_with_label("Add Space after");
+	g_signal_connect(G_OBJECT (add_space_after_button), "clicked",
+		G_CALLBACK(add_space_after_button_pressed), (gpointer) NULL);
+	gtk_tooltips_set_tip(tooltips, add_space_after_button,
+			"Adds space at the end of the measure, crunching all the notes to the left.",
+			NULL);
+	gtk_box_pack_start(GTK_BOX(linebox), add_space_after_button, FALSE, FALSE, 0);
 
 	prevbutton = gtk_button_new_with_label("<- Edit Previous Pattern");
 	nextbutton = gtk_button_new_with_label("Create Next Pattern ->");
