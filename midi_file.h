@@ -1,5 +1,5 @@
 /* 
-    (C) Copyright 2005, Stephen M. Cameron.
+    (C) Copyright 2005,2006 Stephen M. Cameron.
 
     This file is part of Gneutronica.
 

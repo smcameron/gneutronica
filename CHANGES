@@ -101,3 +101,7 @@ gneutronica 0.28
 
 	* Added documentation about using alsa-virmidi to control softsynths.
 
+gneutronica 0.29
+
+	* Added "scramble" feature
+
