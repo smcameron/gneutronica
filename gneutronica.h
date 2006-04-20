@@ -236,10 +236,12 @@ GLOBAL GtkWidget *remap_drumkit_button;
 GLOBAL GtkWidget *automag;
 GLOBAL GtkWidget *autocrunch;
 
+GLOBAL GtkWidget *remove_space_before_button;
 GLOBAL GtkWidget *add_space_before_button;
 GLOBAL GtkWidget *add_space_numerator_spin;
 GLOBAL GtkWidget *add_space_denominator_spin;
 GLOBAL GtkWidget *add_space_after_button;
+GLOBAL GtkWidget *remove_space_after_button;
 
 GLOBAL GtkWidget *TempoChWin;
 GLOBAL GtkWidget *TempoChvbox1;

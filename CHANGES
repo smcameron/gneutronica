@@ -106,4 +106,7 @@ gneutronica 0.29
 	* Added "scramble" feature
 	* Added ability to cram extra space into a measure at the
 	  beginning or at the end.
+ 	* Added ability to remove a fraction of a measure, either
+ 	  from the beginning, or from the end.
+
 
