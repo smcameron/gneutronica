@@ -74,6 +74,7 @@ void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
 void destroy_event(GtkWidget *widget, gpointer data);
 void widget_exclude_keypress(GtkWidget *w);
+int unflatten_pattern(int ckit, int cpattern);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -2399,6 +2400,101 @@ void nextbutton_clicked(GtkWidget *widget,
 #endif
 }
 
+void scramble_button_pressed(GtkWidget *widget,
+	void *whatever)
+{
+	/* this function takes a pattern, divides it up into equal sized sections
+	   according to the first timediv spinbox, then scrambles it by shuffling
+	   those divisions.  Worthwhile thing to do?  Who knows. */
+
+	struct pattern_struct *p = pattern[cpattern];
+	int divisions;
+	int *map;
+	int i;
+	struct hitpattern *hp;
+	struct hitpattern *h;
+	struct hit_struct *hit;
+	struct hit_struct temp;
+	struct hitpattern *next_h;
+	int done;
+
+	divisions = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(timediv[0].spin));
+	/* printf("Scramble button pressed, divisions = %d.\n", divisions); */
+
+	/* construct a mapping of original division to new division */
+	map = (int *) malloc(sizeof(int) * divisions);
+	if (map == NULL) {
+		printf("out of memory, cannot scramble.\n");
+		return;
+	}
+	for (i=0;i<divisions;i++)
+		map[i] = i;
+
+	for (i=0;i<divisions;i++) {
+		int tmp, s;
+
+		/* swap with a random division */
+		s = random() * divisions / RAND_MAX;
+		tmp = map[i];
+		map[i] = map[s];
+		map[s] = tmp;
+	}
+
+	/* for (i=0;i<divisions;i++)
+		printf("map[%d] = %d\n", i, map[i]); */
+
+	flatten_pattern(kit, cpattern);
+
+	hp = p->hitpattern;
+	for (h = hp; h != NULL; h = h->next) {
+		int from_div, to_div;
+		double sub, add;
+
+		hit = &h->h;
+
+		/* Calculate what zone this starts in, use map to figure the new zone */
+		from_div = (int) trunc(hit->time * (double) divisions);
+		to_div = map[from_div];
+
+		/* Adjust hit->time, hit->beat and hit->beats_per_measure to reflect the posititon */
+		/* and use reduce_fraction on those two. */
+		sub = (double) from_div / (double) divisions;
+		add = (double) to_div / (double) divisions;
+
+		/* printf("from_div = %d, to_div = %d, divisions = %d"
+			" time = %g sub = %g, add=%g, new time = %g\n",
+			from_div, to_div, divisions,
+			hit->time, sub, add, hit->time - sub  + add); */
+
+		hit->time = hit->time - sub + add;
+		hit->beat = (int) (hit->time * DRAW_WIDTH);
+		hit->beats_per_measure = DRAW_WIDTH;
+		reduce_fraction(&hit->beat, &hit->beats_per_measure);
+	}
+	free(map);
+
+	/* Sort h by h->h->time, bubble sort is good enough for now */
+	do {
+		done = 1;
+		h = hp;
+		while (h != NULL) { /* traverse through the list */
+			next_h = h->next;
+			if (next_h == NULL)
+				break;
+			if (h->h.time > next_h->h.time) {  /* find a pair out of order? */
+				done = 0;		   /* found something out of order */
+				temp = next_h->h;	   /* not done, swap them. */
+				next_h->h = h->h;
+				h->h = temp;
+			}
+			h = h->next;
+		}
+	} while (!done); /* repeat until we didn't swap anything */
+
+	unflatten_pattern(kit, cpattern);
+	for (i=0;i<drumkit[kit].ninsts; i++)
+		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
+}
 
 void instrument_clear_button_pressed(GtkWidget *widget, 
 	struct instrument_struct *inst)
@@ -3858,6 +3954,7 @@ int main(int argc, char *argv[])
 	GtkWidget *misctable;
 	GtkWidget *magbox;
 	GtkWidget *volume_zoom_label;
+	GtkWidget *scramble_button;
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
@@ -4220,6 +4317,15 @@ int main(int argc, char *argv[])
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
+
+	scramble_button = gtk_button_new_with_label("Scramble");
+	gtk_tooltips_set_tip(tooltips, scramble_button,
+		"Scramble this measure by divisions randomly. "
+		"Is this a useful feature?  "
+		"A million monkeys can't be wrong all the time.", NULL);
+	g_signal_connect(G_OBJECT (scramble_button), "clicked",
+		G_CALLBACK(scramble_button_pressed), (gpointer) NULL);
+	gtk_box_pack_start(GTK_BOX(linebox), scramble_button, FALSE, FALSE, 0);
 
 	for (i=0;i<ndivisions;i++) {
 		timediv[i].spin = gtk_spin_button_new_with_range(0, 300, 1);
