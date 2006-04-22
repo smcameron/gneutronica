@@ -363,13 +363,51 @@ The notes are all shoved over to the left proportionally,
 leaving you an extra 3/19's of a measure of blank space.
 You can then adjust the grid lines to match your new
 spacing.
+<p>When adding space, set the numerator and denominator
+to indicate what fraction of the total measure <em>after
+the operation</em> you want the added space to consume.
+<p>For example, if you have a measure 2 units long, and
+want to make it instead 3 units long by adding some space
+onto the end, set the numerator and denominator to 1 and
+3, or 1/3.  In other words, after the space is added,
+the new space will occupy 1/3 of the total length of
+the measure.
 <h3><b>Remove space before</b> and <b>Remove space after</b></h3>
 <p>These buttons remvoe a fraction of the measure from the
 beginning or end.  If you want to cut off the first quarter
 of a measure, set the numerator/denominator to 1/4, then
 press "Remove space before."  If you want to cut off the last
 1/3rd of a measure, set the numerator/denominator to 1/3
-and press "Remove space after."
+and press "Remove space after."  When removing space, the
+fraction used is the fraction of the measure <em>before
+the operation</em>, which is different than what's done
+for adding space.
+<p><b>Splitting patterns</b>
+<p>Suppose you want to split a pattern into two
+equal sized patterns.
+<ol>
+<li>Duplicate the pattern, say "A" into a second pattern, say "B",
+using the select and paste buttons.
+<li>Cut off the back half of "A" by using "Remove space after"
+with the fraction set to 1/2.
+<li>Cut off the front half of "B" by using "Remove space before"
+and the fraction set to 1/2.  The splitting has now been accomplished.
+</ol>
+<p><b>Joining patterns</b>
+<p>Suppose you want to join two patterns into a single pattern.
+<ol>
+<li>Start with two patterns, "A" and "B".
+<li>Edit pattern "A", and use "Add space after"
+with the fractino set to 1/2.
+<li>Edit pattern "B" and use "Add space before"
+with the fraction set to 1/2.
+<li>Select pattern "B"
+<li>Paste into pattern A.  Now pattern "A" contains
+the original "A" as the front half, and the original
+"B" as the back half.
+<li>Delete pattern "B"  The patterns are now joined.
+</ol>
+
 
 
 <h2>Using Gneutronica with softsynths such as fluidsynth</h2>
