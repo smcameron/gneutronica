@@ -4472,9 +4472,15 @@ int main(int argc, char *argv[])
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(timediv[i].spin), (gdouble) timediv[i].division);
 		g_signal_connect(G_OBJECT(timediv[i].spin), "value-changed", 
 			G_CALLBACK(timediv_spin_change), &timediv[i]);
-		gtk_tooltips_set_tip(tooltips, timediv[i].spin, 
-			"Use this to control the way the measure is divided up for placement of beats", 
-			NULL);
+		if (i==0)
+			gtk_tooltips_set_tip(tooltips, timediv[i].spin,
+				"Use these to control the way the measure is "
+				"divided up for placement of beats.  "
+				"This first one is also used by the Scramble function.", NULL);
+		else
+			gtk_tooltips_set_tip(tooltips, timediv[i].spin,
+				"Use these to control the way the measure is "
+				"divided up for placement of beats", NULL);
 
 		/* gtk_table_attach_defaults(GTK_TABLE(table), timediv[i].spin, 
 			2, 3, i, i+1); */
@@ -4483,35 +4489,58 @@ int main(int argc, char *argv[])
 	remove_space_before_button = gtk_button_new_with_label("Remove Space before");
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_before_button, FALSE, FALSE, 0);
 	gtk_tooltips_set_tip(tooltips, remove_space_before_button,
-			"Removes space at the beginning of the measure.",
+			"Removes space from the beginning of the measure.  "
+			"Set the numerator and denominator to the fraction of the "
+			"measure to be deleted as measured prior to deleting.",
 			NULL);
 	g_signal_connect(G_OBJECT (remove_space_before_button), "clicked",
 		G_CALLBACK(remove_space_before_button_pressed), (gpointer) NULL);
 	add_space_before_button = gtk_button_new_with_label("Add Space before");
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_before_button, FALSE, FALSE, 0);
 	gtk_tooltips_set_tip(tooltips, add_space_before_button,
-			"Adds space at the beginning of the measure, crunching all the notes to the right.",
+			"Adds space to the beginning of the measure, "
+			"squeezing all the notes to the right.  Set the "
+			"numerator and denominator to indicate the fraction of "
+			"the total measure the new space should occupy as measured "
+			"after the operation of adding space is complete.  For instance "
+			"if the measure is 2 units long and you want to be 3 units, "
+			"use 1/3.  In general, if it's X units and you want (X + Y) units, "
+			"use (Y - X) / (X + Y).",
 			NULL);
 	add_space_numerator_spin = gtk_spin_button_new_with_range(1, 400, 1);
+	gtk_tooltips_set_tip(tooltips, add_space_numerator_spin,
+			"Numerator.  Use this when adding/removing space to this measure.", NULL);
 	g_signal_connect(G_OBJECT (add_space_before_button), "clicked",
 		G_CALLBACK(add_space_before_button_pressed), (gpointer) NULL);
 	widget_exclude_keypress(add_space_numerator_spin);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_numerator_spin, FALSE, FALSE, 0);
 	add_space_denominator_spin = gtk_spin_button_new_with_range(1, 400, 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_space_denominator_spin), (gdouble) 2.0);
+	gtk_tooltips_set_tip(tooltips, add_space_denominator_spin,
+			"Denominator.  Use this when adding/removing space to this measure.", NULL);
 	widget_exclude_keypress(add_space_denominator_spin);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_denominator_spin, FALSE, FALSE, 0);
 	add_space_after_button = gtk_button_new_with_label("Add Space after");
 	g_signal_connect(G_OBJECT (add_space_after_button), "clicked",
 		G_CALLBACK(add_space_after_button_pressed), (gpointer) NULL);
 	gtk_tooltips_set_tip(tooltips, add_space_after_button,
-			"Adds space at the end of the measure, crunching all the notes to the left.",
+			"Adds space to the end of the measure, "
+			"squeezing all the notes to the left.  Set the "
+			"numerator and denominator to indicate the fraction of "
+			"the total measure the new space should occupy as measured "
+			"after the operation of adding space is complete.  For instance "
+			"if the measure is 2 units long and you want to be 3 units, "
+			"use 1/3.  In general, if it's X units and you want (X + Y) units, "
+			"use (Y - X) / (X + Y).",
 			NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_after_button, FALSE, FALSE, 0);
 	remove_space_after_button = gtk_button_new_with_label("Remove Space after");
 	g_signal_connect(G_OBJECT (remove_space_after_button), "clicked",
 		G_CALLBACK(remove_space_after_button_pressed), (gpointer) NULL);
 	gtk_tooltips_set_tip(tooltips, remove_space_after_button,
-			"Removes space at the end of the measure.",
+			"Removes space from the end of the measure."
+			"Set the numerator and denominator to the fraction of the "
+			"measure to be deleted as measured prior to deleting.",
 			NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_after_button, FALSE, FALSE, 0);
 
