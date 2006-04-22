@@ -21,6 +21,16 @@
 #ifndef __GNEUTRONICA_H__
 #define __GNEUTRONICA_H__
 
+/* Here's some easily cnofigurable stuff, edit this at will */
+
+	/* AUTOMAG_ON, set to 1 if you want automag on by default, 0 otherwise */
+#define AUTOMAG_ON 1
+
+	/* How much automag... 100.0 means none, 600.0 (max) means 6x */
+#define DEFAULT_AUTOMAG 600.0
+
+/* End of easily configurable stuff */
+
 #ifdef INSTANTIATE_GNEUTRONICA_GLOBALS
 #define GLOBAL
 #define INIT(x, y) x = y

@@ -4321,6 +4321,8 @@ int main(int argc, char *argv[])
 	magbox = gtk_table_new(2, 3, FALSE);
 	gtk_box_pack_start(GTK_BOX(topbox), magbox, TRUE, TRUE, 0);
 	automag = gtk_check_button_new_with_label("AutoMag");
+	if (AUTOMAG_ON)
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(automag), TRUE);
 	g_signal_connect(G_OBJECT (automag), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	autocrunch = gtk_check_button_new_with_label("AutoCrunch");
@@ -4328,7 +4330,7 @@ int main(int argc, char *argv[])
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	gtk_tooltips_set_tip(tooltips, autocrunch, "Turns on experimental UI feature...  You'll see. ;-)", NULL);
 	volume_zoom_label= gtk_label_new("Volume Zoom");
-	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) 100.0, 
+	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) DEFAULT_AUTOMAG,
 			100.0, 600.0, 10.0, 1.0, 0.0);
 	volume_magnifier = gtk_hscale_new(GTK_ADJUSTMENT(volume_magnifier_adjustment));
 	gtk_tooltips_set_tip(tooltips, volume_magnifier, "Controls how much the volume scale is magnified"
