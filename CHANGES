@@ -108,5 +108,8 @@ gneutronica 0.29
 	  beginning or at the end.
  	* Added ability to remove a fraction of a measure, either
  	  from the beginning, or from the end.
+	* Added "Select" button to pattern window so you don't have
+	  to switch over to the arranger window just to select a
+	  pattern for copying.
 
 

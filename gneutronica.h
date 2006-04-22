@@ -225,6 +225,7 @@ GLOBAL GtkWidget *drumkit_vbox;
 GLOBAL GtkWidget *edit_instruments_toggle;
 GLOBAL GtkWidget *save_drumkit_button;
 GLOBAL GtkWidget *pattern_paste_button;
+GLOBAL GtkWidget *pattern_select_button;
 GLOBAL GtkWidget *nextbutton, *prevbutton;
 GLOBAL GtkWidget *play_button;
 GLOBAL GtkWidget *play_selection_button;

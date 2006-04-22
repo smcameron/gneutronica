@@ -2230,14 +2230,27 @@ void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
 	redraw_arranger();
 }
 
+void set_select_message(char *pattern)
+{
+	char msg[255];
+	sprintf(msg, "Superimpose all the notes of the selected pattern (%s) onto this pattern.",
+		pattern);
+	gtk_tooltips_set_tip(tooltips, pattern_paste_button, msg, NULL);
+}
+
+void select_pattern_button_pressed(GtkWidget *widget, void *unused)
+{
+	pattern_in_copy_buffer = cpattern;
+	set_select_message(pattern[cpattern]->patname);
+	redraw_arranger();
+}
+
 void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */
 	struct pattern_struct *data)
 {
 	char msg[255];
 	pattern_in_copy_buffer = data->pattern_num;
-	sprintf(msg, "Superimpose all the notes of the selected pattern (%s) onto this pattern.", 
-		data->patname);
-	gtk_tooltips_set_tip(tooltips, pattern_paste_button, msg, NULL);
+	set_select_message(data->patname);
 	redraw_arranger();
 }
 
@@ -4505,6 +4518,7 @@ int main(int argc, char *argv[])
 	prevbutton = gtk_button_new_with_label("<- Edit Previous Pattern");
 	nextbutton = gtk_button_new_with_label("Create Next Pattern ->");
 	pattern_clear_button = gtk_button_new_with_label("Clear Pattern");
+	pattern_select_button = gtk_button_new_with_label("Select Pattern");
 	pattern_paste_button = gtk_button_new_with_label("Paste Pattern");
 	pattern_play_button = gtk_button_new_with_label("Play");
 	pattern_stop_button = gtk_button_new_with_label("Stop");
@@ -4515,6 +4529,8 @@ int main(int argc, char *argv[])
 			G_CALLBACK (prevbutton_clicked), NULL);
 	g_signal_connect(G_OBJECT (pattern_clear_button), "clicked",
 			G_CALLBACK (pattern_clear_button_clicked), NULL);
+	g_signal_connect(G_OBJECT (pattern_select_button), "clicked",
+			G_CALLBACK (select_pattern_button_pressed), NULL);
 	g_signal_connect(G_OBJECT (pattern_paste_button), "clicked",
 			G_CALLBACK (pattern_paste_button_clicked), NULL);
 	g_signal_connect(G_OBJECT (pattern_play_button), "clicked",
@@ -4525,6 +4541,8 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, nextbutton, "Create and edit the next pattern", NULL);
 	gtk_tooltips_set_tip(tooltips, prevbutton, "Edit the previous pattern", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_clear_button, "Clear all notes from this pattern", NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_select_button,
+		"Select this pattern for later pasting.", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_paste_button, 
 		"Superimpose all the notes of a previously selected pattern onto this pattern.", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_play_button, 
@@ -4536,6 +4554,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(box2), pattern_play_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_stop_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_clear_button, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box2), pattern_select_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_paste_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), nextbutton, TRUE, TRUE, 0);
 
