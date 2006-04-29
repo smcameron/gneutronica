@@ -33,16 +33,17 @@ static struct inst_mapping {
 	char *name;
 	int midi_note;
 	int alternate;
+	int velocity;
 } imap[] = {
-	{ "hh", 42, 46 },
-	{ "c", 49, 52 },
-	{ "ft", 41, 41 },
-	{ "lt", 43, 43 },
-	{ "mt", 45, 45 },
-	{ "ht", 47, 47 },
-	{ "r", 51, 53 },
-	{ "s", 38, 40 },
-	{ "b", 35, 36 },
+	{ "hh", 42, 46, 80 },
+	{ "c", 49, 52, 120 },
+	{ "ft", 41, 41, 110 },
+	{ "lt", 43, 43, 110 },
+	{ "mt", 45, 45, 110 },
+	{ "ht", 47, 47, 110 },
+	{ "r", 51, 53, 80 },
+	{ "s", 38, 40, 125 },
+	{ "b", 35, 36, 126 },
 };
 
 static int used[256];
@@ -55,11 +56,12 @@ static void init_used()
 static nimappings = (sizeof(imap) / sizeof(imap[0]));
 
 
-static int lookup_instrument(char *name)
+static int lookup_instrument(char *name, int *velocity)
 {
 	char newname[100];
 
 	int i;
+	*velocity = 110; /* default */
 	memset(newname, 0, 100);
 	strncpy(newname, name, 99);
 	for (i=0;newname[i] != '\0';i++)
@@ -67,6 +69,7 @@ static int lookup_instrument(char *name)
 	for (i=0;i<nimappings;i++)
 		if (strcmp(newname, imap[i].name) == 0) {
 			used[imap[i].midi_note]= 1;
+			*velocity = imap[i].velocity;
 			return imap[i].midi_note;
 		}
 
@@ -113,7 +116,7 @@ static int find_instrument(char *line)
 			exit(1);
 		}
 		strcpy(dt_inst[dt_ninsts].name, n);
-		dt_inst[dt_ninsts].midi_value = lookup_instrument(n);
+		dt_inst[dt_ninsts].midi_value = lookup_instrument(n, &dt_inst[dt_ninsts].velocity);
 		dt_ninsts++;
 	}
 	return found;

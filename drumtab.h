@@ -32,12 +32,14 @@
 struct dt_inst_type {
 	char *name;
 	int midi_value;
+	int velocity;
 };
 
 struct dt_hit_type {
 	int numerator;
 	int denominator;
 	int inst;
+	int velocity;
 	struct dt_hit_type *next;
 };
 
