@@ -6,7 +6,7 @@ DEBUG=-g
 
 all:	gneutronica documentation/gneutronica.1
 
-drumtab.o:	drumtab.c drumtab.h
+drumtab.o:	drumtab.c drumtab.h dt_known_insts.h
 	gcc ${DEBUG} -c drumtab.c
 
 fractions.o:	fractions.c fractions.h
