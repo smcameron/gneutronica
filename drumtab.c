@@ -162,6 +162,7 @@ static int add_hit(int instrument, int staff, int measure, int numer, int denom)
 {
 	struct dt_hit_type *p;
 
+	printf("add_hit, measure=%d\n", measure);
 	p = dt_pat[dt_npats].hit;
 	dt_pat[dt_npats].hit = malloc(sizeof(*dt_pat[dt_npats].hit));
 	dt_pat[dt_npats].hit->next = p;
@@ -175,6 +176,16 @@ static int add_hit(int instrument, int staff, int measure, int numer, int denom)
 	return 0;
 }
 
+static int is_junk(char *s)
+{
+	int i, len;
+	len = strlen(s);
+	for (i=0;i<len;i++)
+		if (!isspace(s[i]) && s[i] != '|' && s[i] != '\n')
+			return 0;
+	return 1;
+}
+
 static int process_line(char *line, int instrument,
 	int current_measure, int current_staff,
 	int *last_measure_of_staff)
@@ -183,6 +194,9 @@ static int process_line(char *line, int instrument,
 	int denom, numer, i;
 
 	for (chunk = strtok(line, "|"); chunk ; chunk = strtok(NULL, "|")) {
+		printf("chunk = '%s'\n", chunk);
+		if (is_junk(chunk))
+			continue;
 		denom = strlen(chunk);
 		for (i=0;i<denom;i++) {
 			if (chunk[i] == 'x' ||
@@ -207,7 +221,7 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 	int current_instrument = -1;
 	int new_staff_iminent = 1;
 	int current_staff = -1;
-	int last_measure_of_staff = -1;
+	int last_measure_of_staff = 0;
 	int this_measure;
 	int in = -1;
 
@@ -227,11 +241,11 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 			current_measure = last_measure_of_staff;
 		}
 		in = find_instrument(buffer[i]);
-		process_line(vbar+1, in, current_measure,
+		process_line(vbar, in, current_measure,
 			current_staff, &last_measure_of_staff);
 	}
 
-	*nmeasures = last_measure_of_staff;
+	*nmeasures = last_measure_of_staff+1;
 
 	for (i=0;i<dt_ninsts;i++)
 		printf("inst %d = %s\n", i, dt_inst[i].name);
@@ -260,15 +274,72 @@ static int print_data(int nmeasures)
 	return 0;
 }
 
+static int patterns_equal(struct dt_pattern_type *p1, struct dt_pattern_type *p2)
+{
+
+	struct dt_hit_type *h1, *h2;
+
+	h1 = p1->hit;
+	h2 = p2->hit;
+
+	if (h1 == NULL && h2 == NULL)
+		return 1;
+	if (h1 == NULL)
+		return 0;
+	if (h2 == NULL)
+		return 0;
+	for (h1 = p1->hit; h1; h1 = h1->next) {
+		if (h2 == NULL)
+			return 0;
+		if (h1->inst != h2->inst ||
+			h1->numerator != h2->numerator ||
+			h1->denominator != h2->denominator)
+				return 0;
+		h2 = h2->next;
+	}
+	if (h2 != NULL)
+		return 0;
+	return 1;
+}
+
+static int find_duplicates()
+{
+	int nduplicates_found = 0;;
+	int i, j;
+	for (i=0;i<dt_npats;i++) {
+		if (dt_pat[i].duplicate_of != -1)
+			continue;
+		for (j=0;j<dt_npats;j++) {
+			if (i == j)  		/* skip self-compare */
+				continue;
+			if (patterns_equal(&dt_pat[i], &dt_pat[j])) {
+				if (i<j)
+					dt_pat[j].duplicate_of = i;
+				else
+					dt_pat[i].duplicate_of = j;
+				nduplicates_found++;
+			}
+		}
+	}
+	printf("npats = %d, nduplicates = %d, unique = %d\n",
+		dt_npats,  nduplicates_found, dt_npats - nduplicates_found);
+}
+
 int process_drumtab_file(const char *filename)
 {
 	char *buf[MAXLINES];
-	int nlines, rc;
+	int nlines, rc, i;
 
 	memset(dt_pat, 0, sizeof(dt_pat));
+	for (i=0;i<MAXPATS;i++)
+		dt_pat[i].duplicate_of = -1;
+
+	dt_npats = 0;
+	dt_nmeasures = 0;
 
 	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
 	printf("rc = %d, nlines = %d\n", rc, nlines);
 	process_tab(buf, nlines, &dt_nmeasures);
+	find_duplicates();
 	print_data(dt_nmeasures);
 }
