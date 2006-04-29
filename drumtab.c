@@ -29,6 +29,10 @@
 
 #include "fractions.h"
 
+static int buffer_alloced = 0;
+static int dt_nlines;
+static char *dt_buf[MAXLINES];
+
 static struct inst_mapping {
 	char *name;
 	int midi_note;
@@ -179,6 +183,8 @@ static int read_tab_file(const char *filename, char *buffer[],
 		fprintf(stderr, "fopen: %s\n", strerror(errno));
 		return -1;
 	}
+
+	buffer_alloced = 1;
 
 	do {
 		s = fgets(buf, 1000, f);
@@ -485,6 +491,7 @@ static void initialize()
 	}
 	dt_npats = 0;
 	dt_nmeasures = 0;
+	dt_ninsts = 0;
 }
 
 
@@ -502,14 +509,14 @@ int process_drumtab_lines(char *buf[], int nlines, int factor)
 
 int process_drumtab_file(const char *filename, int factor)
 {
-	char *buf[MAXLINES];
 	int nlines, rc, i;
 
 	initialize();
 
-	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
+	rc = read_tab_file(filename, dt_buf, MAXLINES, &nlines);
+	dt_nlines = nlines;
 	printf("rc = %d, nlines = %d\n", rc, nlines);
-	process_drumtab_lines(buf, nlines, factor);
+	process_drumtab_lines(dt_buf, nlines, factor);
 }
 
 void process_drumtab_buffer(char *buffer, int factor)
@@ -520,6 +527,7 @@ void process_drumtab_buffer(char *buffer, int factor)
 	int len;
 	char *spot;
 
+	buffer_alloced = 0;
 	initialize();
 	spot = buffer;
 	len = strlen(buffer);
@@ -534,6 +542,40 @@ void process_drumtab_buffer(char *buffer, int factor)
 		}
 	}
 	process_drumtab_lines(buf, nlines, factor);
+}
+
+static void free_dt_hit(struct dt_hit_type *h)
+{
+	if (!h)
+		return;
+	free_dt_hit(h->next);
+	h->next = NULL;
+	free(h);
+}
+
+void dt_free_memory()
+{
+	int i;
+	if (buffer_alloced) {
+		for (i=0;i<dt_nlines;i++) {
+			if (dt_buf[i]) {
+				free(dt_buf[i]);
+				dt_buf[i] = NULL;
+			}
+		}
+	}
+	buffer_alloced = 0;
+	for (i=0;i<dt_ninsts;i++) {
+		if (dt_inst[i].name) {
+			free(dt_inst[i].name);
+			dt_inst[i].name = NULL;
+		}
+	}
+	dt_ninsts = 0;
+	for (i=0;i<dt_npats;i++)
+		free_dt_hit(dt_pat[i].hit);
+	dt_pat[i].hit = NULL;
+	dt_npats = 0;
 }
 
 

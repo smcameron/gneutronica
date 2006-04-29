@@ -1105,6 +1105,7 @@ static gint drumtab_selection_received(GtkWidget* widget,
 	printf("Drumtab is: %s\n", drumtab);
 	process_drumtab_buffer(drumtab, factor);
 	translate_drumtab_data(factor);
+	dt_free_memory();
 	return;
 }
 
@@ -3554,6 +3555,7 @@ int import_drumtab_from_file(const char *filename, int factor)
 {
 	process_drumtab_file(filename, factor);
 	translate_drumtab_data(factor);
+	dt_free_memory();
 }
 
 int import_patterns_from_file(const char *filename)
