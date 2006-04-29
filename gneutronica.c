@@ -299,6 +299,8 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 	return 0;
 }
 
+#define DEFAULT_DRUMKIT_DIR "/usr/local/share/gneutronica/drumkits"
+
 int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 {
 	FILE *f;
@@ -306,11 +308,24 @@ int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 	int rc, line, n;
 	int fileformat;
 	char cmd[255];
+	char realfilename[300];
+	struct stat statbuf;
+
+	strncpy(realfilename, filename, 300);
+
+	rc = stat(realfilename, &statbuf);
+	if (rc != 0 && (strlen(DEFAULT_DRUMKIT_DIR) + strlen(filename) + 2) < 300) {
+		/* try putting DEFAULT_DRUMKIT_DIR n the front and see if that helps. */
+		sprintf(realfilename, "%s/%s", DEFAULT_DRUMKIT_DIR, filename);
+		rc = stat(realfilename, &statbuf);
+		if (rc != 0) /* Nope... put it back, and let it fail normally */
+			strncpy(realfilename, filename, 300);
+	}
 
 	if (*ndrumkits >= MAXKITS)
 		return -1;
 
-	sprintf(cmd, "grep -v '^#' %s", filename);
+	sprintf(cmd, "grep -v '^#' %s", realfilename);
 	f = popen(cmd, "r");
 	if (f == NULL) {
 		fprintf(stderr, "Can't open %s: %s\n", filename, strerror(errno));
