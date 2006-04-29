@@ -73,6 +73,7 @@ void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 void import_drumtab_button_clicked(GtkWidget *widget, gpointer data);
 void factor_drumtab_button_clicked(GtkWidget *widget, gpointer data);
+static void paste_drumtab_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
@@ -94,11 +95,11 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
 	{ "/File/Import Drum _Tab", NULL,         import_drumtab_button_clicked,    0, "<Item>" },
-	{ "/File/Import and factor Drum _Tab", NULL,         factor_drumtab_button_clicked,    0, "<Item>" },
 	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
 	{ "/File/_Quit",    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT }, 
 	{ "/_Edit",         NULL,         NULL,           0, "<Branch>" },
+	{ "/Edit/_Paste ASCII drum tab",    NULL, paste_drumtab_clicked, 0, "<Item>" },
 	{ "/Edit/_Remap drum kit for whole song via GM",    NULL, remap_drumkit_clicked, 0, "<Item>" },
 	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
 	{ "/_Help/About",   NULL,         (void *) about_activate, 0, "<Item>" },
@@ -1086,7 +1087,7 @@ static gint drumtab_selection_received(GtkWidget* widget,
 {
 	GList *item_list;
 	char *drumtab;
-	int i;
+	int i, factor;
 
 	printf("Drumtab selection received.\n");
 	if (selection->length < 0) {
@@ -1099,10 +1100,11 @@ static gint drumtab_selection_received(GtkWidget* widget,
 	}
 
 	drumtab = (char *) selection->data;
+	factor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_factor_check_button));
 
 	printf("Drumtab is: %s\n", drumtab);
-	process_drumtab_buffer(drumtab, 0);
-	translate_drumtab_data(0);
+	process_drumtab_buffer(drumtab, factor);
+	translate_drumtab_data(factor);
 	return;
 }
 
@@ -1116,6 +1118,20 @@ static void paste_drumtab_selection()
 
 	/* And request the "STRING" target for the primary selection */
 	gtk_selection_convert (arranger_window, GDK_SELECTION_PRIMARY, targets_atom, GDK_CURRENT_TIME);
+	/* We will get called back with the selection */
+}
+
+static void paste_drumtab_clicked(GtkWidget *widget, gpointer data)
+{
+	/* Selected from the menu, same as middle mouse button, except from clipboard */
+	static GdkAtom targets_atom = GDK_NONE;
+
+	/* Get the atom corresponding to the string "STRING" */
+	if (targets_atom == GDK_NONE)
+		targets_atom = gdk_atom_intern ("STRING", FALSE);
+
+	/* And request the "STRING" target for the primary selection */
+	gtk_selection_convert (arranger_window, GDK_SELECTION_CLIPBOARD, targets_atom, GDK_CURRENT_TIME);
 	/* We will get called back with the selection */
 }
 
@@ -1777,18 +1793,12 @@ void import_drumtab_file_selected(GtkWidget *widget,
 	GtkFileSelection *FileBox)
 {
 	const char *filename;
-	filename = gtk_file_selection_get_filename(FileBox);
-	gtk_widget_hide(GTK_WIDGET(FileBox));
-	import_drumtab_from_file(filename, 0);
-}
+	int factor;
 
-void factor_drumtab_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
-{
-	const char *filename;
+	factor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_factor_check_button));
 	filename = gtk_file_selection_get_filename(FileBox);
 	gtk_widget_hide(GTK_WIDGET(FileBox));
-	import_drumtab_from_file(filename, 1);
+	import_drumtab_from_file(filename, factor);
 }
 
 void export_to_midi(GtkWidget *widget,
@@ -1805,8 +1815,7 @@ void export_to_midi(GtkWidget *widget,
 #define SAVE_DRUMKIT 2
 #define IMPORT_PATTERNS 3
 #define IMPORT_DRUMTAB 4
-#define FACTOR_DRUMTAB 5
-#define EXPORT_TO_MIDI 6
+#define EXPORT_TO_MIDI 5
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1817,7 +1826,6 @@ static struct file_dialog_descriptor {
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
 	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
 	{ "Import Drum Tablature", &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
-	{ "Import and factor Drum Tablature", &ImportDrumtabBox, (void *) factor_drumtab_file_selected, },
 	{ "Export Song to MIDI file", &export_to_midi_box, (void *) export_to_midi, },
 };
 	
@@ -1858,12 +1866,6 @@ void import_drumtab_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	make_file_dialog(IMPORT_DRUMTAB);
-}
-
-void factor_drumtab_button_clicked(GtkWidget *widget,
-	gpointer data)
-{
-	make_file_dialog(FACTOR_DRUMTAB);
 }
 
 void save_button_clicked(GtkWidget *widget,
@@ -4895,6 +4897,11 @@ int main(int argc, char *argv[])
 	arr_loop_check_button = gtk_check_button_new_with_label("Loop");
 	gtk_tooltips_set_tip(tooltips, arr_loop_check_button, 
 		"When checked, will cause playback to loop until 'Stop' is pressed.", NULL);
+	arr_factor_check_button = gtk_check_button_new_with_label("Factor drum tabs");
+	gtk_tooltips_set_tip(tooltips, arr_factor_check_button,
+		"When checked, pasted ASCII drum tabs will be factored "
+		"to reduce duplicate patterns on a per-instrument basis, "
+		"rather than a per-measure basis.", NULL);
 	midi_setup_activate_button = gtk_button_new_with_label("MIDI Setup");
 	gtk_tooltips_set_tip(tooltips, midi_setup_activate_button,
 		"Set the MIDI channel to transmit on, and send "
@@ -4933,6 +4940,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_entry, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), arr_loop_check_button, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(arranger_box), arr_factor_check_button, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), midi_setup_activate_button, FALSE, FALSE, 0);
 #if 0
 	gtk_box_pack_start(GTK_BOX(arranger_box), about_button, FALSE, FALSE, 0);

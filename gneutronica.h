@@ -289,6 +289,7 @@ GLOBAL int INIT(end_copy_measure, -1);
 	GLOBAL GtkWidget *Delete_da;
 	GLOBAL GtkWidget *measure_transport_da;
 	GLOBAL GtkWidget *arr_loop_check_button;
+	GLOBAL GtkWidget *arr_factor_check_button;
 
 #define PSCROLLER_HEIGHT 100
 #define PSCROLLER_WIDTH (DRAW_WIDTH + 130) 
