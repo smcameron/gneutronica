@@ -221,7 +221,7 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 			printf("%d: new staff begins\n", i);
 			new_staff_iminent = 0;
 			current_staff++;
-			current_measure = last_measure_of_staff + 1;
+			current_measure = last_measure_of_staff;
 		}
 		in = find_instrument(buffer[i]);
 		process_line(vbar+1, in, current_measure,
