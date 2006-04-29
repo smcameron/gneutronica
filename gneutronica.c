@@ -1297,6 +1297,8 @@ static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct 
 			gdk_draw_line(w->window, gc, x+MEASUREWIDTH-1, ARRANGER_HEIGHT / 2, x+MEASUREWIDTH/2, 2*ARRANGER_HEIGHT/3); 
 		}
 		gdk_draw_line(w->window, gc, x, y1, x, y1+ARRANGER_HEIGHT);
+		if ((i % 10) == 0)
+			gdk_draw_line(w->window, gc, x+1, y1, x+1, y1+ARRANGER_HEIGHT);
 		if (measure[i].npatterns != 0 && i<nmeasures ) {
 			for (j=0;j<measure[i].npatterns;j++) {
 				if (measure[i].pattern[j] == p->pattern_num) {
