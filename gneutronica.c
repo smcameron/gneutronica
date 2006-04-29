@@ -3398,21 +3398,24 @@ int import_patterns_v3(FILE *f)
 
 int import_drumtab_from_file(const char *filename)
 {
-	int i;
+	int i, j;
 	struct hitpattern **h;
 	struct pattern_struct *p;
 	struct dt_hit_type *dth;
+	int maxmeasure = 0;
 
 	process_drumtab_file(filename);
 
 	/* Add patterns */
 	for (i=0;i<dt_npats;i++) {
+		if (dt_pat[i].measure > maxmeasure)
+				maxmeasure = dt_pat[i].measure;
 		if (dt_pat[i].duplicate_of != -1)
 			continue;
 		if (dt_pat[i].hit == NULL) /* empty pattern */
 			continue;
 		printf("Adding pattern %d\n", i);
-		pattern[npatterns] = pattern_struct_alloc(i);
+		pattern[npatterns] = pattern_struct_alloc(npatterns);
 		p = pattern[npatterns];
 		if (p == NULL)
 			return -1;
@@ -3424,8 +3427,8 @@ int import_drumtab_from_file(const char *filename)
 		p->timediv[4].division = 0;
 		p->beats_per_minute = 120;
 		p->beats_per_measure = 4;
-		sprintf(p->patname, "%s %d\n", dt_inst[dt_pat[i].hit->inst].name, i);
-
+		sprintf(p->patname, "%s %d", dt_inst[dt_pat[i].hit->inst].name, i);
+		dt_pat[i].gn_pattern = npatterns;
 		for (dth = dt_pat[i].hit; dth; dth = dth->next) {
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
@@ -3436,12 +3439,33 @@ int import_drumtab_from_file(const char *filename)
 			(*h)->h.beats_per_measure = dth->denominator;
 			(*h)->h.velocity = dth->velocity;
 			h = &(*h)->next;
-			*h = NULL;
-			printf("Add hit.\n");
+			printf("Add hit, %s: velocity = %d, midi=%d, gm inst=%d.\n",
+				dt_inst[dth->inst].name,
+				dth->velocity, dt_inst[dth->inst].midi_value,
+				lookup_gm_equiv(dt_inst[dth->inst].midi_value));
 		}
 		make_new_pattern_widgets(npatterns, npatterns+1);
 		npatterns++;
 	}
+	for (i=0;i<dt_npats;i++) {
+		if (dt_pat[i].duplicate_of != -1)
+			dt_pat[i].gn_pattern = dt_pat[dt_pat[i].duplicate_of].gn_pattern;
+	}
+	/* Add the measures */
+
+	printf("maxmeasure = %d\n", maxmeasure);
+	for (i=0;i<maxmeasure+1;i++)
+		measure[i+nmeasures].npatterns = 0;
+	for (i=0;i<maxmeasure+1;i++) {
+		for (j=0;j<dt_npats;j++) {
+			if (dt_pat[j].measure == i) {
+				measure[i+nmeasures].pattern[measure[i+nmeasures].npatterns] = dt_pat[j].gn_pattern;
+				measure[i+nmeasures].npatterns++;
+			}
+		}
+	}
+	nmeasures += maxmeasure+1;
+	redraw_arranger();
 }
 
 int import_patterns_from_file(const char *filename)

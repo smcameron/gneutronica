@@ -47,6 +47,7 @@ struct dt_pattern_type {
 	int duplicate_of;
 	int staffline;
 	int measure;
+	int gn_pattern;
 	struct dt_hit_type *hit;
 };
 

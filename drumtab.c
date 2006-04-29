@@ -169,10 +169,12 @@ static int add_hit(int instrument, int staff, int measure, int numer, int denom)
 	p = dt_pat[dt_npats].hit;
 	p->numerator = numer;
 	p->denominator = denom;
+	p->velocity = dt_inst[instrument].velocity;
 	reduce_fraction(&p->numerator, &p->denominator);
 	p->inst = instrument;
 	dt_pat[dt_npats].staffline = staff;
 	dt_pat[dt_npats].measure = measure;
+	dt_pat[dt_npats].gn_pattern = -1;
 	return 0;
 }
 
@@ -192,22 +194,27 @@ static int process_line(char *line, int instrument,
 {
 	char *chunk;
 	int denom, numer, i;
+	int added_hit;
 
 	for (chunk = strtok(line, "|"); chunk ; chunk = strtok(NULL, "|")) {
 		printf("chunk = '%s'\n", chunk);
 		if (is_junk(chunk))
 			continue;
 		denom = strlen(chunk);
+		added_hit = 0;
 		for (i=0;i<denom;i++) {
 			if (chunk[i] == 'x' ||
+				chunk[i] == 'f' ||
 				chunk[i] == 'o') {
 				numer = i;
 				add_hit(instrument, current_staff,
 					current_measure, numer, denom);
+				added_hit = 1;
 			}
 		}
 		current_measure++;
-		dt_npats++;
+		if (added_hit)
+			dt_npats++;
 	}
 	*last_measure_of_staff = current_measure - 1;
 	return 0;
@@ -221,7 +228,7 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 	int current_instrument = -1;
 	int new_staff_iminent = 1;
 	int current_staff = -1;
-	int last_measure_of_staff = 0;
+	int last_measure_of_staff = -1;
 	int this_measure;
 	int in = -1;
 
@@ -238,7 +245,7 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 			printf("%d: new staff begins\n", i);
 			new_staff_iminent = 0;
 			current_staff++;
-			current_measure = last_measure_of_staff;
+			current_measure = last_measure_of_staff+1;
 		}
 		in = find_instrument(buffer[i]);
 		process_line(vbar, in, current_measure,
@@ -312,11 +319,17 @@ static int find_duplicates()
 		for (j=0;j<dt_npats;j++) {
 			if (i == j)  		/* skip self-compare */
 				continue;
+			/* if (dt_pat[j].duplicate_of == -1)
+				continue; */
 			if (patterns_equal(&dt_pat[i], &dt_pat[j])) {
-				if (i<j)
+				if (i<j) {
 					dt_pat[j].duplicate_of = i;
-				else
+					printf("%d duplicate of %d\n", j, i);
+				} else {
 					dt_pat[i].duplicate_of = j;
+					printf("%d duplicate of %d\n", i, j);
+					break;
+				}
 				nduplicates_found++;
 			}
 		}
