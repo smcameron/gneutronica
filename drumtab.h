@@ -65,6 +65,7 @@ GLOBAL struct dt_pattern_type dt_pat[MAXPATS];
 GLOBAL int INIT(dt_npats, 0);
 GLOBAL int dt_nmeasures;
 GLOBAL int process_drumtab_file(const char *filename, int factor);
+GLOBAL void process_drumtab_buffer(char *buffer, int factor);
 
 #undef GLOBAL
 #endif

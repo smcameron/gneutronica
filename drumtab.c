@@ -454,22 +454,21 @@ int collapse_unique_patterns()
 	}
 }
 
-int process_drumtab_file(const char *filename, int factor)
+static void initialize()
 {
-	char *buf[MAXLINES];
-	int nlines, rc, i;
-
+	int i;
 	memset(dt_pat, 0, sizeof(dt_pat));
 	for (i=0;i<MAXPATS;i++) {
 		dt_pat[i].duplicate_of = -1;
 		dt_pat[i].is_unique = 1;
 	}
-
 	dt_npats = 0;
 	dt_nmeasures = 0;
+}
 
-	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
-	printf("rc = %d, nlines = %d\n", rc, nlines);
+
+int process_drumtab_lines(char *buf[], int nlines, int factor)
+{
 	process_tab(buf, nlines, &dt_nmeasures);
 	sort_by_measure();
 	if (factor)
@@ -479,3 +478,41 @@ int process_drumtab_file(const char *filename, int factor)
 	collapse_unique_patterns();
 	print_data(dt_nmeasures);
 }
+
+int process_drumtab_file(const char *filename, int factor)
+{
+	char *buf[MAXLINES];
+	int nlines, rc, i;
+
+	initialize();
+
+	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
+	printf("rc = %d, nlines = %d\n", rc, nlines);
+	process_drumtab_lines(buf, nlines, factor);
+}
+
+void process_drumtab_buffer(char *buffer, int factor)
+{
+	/* convert a straight char buffer to an array of pointers to char */
+	char *buf[MAXLINES];
+	int i, nlines;
+	int len;
+	char *spot;
+
+	initialize();
+	spot = buffer;
+	len = strlen(buffer);
+	buf[0] = spot;
+	nlines = 0;
+	for (i=0;i<len;i++) {
+		if (buffer[i] == '\n') {
+			buf[nlines] = spot;
+			buffer[i] = '\0';
+			spot = &buffer[i+1];
+			nlines++;
+		}
+	}
+	process_drumtab_lines(buf, nlines, factor);
+}
+
+

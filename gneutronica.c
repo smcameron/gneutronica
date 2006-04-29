@@ -79,6 +79,7 @@ void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
 void destroy_event(GtkWidget *widget, gpointer data);
 void widget_exclude_keypress(GtkWidget *w);
 int unflatten_pattern(int ckit, int cpattern);
+int translate_drumtab_data(int factor);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -1080,6 +1081,44 @@ static int copy_measure_release(GtkWidget *w, GdkEventButton *event,
 	redraw_arranger();
 }
 
+static gint drumtab_selection_received(GtkWidget* widget,
+	GtkSelectionData *selection, gpointer data)
+{
+	GList *item_list;
+	char *drumtab;
+	int i;
+
+	printf("Drumtab selection received.\n");
+	if (selection->length < 0) {
+		printf("Can't get selection.\n");
+		return;
+	}
+	if (selection->type != GDK_SELECTION_TYPE_STRING) {
+		printf("Selection can't be converted to string.\n");
+		return;
+	}
+
+	drumtab = (char *) selection->data;
+
+	printf("Drumtab is: %s\n", drumtab);
+	process_drumtab_buffer(drumtab, 0);
+	translate_drumtab_data(0);
+	return;
+}
+
+static void paste_drumtab_selection()
+{
+	static GdkAtom targets_atom = GDK_NONE;
+
+	/* Get the atom corresponding to the string "STRING" */
+	if (targets_atom == GDK_NONE)
+		targets_atom = gdk_atom_intern ("STRING", FALSE);
+
+	/* And request the "STRING" target for the primary selection */
+	gtk_selection_convert (arranger_window, GDK_SELECTION_PRIMARY, targets_atom, GDK_CURRENT_TIME);
+	/* We will get called back with the selection */
+}
+
 static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event, 
 		struct pattern_struct *data)
 {
@@ -1118,7 +1157,8 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 			nmeasures++;
 			redraw_arranger();
 		}
-	}
+	} else if (event->button == 2)
+		paste_drumtab_selection();
 	return TRUE;
 }
 
@@ -3437,15 +3477,13 @@ int import_patterns_v3(FILE *f)
 	return 0;
 }
 
-int import_drumtab_from_file(const char *filename, int factor)
+int translate_drumtab_data(int factor)
 {
 	int i, j;
 	struct hitpattern **h;
 	struct pattern_struct *p;
 	struct dt_hit_type *dth;
 	int maxmeasure = 0;
-
-	process_drumtab_file(filename, factor);
 
 	/* Add patterns */
 	for (i=0;i<dt_npats;i++) {
@@ -3508,6 +3546,12 @@ int import_drumtab_from_file(const char *filename, int factor)
 	}
 	nmeasures += maxmeasure+1;
 	redraw_arranger();
+}
+
+int import_drumtab_from_file(const char *filename, int factor)
+{
+	process_drumtab_file(filename, factor);
+	translate_drumtab_data(factor);
 }
 
 int import_patterns_from_file(const char *filename)
@@ -4717,6 +4761,8 @@ int main(int argc, char *argv[])
 	arranger_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	g_signal_connect(G_OBJECT (arranger_window), "key_press_event",
 			G_CALLBACK (key_press_cb), "arranger");
+	g_signal_connect(G_OBJECT (arranger_window), "selection_received",
+			G_CALLBACK (drumtab_selection_received), NULL);
 	gtk_container_set_border_width(GTK_CONTAINER (arranger_window), 15);
 
 	/* 1 row, 2 colums, 1 row per pattern, will resize table as necc.
