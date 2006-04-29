@@ -137,7 +137,7 @@ static int find_instrument(char *line)
 	for (i=0;i<strlen(line);i++) {
 		if (is_measure_separator(line[i]))
 			break;
-		if (isalpha(line[i])) {
+		if (isalpha(line[i]) || isdigit(line[i])) {
 			n[j] = line[i];
 			j++;
 			n[j] = '\0';
