@@ -2796,6 +2796,19 @@ void clear_hitpattern(struct hitpattern *p)
 	return;
 }
 
+int lookup_gm_equiv(int gm_equiv)
+{
+	int i;
+	struct drumkit_struct *dk = &drumkit[kit];
+	struct instrument_struct *inst;
+	for (i=0;i<dk->ninsts;i++) {
+		inst = &dk->instrument[i];
+		if (inst->gm_equivalent == gm_equiv)
+			return i;
+	}
+	return -1;
+}
+
 void remap_drumkit_hit(struct hit_struct *h, int set_toggles)
 {
 	int i;
@@ -3385,7 +3398,50 @@ int import_patterns_v3(FILE *f)
 
 int import_drumtab_from_file(const char *filename)
 {
+	int i;
+	struct hitpattern **h;
+	struct pattern_struct *p;
+	struct dt_hit_type *dth;
+
 	process_drumtab_file(filename);
+
+	/* Add patterns */
+	for (i=0;i<dt_npats;i++) {
+		if (dt_pat[i].duplicate_of != -1)
+			continue;
+		if (dt_pat[i].hit == NULL) /* empty pattern */
+			continue;
+		printf("Adding pattern %d\n", i);
+		pattern[npatterns] = pattern_struct_alloc(i);
+		p = pattern[npatterns];
+		if (p == NULL)
+			return -1;
+		h = &p->hitpattern;
+		p->timediv[0].division = 4,
+		p->timediv[1].division = 16,
+		p->timediv[2].division = 0;
+		p->timediv[3].division = 0,
+		p->timediv[4].division = 0;
+		p->beats_per_minute = 120;
+		p->beats_per_measure = 4;
+		sprintf(p->patname, "%s %d\n", dt_inst[dt_pat[i].hit->inst].name, i);
+
+		for (dth = dt_pat[i].hit; dth; dth = dth->next) {
+			*h = malloc(sizeof(struct hitpattern));
+			(*h)->next = NULL;
+			(*h)->h.time = (double) dth->numerator / (double) dth->denominator;
+			(*h)->h.drumkit = kit;
+			(*h)->h.instrument_num = lookup_gm_equiv(dt_inst[dth->inst].midi_value);
+			(*h)->h.beat = dth->numerator;
+			(*h)->h.beats_per_measure = dth->denominator;
+			(*h)->h.velocity = dth->velocity;
+			h = &(*h)->next;
+			*h = NULL;
+			printf("Add hit.\n");
+		}
+		make_new_pattern_widgets(npatterns, npatterns+1);
+		npatterns++;
+	}
 }
 
 int import_patterns_from_file(const char *filename)
