@@ -92,7 +92,7 @@ static int find_instrument(char *line)
 	char n[100];
 	int found = 0;
 
-	j = 0; n[j] = '\0';
+	j = 0; n[0] = '\0';
 
 	/* printf("line = %s\n", line); */
 	for (i=0;i<strlen(line);i++) {
@@ -378,10 +378,15 @@ static int find_duplicates()
 			if (patterns_equal(&dt_pat[i], &dt_pat[j])) {
 				if (i<j) {
 					dt_pat[j].duplicate_of = i;
+					dt_pat[i].is_unique = 0;
+					dt_pat[j].is_unique = 0;
 					printf("%d duplicate of %d\n", j, i);
 				} else {
 					dt_pat[i].duplicate_of = j;
+					dt_pat[i].is_unique = 0;
+					dt_pat[j].is_unique = 0;
 					printf("%d duplicate of %d\n", i, j);
+					nduplicates_found++;
 					break;
 				}
 				nduplicates_found++;
@@ -392,14 +397,55 @@ static int find_duplicates()
 		dt_npats,  nduplicates_found, dt_npats - nduplicates_found);
 }
 
+int collapse_unique_patterns()
+{
+	/* for each measure which contains several unique_patterns,
+	   collapse those patterns into a single pattern */
+
+	int i, j;
+	int first_unique, measure;
+	struct dt_hit_type *last, *h;
+
+	printf("Scanning for unique patterns to collapse\n");
+	for (i=0;i<dt_npats;i++) {
+		if (!dt_pat[i].is_unique)
+			continue;
+
+		first_unique = i;
+		measure = dt_pat[i].measure;
+		printf("First unique pattern is %d, m=%d\n", i, measure);
+
+		for (j=i+1;j<dt_npats;) {
+			if (dt_pat[j].measure > measure)
+				break;
+			if (dt_pat[j].is_unique && dt_pat[i].measure == measure) {
+				printf("Joining pat %d with %d\n", j, first_unique);
+				/* join this pattern with pattern first_unique */
+				for (h = dt_pat[j].hit; h != NULL; h=h->next)
+					if (h->next == NULL)
+						last = h;
+				last->next = dt_pat[first_unique].hit;
+				dt_pat[first_unique].hit = dt_pat[j].hit;
+				dt_pat[j].hit = NULL;
+				if (j < dt_npats-1)
+					memmove(&dt_pat[j], &dt_pat[j+1], sizeof(dt_pat[0])*(dt_npats-1-j));
+				dt_npats--;
+			} else
+				j++;
+		}
+	}
+}
+
 int process_drumtab_file(const char *filename)
 {
 	char *buf[MAXLINES];
 	int nlines, rc, i;
 
 	memset(dt_pat, 0, sizeof(dt_pat));
-	for (i=0;i<MAXPATS;i++)
+	for (i=0;i<MAXPATS;i++) {
 		dt_pat[i].duplicate_of = -1;
+		dt_pat[i].is_unique = 1;
+	}
 
 	dt_npats = 0;
 	dt_nmeasures = 0;
@@ -409,5 +455,8 @@ int process_drumtab_file(const char *filename)
 	process_tab(buf, nlines, &dt_nmeasures);
 	sort_by_measure();
 	find_duplicates();
+	collapse_unique_patterns();
+	/* find_duplicates();
+	collapse_unique_patterns(); */
 	print_data(dt_nmeasures);
 }

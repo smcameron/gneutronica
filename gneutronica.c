@@ -3427,7 +3427,8 @@ int import_drumtab_from_file(const char *filename)
 		p->timediv[4].division = 0;
 		p->beats_per_minute = 120;
 		p->beats_per_measure = 4;
-		sprintf(p->patname, "%s %d", dt_inst[dt_pat[i].hit->inst].name, i);
+		/* sprintf(p->patname, "%s %d", dt_inst[dt_pat[i].hit->inst].name, i); */
+		sprintf(p->patname, "Pattern %d",npatterns);
 		dt_pat[i].gn_pattern = npatterns;
 		for (dth = dt_pat[i].hit; dth; dth = dth->next) {
 			*h = malloc(sizeof(struct hitpattern));

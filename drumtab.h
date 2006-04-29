@@ -29,7 +29,7 @@
 #define INIT(x, y) x
 #endif
 
-#define MEASURE_SEPARATOR "|/"
+#define MEASURE_SEPARATOR "|"
 struct dt_inst_type {
 	char *name;
 	int midi_value;
@@ -46,6 +46,7 @@ struct dt_hit_type {
 
 struct dt_pattern_type {
 	int duplicate_of;
+	int is_unique;
 	int staffline;
 	int measure;
 	int gn_pattern;
