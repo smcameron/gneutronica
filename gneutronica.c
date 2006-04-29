@@ -2806,6 +2806,7 @@ int lookup_gm_equiv(int gm_equiv)
 		if (inst->gm_equivalent == gm_equiv)
 			return i;
 	}
+	printf("Bad instrument gm_equiv %d\n", gm_equiv);
 	return -1;
 }
 
@@ -3008,9 +3009,13 @@ int unflatten_pattern(int ckit, int cpattern)
 	for (h = pattern[cpattern]->hitpattern; h != NULL; h = h->next) {
 		/* g_print("inst = %d, beat=%d, bpm =%d\n", h->h.instrument_num, 
 			h->h.beat, h->h.beats_per_measure); fflush(stdout); */
-		lowlevel_add_hit(&drumkit[ckit].instrument[h->h.instrument_num].hit, 
+		/* printf("instrument_num = %d\n", h->h.instrument_num); */
+		if (h->h.instrument_num != -1)
+			lowlevel_add_hit(&drumkit[ckit].instrument[h->h.instrument_num].hit,
 				ckit, cpattern, h->h.instrument_num, 
 				h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+		else
+			printf("Bad instrument number in pattern %d...\n", cpattern);
 		/* add_hit(&drumkit[ckit].instrument[h->h.instrument_num].hit, 
 			h->h.beat, h->h.beats_per_measure,
 			ckit, h->h.instrument_num, cpattern); */

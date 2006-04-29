@@ -167,8 +167,10 @@ int add_to_schedule(struct schedule_t *s,
 	int n = s->nevents;
 	int i, j, spot;
 	
-	if (n >= MAXEVENTS) 
+	if (n >= MAXEVENTS) {
+		printf("MAXEVENTS exceeded!\n");
 		return -1;
+	}
 	/* Find where this event goes */
 	spot = 0;
 	if (e->rtime.tv_usec > 1000000) {

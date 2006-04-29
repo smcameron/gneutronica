@@ -35,6 +35,7 @@ static struct inst_mapping {
 	int alternate;
 	int velocity;
 } imap[] = {
+	{ "h", 42, 46, 80 },
 	{ "hh", 42, 46, 80 },
 	{ "c", 49, 52, 120 },
 	{ "ft", 41, 41, 110 },
@@ -78,7 +79,7 @@ static int lookup_instrument(char *name, int *velocity)
 			used[i] = 1;
 			return i;
 		}
-	return 127;
+	return 127; /* this is bad. */
 }
 
 int is_measure_separator(int c)
@@ -286,9 +287,12 @@ static int print_data(int nmeasures)
 
 	for (i=0;i<nmeasures;i++) {
 		printf("Measure %d\n", i);
-		for (j=0;j<dt_npats;j++)
+		for (j=0;j<dt_npats;j++) {
 			if (dt_pat[j].measure == i)
 				print_pattern(&dt_pat[j]);
+			if (dt_pat[j].hit == NULL)
+				printf("pat %d is null\n", j);
+		}
 	}
 	return 0;
 }
@@ -454,9 +458,9 @@ int process_drumtab_file(const char *filename)
 	printf("rc = %d, nlines = %d\n", rc, nlines);
 	process_tab(buf, nlines, &dt_nmeasures);
 	sort_by_measure();
+	/* find_duplicates(); */
+	collapse_unique_patterns();
 	find_duplicates();
 	collapse_unique_patterns();
-	/* find_duplicates();
-	collapse_unique_patterns(); */
 	print_data(dt_nmeasures);
 }
