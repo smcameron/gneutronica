@@ -440,7 +440,7 @@ int collapse_unique_patterns()
 	}
 }
 
-int process_drumtab_file(const char *filename)
+int process_drumtab_file(const char *filename, int factor)
 {
 	char *buf[MAXLINES];
 	int nlines, rc, i;
@@ -458,7 +458,8 @@ int process_drumtab_file(const char *filename)
 	printf("rc = %d, nlines = %d\n", rc, nlines);
 	process_tab(buf, nlines, &dt_nmeasures);
 	sort_by_measure();
-	/* find_duplicates(); */
+	if (factor)
+		find_duplicates();
 	collapse_unique_patterns();
 	find_duplicates();
 	collapse_unique_patterns();

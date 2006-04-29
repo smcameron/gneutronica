@@ -72,6 +72,7 @@ void load_button_clicked(GtkWidget *widget, gpointer data);
 void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
 void import_drumtab_button_clicked(GtkWidget *widget, gpointer data);
+void factor_drumtab_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
@@ -92,6 +93,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
 	{ "/File/Import Drum _Tab", NULL,         import_drumtab_button_clicked,    0, "<Item>" },
+	{ "/File/Import and factor Drum _Tab", NULL,         factor_drumtab_button_clicked,    0, "<Item>" },
 	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
 	{ "/File/_Quit",    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT }, 
@@ -1720,7 +1722,16 @@ void import_drumtab_file_selected(GtkWidget *widget,
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
 	gtk_widget_hide(GTK_WIDGET(FileBox));
-	import_drumtab_from_file(filename);
+	import_drumtab_from_file(filename, 0);
+}
+
+void factor_drumtab_file_selected(GtkWidget *widget,
+	GtkFileSelection *FileBox)
+{
+	const char *filename;
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
+	import_drumtab_from_file(filename, 1);
 }
 
 void export_to_midi(GtkWidget *widget,
@@ -1737,7 +1748,8 @@ void export_to_midi(GtkWidget *widget,
 #define SAVE_DRUMKIT 2
 #define IMPORT_PATTERNS 3
 #define IMPORT_DRUMTAB 4
-#define EXPORT_TO_MIDI 5
+#define FACTOR_DRUMTAB 5
+#define EXPORT_TO_MIDI 6
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1748,6 +1760,7 @@ static struct file_dialog_descriptor {
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
 	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
 	{ "Import Drum Tablature", &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
+	{ "Import and factor Drum Tablature", &ImportDrumtabBox, (void *) factor_drumtab_file_selected, },
 	{ "Export Song to MIDI file", &export_to_midi_box, (void *) export_to_midi, },
 };
 	
@@ -1788,6 +1801,12 @@ void import_drumtab_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	make_file_dialog(IMPORT_DRUMTAB);
+}
+
+void factor_drumtab_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	make_file_dialog(FACTOR_DRUMTAB);
 }
 
 void save_button_clicked(GtkWidget *widget,
@@ -3401,7 +3420,7 @@ int import_patterns_v3(FILE *f)
 	return 0;
 }
 
-int import_drumtab_from_file(const char *filename)
+int import_drumtab_from_file(const char *filename, int factor)
 {
 	int i, j;
 	struct hitpattern **h;
@@ -3409,7 +3428,7 @@ int import_drumtab_from_file(const char *filename)
 	struct dt_hit_type *dth;
 	int maxmeasure = 0;
 
-	process_drumtab_file(filename);
+	process_drumtab_file(filename, factor);
 
 	/* Add patterns */
 	for (i=0;i<dt_npats;i++) {
