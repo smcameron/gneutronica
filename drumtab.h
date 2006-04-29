@@ -29,6 +29,7 @@
 #define INIT(x, y) x
 #endif
 
+#define MEASURE_SEPARATOR "|/"
 struct dt_inst_type {
 	char *name;
 	int midi_value;

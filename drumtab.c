@@ -81,6 +81,11 @@ static int lookup_instrument(char *name, int *velocity)
 	return 127;
 }
 
+int is_measure_separator(int c)
+{
+	return (strchr(MEASURE_SEPARATOR, c) != NULL);
+}
+
 static int find_instrument(char *line)
 {
 	int i, j;
@@ -91,7 +96,7 @@ static int find_instrument(char *line)
 
 	/* printf("line = %s\n", line); */
 	for (i=0;i<strlen(line);i++) {
-		if (line[i] == '|')
+		if (is_measure_separator(line[i]))
 			break;
 		if (isalpha(line[i])) {
 			n[j] = line[i];
@@ -183,7 +188,7 @@ static int is_junk(char *s)
 	int i, len;
 	len = strlen(s);
 	for (i=0;i<len;i++)
-		if (!isspace(s[i]) && s[i] != '|' && s[i] != '\n')
+		if (!isspace(s[i]) && !is_measure_separator(s[i]) && s[i] != '\n')
 			return 0;
 	return 1;
 }
@@ -196,7 +201,7 @@ static int process_line(char *line, int instrument,
 	int denom, numer, i;
 	int added_hit;
 
-	for (chunk = strtok(line, "|"); chunk ; chunk = strtok(NULL, "|")) {
+	for (chunk = strtok(line, MEASURE_SEPARATOR); chunk ; chunk = strtok(NULL, MEASURE_SEPARATOR)) {
 		printf("chunk = '%s'\n", chunk);
 		if (is_junk(chunk))
 			continue;
@@ -222,7 +227,8 @@ static int process_line(char *line, int instrument,
 
 static int process_tab(char *buffer[], int nlines, int *nmeasures)
 {
-	int i;
+	int i, j;
+	char *sepr;
 	int current_measure = 0;
 	int last_measure = -1;
 	int current_instrument = -1;
@@ -234,9 +240,15 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 
 	char *vbar;
 
+	sepr = MEASURE_SEPARATOR;
+
 	for (i=0;i<nlines;i++) {
 		/* look for a a vertical bar */
-		vbar = strstr(buffer[i], "|");
+		for (j=0;j<strlen(sepr);j++) {
+			vbar = strchr(buffer[i], sepr[j]);
+			if (vbar != NULL)
+				break;
+		}
 		if (vbar == NULL) {
 			new_staff_iminent = 1;
 			continue;
