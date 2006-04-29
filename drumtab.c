@@ -525,8 +525,8 @@ void process_drumtab_buffer(char *buffer, int factor)
 	len = strlen(buffer);
 	buf[0] = spot;
 	nlines = 0;
-	for (i=0;i<len;i++) {
-		if (buffer[i] == '\n') {
+	for (i=0;i<=len;i++) {
+		if (buffer[i] == '\n' || buffer[i] == '\0') {
 			buf[nlines] = spot;
 			buffer[i] = '\0';
 			spot = &buffer[i+1];
