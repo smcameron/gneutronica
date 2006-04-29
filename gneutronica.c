@@ -71,6 +71,7 @@ void print_hello()
 void load_button_clicked(GtkWidget *widget, gpointer data);
 void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
+void import_drumtab_button_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
 void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
@@ -90,6 +91,7 @@ static GtkItemFactoryEntry menu_items[] = {
 	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
 	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
 	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
+	{ "/File/Import Drum _Tab", NULL,         import_drumtab_button_clicked,    0, "<Item>" },
 	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
 	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
 	{ "/File/_Quit",    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT }, 
@@ -1712,6 +1714,15 @@ void import_patterns_file_selected(GtkWidget *widget,
 	import_patterns_from_file(filename);
 }
 
+void import_drumtab_file_selected(GtkWidget *widget,
+	GtkFileSelection *FileBox)
+{
+	const char *filename;
+	filename = gtk_file_selection_get_filename(FileBox);
+	gtk_widget_hide(GTK_WIDGET(FileBox));
+	import_drumtab_from_file(filename);
+}
+
 void export_to_midi(GtkWidget *widget,
 	GtkFileSelection *FileBox)
 {
@@ -1725,7 +1736,8 @@ void export_to_midi(GtkWidget *widget,
 #define LOAD_SONG 1
 #define SAVE_DRUMKIT 2
 #define IMPORT_PATTERNS 3
-#define EXPORT_TO_MIDI 4
+#define IMPORT_DRUMTAB 4
+#define EXPORT_TO_MIDI 5
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
@@ -1735,6 +1747,7 @@ static struct file_dialog_descriptor {
 	{ "Load Song", &LoadBox, (void *) loadbox_file_selected, },
 	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
 	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
+	{ "Import Drum Tablature", &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
 	{ "Export Song to MIDI file", &export_to_midi_box, (void *) export_to_midi, },
 };
 	
@@ -1769,6 +1782,12 @@ void import_patterns_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	make_file_dialog(IMPORT_PATTERNS);
+}
+
+void import_drumtab_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	make_file_dialog(IMPORT_DRUMTAB);
 }
 
 void save_button_clicked(GtkWidget *widget,
@@ -3362,6 +3381,11 @@ int import_patterns_v3(FILE *f)
 	fclose(f);
 	npatterns += newpatterns;
 	return 0;
+}
+
+int import_drumtab_from_file(const char *filename)
+{
+	printf("import drumtab %s, Not yet implemented\n", filename);
 }
 
 int import_patterns_from_file(const char *filename)
