@@ -1089,7 +1089,6 @@ static gint drumtab_selection_received(GtkWidget* widget,
 	char *drumtab;
 	int i, factor;
 
-	printf("Drumtab selection received.\n");
 	if (selection->length < 0) {
 		printf("Can't get selection.\n");
 		return;
@@ -1102,7 +1101,7 @@ static gint drumtab_selection_received(GtkWidget* widget,
 	drumtab = (char *) selection->data;
 	factor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_factor_check_button));
 
-	printf("Drumtab is: %s\n", drumtab);
+	/* printf("Drumtab is: %s\n", drumtab); */
 	process_drumtab_buffer(drumtab, factor);
 	translate_drumtab_data(factor);
 	dt_free_memory();
@@ -3496,7 +3495,7 @@ int translate_drumtab_data(int factor)
 			continue;
 		if (dt_pat[i].hit == NULL) /* empty pattern */
 			continue;
-		printf("Adding pattern %d\n", i);
+		/* printf("Adding pattern %d\n", i); */
 		pattern[npatterns] = pattern_struct_alloc(npatterns);
 		p = pattern[npatterns];
 		if (p == NULL)
@@ -3522,10 +3521,10 @@ int translate_drumtab_data(int factor)
 			(*h)->h.beats_per_measure = dth->denominator;
 			(*h)->h.velocity = dth->velocity;
 			h = &(*h)->next;
-			printf("Add hit, %s: velocity = %d, midi=%d, gm inst=%d.\n",
+			/* printf("Add hit, %s: velocity = %d, midi=%d, gm inst=%d.\n",
 				dt_inst[dth->inst].name,
 				dth->velocity, dt_inst[dth->inst].midi_value,
-				lookup_gm_equiv(dt_inst[dth->inst].midi_value));
+				lookup_gm_equiv(dt_inst[dth->inst].midi_value)); */
 		}
 		make_new_pattern_widgets(npatterns, npatterns+1);
 		npatterns++;
@@ -3536,7 +3535,7 @@ int translate_drumtab_data(int factor)
 	}
 	/* Add the measures */
 
-	printf("maxmeasure = %d\n", maxmeasure);
+	/* printf("maxmeasure = %d\n", maxmeasure); */
 	for (i=0;i<maxmeasure+1;i++)
 		measure[i+nmeasures].npatterns = 0;
 	for (i=0;i<maxmeasure+1;i++) {
@@ -3569,16 +3568,16 @@ int import_patterns_from_file(const char *filename)
 	int hidden;
 	int fileformatversion;
 
-	printf("Import patterns from: %s\n", filename);
+	/* printf("Import patterns from: %s\n", filename); */
 
 	f = fopen(filename, "r");
 	if (f == NULL) {
-		printf("Nope\n");
+		printf("Nope, can't open %s, %s\n", filename, strerror(errno));
 		return -1;
 	}
 	rc = fscanf(f, "Gneutronica file format version: %d\n", &fileformatversion);
 	if (rc != 1) {
-		printf("File does not appear to be a %s file.\n",
+		printf("File %s does not appear to be a %s file.\n", filename,
 			PROGNAME);
 		return -1;
 	}
