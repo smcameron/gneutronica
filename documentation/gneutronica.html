@@ -342,6 +342,62 @@ instruments to appropriate roles for the drumkit in use.  This menu item causes 
 to attempt such a mapping for every pattern in the song.
 
 <h2>Some miscelaneous features:</h2>
+<h3>Import ASCII drum tablature</h3>
+<p>This is one of the coolest new features I've added in a
+while.  There are a couple of selections in the "File" menu
+which will allow you to import aSCII drum tabs from a file,
+which is pretty straightforward.
+
+<p>You can also select drum tabs with the mouse, then
+paste them into the arranger window with the middle
+mouse button.
+
+<p>If you hear a "Cuica" (whatever that is) during
+playback, that's the instrument that Gneutronica uses
+when it can't figure out what it should use.
+
+For instance, you can paste this in, and for the question
+mark instruments, you'll hear the Cuica, which sounds a little
+bit like someone saying "huh?".  That's just so
+you can know that Gneutronica couldn't figure out what to
+do, so you can teach Gneutronica about this unknown instrument,
+or, fix your tab file if it's just using some
+notation which gneutronica doesn't grok.
+
+<p>Some sample drum tab you can try pasting.
+<pre>
+Hh|x-------x-------|x-------x-------|x-------x-------|x-------x-------|
+hc|--x-x-x---x-x-x-|--x---x---x---x-|--x-x-x---x-x-x-|--x---x---x---x-|
+sd|----x-------x---|----x-------x---|----x-------x---|----x-------x---|
+bd|x-------x-------|x-------x-x-----|x-------x-------|x-------x-x-----|
+C |x---------------|----------------|x---------------|----------------|
+
+Hh|x-------x-------|x-------x-------|
+r |--x-x-x---x-x-x-|--x-x-x---x-x-x-|
+sd|----x-------x---|---xx-------x---|
+bd|x-------x-------|x-x-----x-------|
+? |x---------------|x---------------|
+</pre>
+
+<p>Sometimes it may be necessary to edit the tab file a little
+bit to get gneutronica to understand it (some complicated things,
+it may never be able to get.)  Lot of times, stray vertical bar
+characters, or extra spacing inside the measures and so on can
+throw it off.  Lots of times the file will just go right in, but
+when it doesn't, more often than not, a few moments editing the
+file in vi will make it usable.
+
+<p>In addition to pasting with the middle mouse button, there is
+a "Paste" menu item.  The difference is that the middle mouse
+button pastes whatever is in the current selection, and the menu
+item pastes whatever has been copied to the clipboard.  The
+"current selection" is more transient than the clipboard selection.
+(See <a href="http://www.jwz.org/doc/x-cut-and-paste.html">
+X Selections, Cut Buffers, and Kill Rings.  </a> by Jamie
+Zawinski for a thorough explanation of the difference.  It
+boils down to the idea that X has two different ways to copy
+and paste.)
+
 <h3>Scramble</h3>
 <p>The Scramble button randomly scrambles the current
 pattern.  It is intended to be used as an aid in composition.
