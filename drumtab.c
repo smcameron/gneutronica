@@ -309,6 +309,48 @@ static int patterns_equal(struct dt_pattern_type *p1, struct dt_pattern_type *p2
 	return 1;
 }
 
+static int sort_by_measure()
+{
+	/* sort the patterns by measure order, but with a measure, leave the patterns in order. */
+
+	int i, j;
+	struct dt_pattern_type temp;
+	int insert_before = 0;
+	int measure = 0;
+	int done;
+	int maxmeasure = 0;
+	int k;
+
+	for (i=0;i<dt_npats;i++)
+		if (dt_pat[i].measure > maxmeasure)
+			maxmeasure = dt_pat[i].measure;
+
+	for (measure = 0;measure < maxmeasure + 1; measure++)
+		do {
+			/* Find insertion point */
+			for (i=0;i<dt_npats;i++)
+				if (dt_pat[i].measure > measure) {
+					insert_before = i;
+					break;
+				}
+			/* printf("insert_before = %d, measure=%d\n", insert_before, measure); */
+			done = 1;
+			for (i=insert_before+1;i<dt_npats;) {
+				if (dt_pat[i].measure == measure) {
+					temp = dt_pat[i];
+					/* this is horribly inefficient, guaranteed almost 100% overlap */
+					memmove(&dt_pat[insert_before+1], &dt_pat[insert_before],
+						sizeof(temp) * (i - insert_before));
+					dt_pat[insert_before] = temp;
+					done = 0;
+					insert_before++;
+				}
+				i++;
+			}
+		} while (!done);
+	return 0;
+}
+
 static int find_duplicates()
 {
 	int nduplicates_found = 0;;
@@ -353,6 +395,7 @@ int process_drumtab_file(const char *filename)
 	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
 	printf("rc = %d, nlines = %d\n", rc, nlines);
 	process_tab(buf, nlines, &dt_nmeasures);
+	sort_by_measure();
 	find_duplicates();
 	print_data(dt_nmeasures);
 }
