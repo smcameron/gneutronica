@@ -112,4 +112,8 @@ gneutronica 0.29
 	  to switch over to the arranger window just to select a
 	  pattern for copying.
 
+gneutronica 0.30
+
+	* You can now import ASCII drum tablature either from a file or
+	  by cutting and pasting with the mouse.
 
