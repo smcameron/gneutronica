@@ -3,14 +3,10 @@ PROGRAM=gneutronica
 BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share/${PROGRAM}
 
-all:	gneutronica documentation/gneutronica.1 drumtab
-
+all:	gneutronica documentation/gneutronica.1
 
 fractions.o:	fractions.c fractions.h
 	gcc -g -c fractions.c
-
-drumtab:	drumtab.c fractions.o
-	gcc -g -o drumtab drumtab.c fractions.o
 
 documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.txt
 	chmod +x ./make_manpage

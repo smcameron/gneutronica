@@ -3385,7 +3385,7 @@ int import_patterns_v3(FILE *f)
 
 int import_drumtab_from_file(const char *filename)
 {
-	printf("import drumtab %s, Not yet implemented\n", filename);
+	process_drumtab_file(filename);
 }
 
 int import_patterns_from_file(const char *filename)

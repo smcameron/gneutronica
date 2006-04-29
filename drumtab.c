@@ -29,6 +29,55 @@
 
 #include "fractions.h"
 
+static struct inst_mapping {
+	char *name;
+	int midi_note;
+	int alternate;
+} imap[] = {
+	{ "hh", 42, 46 },
+	{ "c", 49, 52 },
+	{ "ft", 41, 41 },
+	{ "lt", 43, 43 },
+	{ "mt", 45, 45 },
+	{ "ht", 47, 47 },
+	{ "r", 51, 53 },
+	{ "s", 38, 40 },
+	{ "b", 35, 36 },
+};
+
+static int used[256];
+
+static void init_used()
+{
+	memset(used, 0, 256);
+}
+
+static nimappings = (sizeof(imap) / sizeof(imap[0]));
+
+
+static int lookup_instrument(char *name)
+{
+	char newname[100];
+
+	int i;
+	memset(newname, 0, 100);
+	strncpy(newname, name, 99);
+	for (i=0;newname[i] != '\0';i++)
+		newname[i] = tolower(newname[i]);
+	for (i=0;i<nimappings;i++)
+		if (strcmp(newname, imap[i].name) == 0) {
+			used[imap[i].midi_note]= 1;
+			return imap[i].midi_note;
+		}
+
+	for (i=127;i>0;i--)
+		if (!used[i]) {
+			used[i] = 1;
+			return i;
+		}
+	return 127;
+}
+
 static int find_instrument(char *line)
 {
 	int i, j;
@@ -64,14 +113,14 @@ static int find_instrument(char *line)
 			exit(1);
 		}
 		strcpy(dt_inst[dt_ninsts].name, n);
-		dt_inst[dt_ninsts].midi_value = found;
+		dt_inst[dt_ninsts].midi_value = lookup_instrument(n);
 		dt_ninsts++;
 	}
 	return found;
 }
 
 
-static int read_tab_file(char *filename, char *buffer[],
+static int read_tab_file(const char *filename, char *buffer[],
 	int maxlinecount, int *linecount)
 {
 	FILE *f;
@@ -208,18 +257,15 @@ static int print_data(int nmeasures)
 	return 0;
 }
 
-#ifdef MAIN
-int main(int argc, char *argv[])
+int process_drumtab_file(const char *filename)
 {
 	char *buf[MAXLINES];
-	int nlines, rc, nmeasures;
+	int nlines, rc;
 
 	memset(dt_pat, 0, sizeof(dt_pat));
 
-	rc = read_tab_file("stairway.txt", buf, MAXLINES, &nlines);
+	rc = read_tab_file(filename, buf, MAXLINES, &nlines);
 	printf("rc = %d, nlines = %d\n", rc, nlines);
-	process_tab(buf, nlines, &nmeasures);
-	print_data(nmeasures);
-	exit(0);
+	process_tab(buf, nlines, &dt_nmeasures);
+	print_data(dt_nmeasures);
 }
-#endif
