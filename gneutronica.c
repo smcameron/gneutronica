@@ -52,6 +52,7 @@
 #include "gneutronica.h"
 #include "sched.h"
 #include "old_fileformats.h"
+#include "fractions.h"
 
 #include "version.h"
 
@@ -561,32 +562,6 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	gtk_widget_show_all(arranger_window);
 	gtk_widget_queue_draw(arranger_table);
 	return;
-}
-
-int gcd(int n,int d)
-{
-	/* Euclid's algorithm for greatest common divisor */
-	int t;
-	while (d > 0) {
-		if (n > d) {
-			t = n;
-			n = d;
-			d = t;
-		}
-		d = d-n;
-	}
-	return n;
-}
-
-int reduce_fraction(int *numerator, int *denominator)
-{
-	int xgcd;
-
-	if (*denominator == 0 || *numerator == 0 || *numerator == 1)
-		return;
-	xgcd = gcd (*numerator, *denominator);
-	*numerator = *numerator / xgcd;
-	*denominator = *denominator / xgcd;
 }
 
 int lowlevel_add_hit(struct hitpattern **hit,

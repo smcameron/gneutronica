@@ -360,5 +360,7 @@ GLOBAL int unflatten_pattern(int ckit, int cpattern);
 GLOBAL int INIT(n_exclude_keypress_widgets, 0);
 GLOBAL GtkWidget *exclude_keypress_list[EXCLUDE_LIST_SIZE];
 
+#undef GLOBAL
+#undef INIT
 #endif /* __GNEUTRONICA_H__ */
 

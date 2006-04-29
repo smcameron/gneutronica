@@ -3,7 +3,14 @@ PROGRAM=gneutronica
 BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share/${PROGRAM}
 
-all:	gneutronica documentation/gneutronica.1
+all:	gneutronica documentation/gneutronica.1 drumtab
+
+
+fractions.o:	fractions.c fractions.h
+	gcc -g -c fractions.c
+
+drumtab:	drumtab.c fractions.o
+	gcc -g -o drumtab drumtab.c fractions.o
 
 documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.txt
 	chmod +x ./make_manpage
@@ -13,9 +20,9 @@ version.h:	versionnumber.txt
 	@echo '#define VERSION "'`cat versionnumber.txt`'"' > version.h
 
 gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
-		version.h gneutronica.h midi_file.h
+		version.h gneutronica.h midi_file.h fractions.o
 	gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
-		midi_file.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0` 
+		midi_file.o fractions.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
 
 sched.o:	sched.c sched.h	midi_file.h
 
@@ -50,4 +57,4 @@ uninstall:
 	/bin/rm -f /usr/share/pixmaps/gneutronica_icon.png
 
 clean:
-	/bin/rm -f gneutronica *.o documentation/gneutronica.1 version.h
+	/bin/rm -f gneutronica *.o documentation/gneutronica.1 version.h drumtab
