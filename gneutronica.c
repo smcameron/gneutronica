@@ -53,6 +53,7 @@
 #include "sched.h"
 #include "old_fileformats.h"
 #include "fractions.h"
+#include "drumtab.h"
 
 #include "version.h"
 

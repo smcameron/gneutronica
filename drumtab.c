@@ -24,32 +24,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define INSTANTIATE_DRUMTAB 1
+#include "drumtab.h"
+
 #include "fractions.h"
 
-#define MAXLINES 1000
-#define MAXPATS 1000
-
-struct dt_inst_type {
-	char *name;
-	int midi_value;
-} inst[1000];
-int ninsts = 0;
-
-struct dt_hit_type {
-	int numerator;
-	int denominator;
-	int inst;
-	struct dt_hit_type *next;
-};
-
-struct dt_pattern_type {
-	int staffline;
-	int measure;
-	struct dt_hit_type *hit;
-} pat[MAXPATS];
-int npats = 0;
-
-int find_instrument(char *line)
+static int find_instrument(char *line)
 {
 	int i, j;
 	char n[100];
@@ -69,29 +49,29 @@ int find_instrument(char *line)
 	}
 	/* printf("n = %s\n", n); */
 
-	for (i=0;i<ninsts;i++) {
-		if (strcmp(n, inst[i].name) == 0) {
+	for (i=0;i<dt_ninsts;i++) {
+		if (strcmp(n, dt_inst[i].name) == 0) {
 			found = i;
 			break;
 		}
 	}
 	found = i;
-	if (found >= ninsts) {
-		inst[ninsts].name = malloc(strlen(n)+1);
-		if (inst[ninsts].name == NULL) {
+	if (found >= dt_ninsts) {
+		dt_inst[dt_ninsts].name = malloc(strlen(n)+1);
+		if (dt_inst[dt_ninsts].name == NULL) {
 			fprintf(stderr, "Out of memory %s:%d\n",
 				__FILE__, __LINE__);
 			exit(1);
 		}
-		strcpy(inst[ninsts].name, n);
-		inst[ninsts].midi_value = found;
-		ninsts++;
+		strcpy(dt_inst[dt_ninsts].name, n);
+		dt_inst[dt_ninsts].midi_value = found;
+		dt_ninsts++;
 	}
 	return found;
 }
 
 
-int read_tab_file(char *filename, char *buffer[],
+static int read_tab_file(char *filename, char *buffer[],
 	int maxlinecount, int *linecount)
 {
 	FILE *f;
@@ -126,24 +106,24 @@ int read_tab_file(char *filename, char *buffer[],
 	return rc;
 }
 
-int add_hit(int instrument, int staff, int measure, int numer, int denom)
+static int add_hit(int instrument, int staff, int measure, int numer, int denom)
 {
 	struct dt_hit_type *p;
 
-	p = pat[npats].hit;
-	pat[npats].hit = malloc(sizeof(*pat[npats].hit));
-	pat[npats].hit->next = p;
-	p = pat[npats].hit;
+	p = dt_pat[dt_npats].hit;
+	dt_pat[dt_npats].hit = malloc(sizeof(*dt_pat[dt_npats].hit));
+	dt_pat[dt_npats].hit->next = p;
+	p = dt_pat[dt_npats].hit;
 	p->numerator = numer;
 	p->denominator = denom;
 	reduce_fraction(&p->numerator, &p->denominator);
 	p->inst = instrument;
-	pat[npats].staffline = staff;
-	pat[npats].measure = measure;
+	dt_pat[dt_npats].staffline = staff;
+	dt_pat[dt_npats].measure = measure;
 	return 0;
 }
 
-int process_line(char *line, int instrument,
+static int process_line(char *line, int instrument,
 	int current_measure, int current_staff,
 	int *last_measure_of_staff)
 {
@@ -161,13 +141,13 @@ int process_line(char *line, int instrument,
 			}
 		}
 		current_measure++;
-		npats++;
+		dt_npats++;
 	}
 	*last_measure_of_staff = current_measure - 1;
 	return 0;
 }
 
-int process_tab(char *buffer[], int nlines, int *nmeasures)
+static int process_tab(char *buffer[], int nlines, int *nmeasures)
 {
 	int i;
 	int current_measure = 0;
@@ -201,39 +181,40 @@ int process_tab(char *buffer[], int nlines, int *nmeasures)
 
 	*nmeasures = last_measure_of_staff;
 
-	for (i=0;i<ninsts;i++)
-		printf("inst %d = %s\n", i, inst[i].name);
+	for (i=0;i<dt_ninsts;i++)
+		printf("inst %d = %s\n", i, dt_inst[i].name);
 }
 
-int print_pattern(struct dt_pattern_type *p)
+static int print_pattern(struct dt_pattern_type *p)
 {
 	struct dt_hit_type *h;
 
 	for (h=p->hit; h ; h = h->next) {
-		printf("%s:%d/%d ", inst[h->inst].name, h->numerator, h->denominator);
+		printf("%s:%d/%d ", dt_inst[h->inst].name, h->numerator, h->denominator);
 	}
 	printf("\n");
 }
 
-int print_data(int nmeasures)
+static int print_data(int nmeasures)
 {
 	int i, j;
 
 	for (i=0;i<nmeasures;i++) {
 		printf("Measure %d\n", i);
-		for (j=0;j<npats;j++)
-			if (pat[j].measure == i)
-				print_pattern(&pat[j]);
+		for (j=0;j<dt_npats;j++)
+			if (dt_pat[j].measure == i)
+				print_pattern(&dt_pat[j]);
 	}
 	return 0;
 }
 
+#ifdef MAIN
 int main(int argc, char *argv[])
 {
 	char *buf[MAXLINES];
 	int nlines, rc, nmeasures;
 
-	memset(pat, 0, sizeof(pat));
+	memset(dt_pat, 0, sizeof(dt_pat));
 
 	rc = read_tab_file("stairway.txt", buf, MAXLINES, &nlines);
 	printf("rc = %d, nlines = %d\n", rc, nlines);
@@ -241,3 +222,4 @@ int main(int argc, char *argv[])
 	print_data(nmeasures);
 	exit(0);
 }
+#endif
