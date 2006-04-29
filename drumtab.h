@@ -30,6 +30,9 @@
 #endif
 
 #define MEASURE_SEPARATOR "|"
+#define UNRECOGNIZED_INSTRUMENT 79 /* cuica -- pureposely annoying  */
+#define UNRECOGNIZED_VOLUME 127
+
 struct dt_inst_type {
 	char *name;
 	int midi_value;

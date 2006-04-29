@@ -37,14 +37,20 @@ static struct inst_mapping {
 } imap[] = {
 	{ "h", 42, 46, 80 },
 	{ "hh", 42, 46, 80 },
+	{ "hc", 46, 46, 80 },
 	{ "c", 49, 52, 120 },
+	{ "cc", 49, 52, 120 },
 	{ "ft", 41, 41, 110 },
 	{ "lt", 43, 43, 110 },
 	{ "mt", 45, 45, 110 },
 	{ "ht", 47, 47, 110 },
 	{ "r", 51, 53, 80 },
+	{ "rc", 51, 53, 80 },
 	{ "s", 38, 40, 125 },
+	{ "sd", 40, 40, 125 },
 	{ "b", 35, 36, 126 },
+	{ "bd", 35, 36, 126 },
+	{ "cb", 56, 56, 126 },
 };
 
 static int used[256];
@@ -74,12 +80,19 @@ static int lookup_instrument(char *name, int *velocity)
 			return imap[i].midi_note;
 		}
 
+	printf("Unrecognized instrument '%s'\n", name);
+	*velocity = UNRECOGNIZED_VOLUME;
+	return UNRECOGNIZED_INSTRUMENT; ; /* cuica... weird little instrument, audibly stands out as wrong. */
+#if 0
+	This code just makes a mess... starts changing programs on my motif rack
 	for (i=127;i>0;i--)
 		if (!used[i]) {
 			used[i] = 1;
 			return i;
 		}
+	printf("Bad instrument '$s'\n", name);
 	return 127; /* this is bad. */
+#endif
 }
 
 int is_measure_separator(int c)
@@ -105,7 +118,7 @@ static int find_instrument(char *line)
 			n[j] = '\0';
 		}
 	}
-	/* printf("n = %s\n", n); */
+	printf("n = %s\n", n);
 
 	for (i=0;i<dt_ninsts;i++) {
 		if (strcmp(n, dt_inst[i].name) == 0) {
@@ -123,6 +136,7 @@ static int find_instrument(char *line)
 		}
 		strcpy(dt_inst[dt_ninsts].name, n);
 		dt_inst[dt_ninsts].midi_value = lookup_instrument(n, &dt_inst[dt_ninsts].velocity);
+
 		dt_ninsts++;
 	}
 	return found;
