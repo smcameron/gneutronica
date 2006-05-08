@@ -80,7 +80,9 @@ struct tempo_change_t {
 struct shared_info_struct {
 	int measure;
 	int percent;
+	unsigned char midi_data[3];
 };
+GLOBAL unsigned char shared_buf[4096];
 
 struct division_struct {
 	int division;
@@ -188,6 +190,7 @@ GLOBAL struct device_access_method INIT(*access_device, &access_method[EXTERNAL_
 GLOBAL int INIT(midi_fd, -1);
 GLOBAL int INIT(player_process_fd, -1);
 GLOBAL int INIT(player_process_pid, -1);
+GLOBAL int INIT(midi_reader_process_id, -1);
 
 /* for communicating transport location from player process */
 GLOBAL struct shared_info_struct INIT(*transport_location, NULL); 
@@ -347,6 +350,7 @@ GLOBAL int INIT(cpattern, 0);
 GLOBAL int INIT(kit, 0);
 GLOBAL int INIT(nmeasures, 0);
 GLOBAL int INIT(current_instrument,0);
+GLOBAL int INIT(record_mode, 0);
 
 GLOBAL void note_on(int fd, unsigned char value, unsigned char volume);
 GLOBAL void note_off(int fd, unsigned char value, unsigned char volume);

@@ -54,6 +54,7 @@
 #include "old_fileformats.h"
 #include "fractions.h"
 #include "drumtab.h"
+#include "midi_reader.h"
 
 #include "version.h"
 
@@ -81,6 +82,7 @@ void destroy_event(GtkWidget *widget, gpointer data);
 void widget_exclude_keypress(GtkWidget *w);
 int unflatten_pattern(int ckit, int cpattern);
 int translate_drumtab_data(int factor);
+void pattern_record_button_clicked(GtkWidget *widget, gpointer data);
 void pattern_play_button_clicked(GtkWidget *widget, gpointer data);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
@@ -1979,6 +1981,12 @@ void pattern_paste_button_clicked(GtkWidget *widget,
 	return;
 }
 
+void pattern_record_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	printf("Record pattern button clicked\n");
+}
+
 void pattern_play_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
@@ -2758,6 +2766,7 @@ void destroy_event(GtkWidget *widget,
 	printf("\n\n\n\n\n\n      Gneutronica quits... your File is saved in /tmp/zzz.gdt\n\n\n\n\n\n");
 	save_to_file("/tmp/zzz.gdt");
 	kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
+	kill(midi_reader_process_id, SIGTERM);
 	gtk_main_quit();
 }
 
@@ -3862,6 +3871,42 @@ void send_schedule(struct schedule_t *sched, int loop)
 	return;
 }
 
+void receive_midi_data(int signal)
+{
+	/* This is called whenever the midi_reader process gets some midi data */
+	/* from a midi input device, eg. Akai MPD16, or some such. */
+	struct shared_info_struct *s = (struct shared_info_struct *) transport_location;
+	unsigned char data[3];
+
+	printf("Received MIDI data:");
+
+	/* get semaphore */
+	memcpy(data, &s->midi_data[0], 3);
+	/* release semaphore */
+
+	printf("0x%02x 0x%02x 0x%02x\n",
+		data[0], data[1], data[2]);
+	fflush(stdout);
+	/* release semaphore */
+	if (data[0] == 0x90)
+		note_on(midi_fd, data[1], data[2]);
+	/* process data */
+	return;
+}
+
+void setup_midi_receiver()
+{
+	int i, rc;
+	struct sigaction action;
+	unsigned char cmd;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = receive_midi_data;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGUSR1, &action, NULL);
+	return;
+}
+
 static jmp_buf the_beginning;
 
 void sigusr1_handler(int signal)
@@ -4265,6 +4310,7 @@ int main(int argc, char *argv[])
 	GtkWidget *a_button_box;
 	/* GtkWidget *save_button;
 	GtkWidget *load_button; */
+	GtkWidget *pattern_record_button;
 	GtkWidget *pattern_play_button;
 	GtkWidget *pattern_stop_button;
 	GtkWidget *pattern_clear_button;
@@ -4279,12 +4325,11 @@ int main(int argc, char *argv[])
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
-	unsigned char shared_buf[4096];
 	int i, rc;
 
-	/* ----- open the midi device ------------------------ */
-        int fd, c;
-        char device[255], drumkitfile[255];
+	/* ----- open the midi output device ------------------------ */
+        int fd, ifd, c;
+        char output_device[255], drumkitfile[255], midi_input_device[255];
 
 	transport_location = (struct shared_info_struct *) 
 		mmap(shared_buf, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
@@ -4298,20 +4343,22 @@ int main(int argc, char *argv[])
 	transport_location->measure = 0;
 	transport_location->percent = 0;
 
-        strcpy(device, "/dev/snd/midi1");
+        strcpy(output_device, "/dev/snd/midi1");
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");
 	strcpy(drumkitfile, "drumkits/generic.dk");
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
 	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
-        while ((c = getopt(argc, argv, "mk:d:")) != -1) {
+	strcpy(midi_input_device, "");
+        while ((c = getopt(argc, argv, "mi:k:d:")) != -1) {
                 switch (c) {
-                case 'd': strcpy(device, optarg); break;
+                case 'd': strcpy(output_device, optarg); break;
+                case 'i': strcpy(midi_input_device, optarg); break;
                 case 'k': strcpy(drumkitfile, optarg); break;
 		case 'm': maximize_windows = 0; break;
                 }
         }
-	fd = open(device, O_RDWR);
+	fd = open(output_device, O_RDWR);
 	if (fd >= 0) {
 		unsigned char bankchange[] = { 0xb0, 0x00, 0x00 };
 		unsigned char patchchange[] = { 0xc0, 117};
@@ -4320,10 +4367,12 @@ int main(int argc, char *argv[])
 		/* Check to see that it's a device file at least... */
 		rc = fstat(fd, &statbuf);
 		if (rc < 0) {
-			printf("Can't stat MIDI device file %s, %s\n", device, strerror(errno));
+			printf("Can't stat MIDI device file %s, %s\n",
+				output_device, strerror(errno));
 			close(fd);
 		} else if (!S_ISCHR(statbuf.st_mode)) {
-			printf("%s is not a character special device file\n", device);
+			printf("%s is not a character special device file\n",
+				output_device);
 			close(fd);
 		} else
 			midi_fd = fd;
@@ -4340,11 +4389,11 @@ int main(int argc, char *argv[])
 
 		 */
 	} else {
-		printf("Can't open MIDI device file %s, oh well, NO SOUND FOR YOU!!!\n", device);
+		printf("Can't open MIDI device file %s, oh well, NO SOUND FOR YOU!!!\n", output_device);
 		close(fd);
 	}
 	
-	player_process_pid = fork_player_process(device, &player_process_fd);
+	player_process_pid = fork_player_process(output_device, &player_process_fd);
 	pattern = malloc(sizeof(struct pattern_struct *) * MAXPATTERNS);
 	memset(pattern, 0, sizeof(struct pattern_struct *) * MAXPATTERNS);
 	init_measures();
@@ -4355,7 +4404,24 @@ int main(int argc, char *argv[])
 	ntempochanges = 1;
 	tempo_change[0] = initial_change;
 	sprintf(songname, "Untitled Song");
-	
+
+	/* open midi input device */
+	ifd = -1;
+	if (strcmp(midi_input_device, "") != 0) {
+		printf("Starting midi reader\n");
+		ifd = open(midi_input_device, O_RDONLY);
+		printf("ifd = %d\n");
+		if (ifd >= 0) {
+			struct shared_info_struct *sis = (struct shared_info_struct *) transport_location;
+			setup_midi_receiver();
+			midi_reader_process_id = midi_reader(ifd, &sis->midi_data[0]);
+			printf("midi_reader started, pid=%D.\n",
+				midi_reader_process_id);
+		} else {
+			fprintf(stderr, "Error opening midi input device: $s\n", strerror(errno));
+		}
+	}
+
 	rc = read_drumkit(drumkitfile, &ndrumkits, drumkit);
 	if (rc != 0) {
 		fprintf(stderr, "Can't read drumkit file, "
@@ -4734,6 +4800,7 @@ int main(int argc, char *argv[])
 	pattern_clear_button = gtk_button_new_with_label("Clear Pattern");
 	pattern_select_button = gtk_button_new_with_label("Select Pattern");
 	pattern_paste_button = gtk_button_new_with_label("Paste Pattern");
+	pattern_record_button = gtk_button_new_with_label("Record");
 	pattern_play_button = gtk_button_new_with_label("Play");
 	pattern_stop_button = gtk_button_new_with_label("Stop");
 
@@ -4749,6 +4816,8 @@ int main(int argc, char *argv[])
 			G_CALLBACK (select_pattern_button_pressed), NULL);
 	g_signal_connect(G_OBJECT (pattern_paste_button), "clicked",
 			G_CALLBACK (pattern_paste_button_clicked), NULL);
+	g_signal_connect(G_OBJECT (pattern_record_button), "clicked",
+			G_CALLBACK (pattern_record_button_clicked), NULL);
 	g_signal_connect(G_OBJECT (pattern_play_button), "clicked",
 			G_CALLBACK (pattern_play_button_clicked), NULL);
 	g_signal_connect(G_OBJECT (pattern_stop_button), "clicked",
@@ -4763,6 +4832,8 @@ int main(int argc, char *argv[])
 		"Select this pattern for later pasting.", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_paste_button, 
 		"Superimpose all the notes of a previously selected pattern onto this pattern.", NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_record_button,
+		"Record from MIDI input device", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_play_button, 
 		"Send this pattern to MIDI device for playback", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_stop_button, 
@@ -4770,6 +4841,8 @@ int main(int argc, char *argv[])
 
 	gtk_box_pack_start(GTK_BOX(box2), pattern_loop_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), prevbutton, TRUE, TRUE, 0);
+	if (ifd >= 0)
+		gtk_box_pack_start(GTK_BOX(box2), pattern_record_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_play_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_stop_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_clear_button, TRUE, TRUE, 0);
@@ -5039,6 +5112,9 @@ int main(int argc, char *argv[])
 
 	if (fd > 0) 
 		close(fd);
+
+	if (ifd > 0)
+		close(ifd);
 
 	exit(0);
 }

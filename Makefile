@@ -20,9 +20,12 @@ version.h:	versionnumber.txt
 	@echo '#define VERSION "'`cat versionnumber.txt`'"' > version.h
 
 gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
-		version.h gneutronica.h midi_file.h fractions.o drumtab.o
+		version.h gneutronica.h midi_file.h fractions.o drumtab.o \
+		midi_reader.o
 	gcc ${DEBUG} -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
-		midi_file.o fractions.o drumtab.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
+		midi_reader.o midi_file.o fractions.o drumtab.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
+
+midi_reader.o:	midi_reader.c midi_reader.h
 
 sched.o:	sched.c sched.h	midi_file.h
 
