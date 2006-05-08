@@ -81,6 +81,7 @@ void destroy_event(GtkWidget *widget, gpointer data);
 void widget_exclude_keypress(GtkWidget *w);
 int unflatten_pattern(int ckit, int cpattern);
 int translate_drumtab_data(int factor);
+void pattern_play_button_clicked(GtkWidget *widget, gpointer data);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -1256,15 +1257,25 @@ static int measure_transport_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 gint transport_update_callback (gpointer data)
 {
 	/* this is called back by gtk_main, as an idle function every so often
-	   during playback to update the transport location */ 
+	   during playback to update the transport location.  Returns TRUE,
+	   means it will get called again, returning false, means it's done. */
 
 	static int lastmeasure = -1;
 	static int lastpercent = -1; /* remember, so if transport hasn't moved, we don't redraw */
 
 	if (transport_location->measure == -1) {
+		/* The player process sets the measure to -1 when
+		   when it finishes playing. */
 		transport_location->measure = 0;
 		transport_location->percent = 0;
 		gtk_widget_queue_draw(measure_transport_da);
+
+		/* looping the pattern?  */
+		if (pattern_play_mode &&
+		    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(pattern_loop_chbox))) {
+			/* play it again Sam... */
+			pattern_play_button_clicked(NULL, NULL);
+		}
 		return FALSE;
 	}
 
@@ -1913,6 +1924,7 @@ void arranger_play_button_clicked(GtkWidget *widget,
 {
 	int start, end;
 
+	pattern_play_mode = 0;
 	if (widget == play_button) {
 		start = 0;
 		end = nmeasures;
@@ -1974,6 +1986,7 @@ void pattern_play_button_clicked(GtkWidget *widget,
 	schedule_pattern(kit, 0, cpattern, -1, NULL);
 	send_schedule(&sched, 0);
 	free_schedule(&sched);
+	pattern_play_mode = 1;
 	measure_transport_tag = g_timeout_add(100, /* 10x per sec? */
 			transport_update_callback, NULL);
 }
@@ -4715,6 +4728,7 @@ int main(int argc, char *argv[])
 			NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_after_button, FALSE, FALSE, 0);
 
+	pattern_loop_chbox = gtk_check_button_new_with_label("Loop");
 	prevbutton = gtk_button_new_with_label("<- Edit Previous Pattern");
 	nextbutton = gtk_button_new_with_label("Create Next Pattern ->");
 	pattern_clear_button = gtk_button_new_with_label("Clear Pattern");
@@ -4723,6 +4737,8 @@ int main(int argc, char *argv[])
 	pattern_play_button = gtk_button_new_with_label("Play");
 	pattern_stop_button = gtk_button_new_with_label("Stop");
 
+	g_signal_connect(G_OBJECT (nextbutton), "clicked",
+			G_CALLBACK (nextbutton_clicked), NULL);
 	g_signal_connect(G_OBJECT (nextbutton), "clicked",
 			G_CALLBACK (nextbutton_clicked), NULL);
 	g_signal_connect(G_OBJECT (prevbutton), "clicked",
@@ -4738,6 +4754,8 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (pattern_stop_button), "clicked",
 			G_CALLBACK (pattern_stop_button_clicked), NULL);
 
+	gtk_tooltips_set_tip(tooltips, pattern_loop_chbox,
+		"When checked, will cause playback to loop until 'Stop' is pressed.", NULL);
 	gtk_tooltips_set_tip(tooltips, nextbutton, "Create and edit the next pattern", NULL);
 	gtk_tooltips_set_tip(tooltips, prevbutton, "Edit the previous pattern", NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_clear_button, "Clear all notes from this pattern", NULL);
@@ -4750,6 +4768,7 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, pattern_stop_button, 
 		"Stop any playback currently in progress.", NULL);
 
+	gtk_box_pack_start(GTK_BOX(box2), pattern_loop_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), prevbutton, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_play_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_stop_button, TRUE, TRUE, 0);

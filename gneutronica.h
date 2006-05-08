@@ -192,6 +192,7 @@ GLOBAL int INIT(player_process_pid, -1);
 /* for communicating transport location from player process */
 GLOBAL struct shared_info_struct INIT(*transport_location, NULL); 
 GLOBAL gint measure_transport_tag; /* tag for cancelling idle function */
+GLOBAL int INIT(pattern_play_mode, 0);
 
 GLOBAL int INIT(changing_tempo_measure, -1);
 GLOBAL int ntempochanges;
@@ -237,6 +238,7 @@ GLOBAL GtkWidget *edit_instruments_toggle;
 GLOBAL GtkWidget *save_drumkit_button;
 GLOBAL GtkWidget *pattern_paste_button;
 GLOBAL GtkWidget *pattern_select_button;
+GLOBAL GtkWidget *pattern_loop_chbox;
 GLOBAL GtkWidget *nextbutton, *prevbutton;
 GLOBAL GtkWidget *play_button;
 GLOBAL GtkWidget *play_selection_button;
