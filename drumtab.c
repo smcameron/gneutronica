@@ -207,9 +207,10 @@ static int process_line(char *line, int instrument,
 		denom = strlen(chunk);
 		added_hit = 0;
 		for (i=0;i<denom;i++) {
-			if (chunk[i] == 'x' ||
-				chunk[i] == 'f' ||
-				chunk[i] == 'o') {
+			int hitchar = tolower(chunk[i]);
+			if (hitchar == 'x' ||
+				hitchar == 'f' ||
+				hitchar == 'o') {
 				numer = i;
 				add_hit(instrument, current_staff,
 					current_measure, numer, denom);
