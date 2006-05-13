@@ -48,6 +48,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+// #define GNEUTRONICA_FRENCH 1
+#include "lang.h"
+
 #define INSTANTIATE_GNEUTRONICA_GLOBALS
 #include "gneutronica.h"
 #include "sched.h"
@@ -90,22 +93,22 @@ void pattern_play_button_clicked(GtkWidget *widget, gpointer data);
    I tweaked it tweaked a bit for style and menu content, but that's about it.*/
 
 static GtkItemFactoryEntry menu_items[] = {
-	{ "/_File",         NULL,         NULL,           0, "<Branch>" },
+	{ "/" FILE_LABEL,         NULL,         NULL,           0, "<Branch>" },
 	/* { "/File/_New",     "<control>N", print_hello,    0, "<StockItem>", GTK_STOCK_NEW }, */
-	{ "/File/_Open",    "<control>O", load_button_clicked,    0, "<StockItem>", GTK_STOCK_OPEN },
-	{ "/File/_Save",    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
-	{ "/File/Save _As", NULL,         save_button_clicked,    0, "<Item>" },
-	{ "/File/sep1",     NULL,         NULL,           0, "<Separator>" },
-	{ "/File/_Import Patterns", NULL,         import_patterns_button_clicked,    0, "<Item>" },
-	{ "/File/Import Drum _Tab", NULL,         import_drumtab_button_clicked,    0, "<Item>" },
-	{ "/File/_Export Song to MIDI file", NULL,         export_midi_button_clicked,    0, "<Item>" },
+	{ "/" FILE_LABEL "/_" OPEN_LABEL,    "<control>O", load_button_clicked,    0, "<StockItem>", GTK_STOCK_OPEN },
+	{ "/" FILE_LABEL "/_" SAVE_LABEL,    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
+	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL,         save_button_clicked,    0, "<Item>" },
+	{ "/" FILE_LABEL "/sep1",     NULL,         NULL,           0, "<Separator>" },
+	{ "/" FILE_LABEL "/" IMPORT_PATTERNS_LABEL, NULL,         import_patterns_button_clicked,    0, "<Item>" },
+	{ "/" FILE_LABEL "/" IMPORT_DRUM_TAB_LABEL, NULL,         import_drumtab_button_clicked,    0, "<Item>" },
+	{ "/" FILE_LABEL "/" EXPORT_TO_MIDI_FILE_LABEL, NULL,         export_midi_button_clicked,    0, "<Item>" },
 	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
-	{ "/File/_Quit",    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT }, 
-	{ "/_Edit",         NULL,         NULL,           0, "<Branch>" },
-	{ "/Edit/_Paste ASCII drum tab",    NULL, paste_drumtab_clicked, 0, "<Item>" },
-	{ "/Edit/_Remap drum kit for whole song via GM",    NULL, remap_drumkit_clicked, 0, "<Item>" },
-	{ "/_Help",         NULL,         NULL,           0, "<LastBranch>" },
-	{ "/_Help/About",   NULL,         (void *) about_activate, 0, "<Item>" },
+	{ "/" FILE_LABEL "/" QUIT_LABEL,    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT },
+	{ "/" EDIT_LABEL,         NULL,         NULL,           0, "<Branch>" },
+	{ "/" EDIT_LABEL "/" PASTE_DRUM_TAB_LABEL,    NULL, paste_drumtab_clicked, 0, "<Item>" },
+	{ "/" EDIT_LABEL "/" REMAP_DRUM_KIT_MENU_LABEL,    NULL, remap_drumkit_clicked, 0, "<Item>" },
+	{ "/" HELP_LABEL,         NULL,         NULL,           0, "<LastBranch>" },
+	{ "/" HELP_LABEL "/" ABOUT_LABEL,   NULL,         (void *) about_activate, 0, "<Item>" },
 };
 
 static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
@@ -528,18 +531,18 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	top = total_rows -1;
 
 	p->arr_button = gtk_button_new_with_label(p->patname);
-	gtk_tooltips_set_tip(tooltips, p->arr_button, "Edit this pattern.  Click the boxes to the right to assign this pattern to measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->arr_button, EDIT_PATTERN_TIP, NULL);
 	p->copy_button = gtk_button_new_with_label("Sel");
-	sprintf(msg, "Select this pattern (%s) for later pasting into another pattern", p->patname);
+	sprintf(msg, SELECT_PATTERN_TIP, p->patname);
 	gtk_tooltips_set_tip(tooltips, p->copy_button, msg, NULL);
 	p->ins_button = gtk_button_new_with_label("Ins");
 	gtk_tooltips_set_tip(tooltips, p->ins_button, 
-		"Insert new pattern before this pattern.",NULL);
+		INSERT_PATTERN_TIP,NULL);
 	p->del_button = gtk_button_new_with_label("Del");
 	gtk_tooltips_set_tip(tooltips, p->del_button, 
-		"Delete this pattern.", NULL);
+		DELETE_PATTERN_TIP, NULL);
 	p->arr_darea = gtk_drawing_area_new();
-	gtk_tooltips_set_tip(tooltips, p->arr_darea, "Click to assign patterns to measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->arr_darea, ASSIGN_P_TO_M_TIP, NULL);
 	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
 			G_CALLBACK (arr_darea_event), p);
 	gtk_widget_add_events(p->arr_darea, GDK_BUTTON_PRESS_MASK); 
@@ -952,7 +955,7 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 		changing_tempo_measure = m;
 		index = insert_tempo_change(m, -1);
 		printf("index = %d, tempo = %d\n", index, tempo_change[index].beats_per_minute);
-		sprintf(TempoChMsg, "Measure:%d Beats/Minute:", m);
+		sprintf(TempoChMsg, TEMPO_CHANGE_MESSAGE, m); /* "measure:%d beats / minute" */
 		gtk_label_set_text(GTK_LABEL(TempoChLabel), TempoChMsg);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(TempoChBPM), 
 			(gdouble) tempo_change[index].beats_per_minute);
@@ -1834,12 +1837,12 @@ static struct file_dialog_descriptor {
 	GtkWidget **widget;
 	void *file_selected_function;
 } file_dialog[] = {
-	{ "Save Song", &SaveBox, (void *) savebox_file_selected, },
-	{ "Load Song", &LoadBox, (void *) loadbox_file_selected, },
-	{ "Save Drum Kit", &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
-	{ "Import Patterns from Song", &ImportPatternsBox, (void *) import_patterns_file_selected, },
-	{ "Import Drum Tablature", &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
-	{ "Export Song to MIDI file", &export_to_midi_box, (void *) export_to_midi, },
+	{ SAVE_SONG_ITEM, &SaveBox, (void *) savebox_file_selected, },
+	{ LOAD_SONG_ITEM, &LoadBox, (void *) loadbox_file_selected, },
+	{ SAVE_DRUMKIT_LABEL, &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
+	{ IMPORT_PATTERNS_ITEM, &ImportPatternsBox, (void *) import_patterns_file_selected, },
+	{ IMPORT_DRUM_TAB_ITEM, &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
+	{ EXPORT_SONG_TO_MIDI_ITEM, &export_to_midi_box, (void *) export_to_midi, },
 };
 	
 GtkWidget *make_file_dialog(int i)
@@ -2001,7 +2004,7 @@ void pattern_play_button_clicked(GtkWidget *widget,
 
 void set_arranger_window_title()
 {
-	sprintf(arranger_title, "%s v. %s - Arrangement Editor: %s",
+	sprintf(arranger_title, ARRANGER_TITLE_ITEM, /* "%s v. %s - Arrangement Editor: %s" */
 		PROGNAME, VERSION, songname);
 	gtk_window_set_title(GTK_WINDOW(arranger_window), arranger_title);
 	gtk_entry_set_text(GTK_ENTRY(song_name_entry), songname);
@@ -2029,11 +2032,11 @@ void edit_pattern(int new_pattern)
 	set_pattern_window_title();
 	flatten_pattern(kit, cpattern); /* cause widgets and stuff to be made... */
 	if (cpattern == npatterns - 1) {
-		gtk_button_set_label(GTK_BUTTON(nextbutton), "Create Next Pattern -->"); 
-		gtk_tooltips_set_tip(tooltips, nextbutton, "Create and edit the next pattern", NULL);
+		gtk_button_set_label(GTK_BUTTON(nextbutton), CREATE_NEXT_PATTERN_LABEL);
+		gtk_tooltips_set_tip(tooltips, nextbutton, CREATE_NEXT_PATTERN_TIP, NULL);
 	} else {
-		gtk_button_set_label(GTK_BUTTON(nextbutton), "Edit Next Pattern -->"); 
-		gtk_tooltips_set_tip(tooltips, nextbutton, "Edit the next pattern", NULL);
+		gtk_button_set_label(GTK_BUTTON(nextbutton), EDIT_NEXT_PATTERN_LABEL);
+		gtk_tooltips_set_tip(tooltips, nextbutton, EDIT_NEXT_PATTERN_TIP, NULL);
 	}
 	/* Make the timing lines redraw . . . */
 	for (i=0;i<drumkit[kit].ninsts;i++)
@@ -2113,20 +2116,16 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	/* this and code in make_new_pattern_widgets should be refactored */
 
 	p->arr_button = gtk_button_new_with_label(p->patname);
-	gtk_tooltips_set_tip(tooltips, p->arr_button, "Edit this pattern.  "
-		"Click the boxes to the right to assign this "
-		"pattern to measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->arr_button, EDIT_PATTERN_TIP, NULL);
 	p->copy_button = gtk_button_new_with_label("Sel");
-	sprintf(msg, "Select this pattern (%s) for later pasting into another pattern", p->patname);
+	sprintf(msg, SELECT_PATTERN_TIP, p->patname);
 	gtk_tooltips_set_tip(tooltips, p->copy_button, msg, NULL);
 	p->ins_button = gtk_button_new_with_label("Ins");
-	gtk_tooltips_set_tip(tooltips, p->ins_button, 
-		"Insert new pattern before this pattern.  ", NULL);
+	gtk_tooltips_set_tip(tooltips, p->ins_button, INSERT_PATTERN_TIP, NULL);
 	p->del_button = gtk_button_new_with_label("Del");
-	gtk_tooltips_set_tip(tooltips, p->del_button, 
-		"Delete this pattern.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->del_button, DELETE_PATTERN_TIP, NULL);
 	p->arr_darea = gtk_drawing_area_new();
-	gtk_tooltips_set_tip(tooltips, p->arr_darea, "Click to assign patterns to measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, p->arr_darea, ASSIGN_P_TO_M_TIP, NULL);
 	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
 			G_CALLBACK (arr_darea_event), p);
 	gtk_widget_add_events(p->arr_darea, GDK_BUTTON_PRESS_MASK); 
@@ -2327,8 +2326,8 @@ void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
 void set_select_message(char *pattern)
 {
 	char msg[255];
-	sprintf(msg, "Superimpose all the notes of the selected pattern (%s) onto this pattern.",
-		pattern);
+	/* "Superimpose all the notes of the selected pattern (%s) onto this pattern.", */
+	sprintf(msg, PASTE_MSG_TIP, pattern);
 	gtk_tooltips_set_tip(tooltips, pattern_paste_button, msg, NULL);
 }
 
@@ -4403,7 +4402,7 @@ int main(int argc, char *argv[])
 	cmeasure = 0;
 	ntempochanges = 1;
 	tempo_change[0] = initial_change;
-	sprintf(songname, "Untitled Song");
+	sprintf(songname, UNTITLED_SONG_LABEL);
 
 	/* open midi input device */
 	ifd = -1;
@@ -4478,67 +4477,49 @@ int main(int argc, char *argv[])
 	/* gtk_box_pack_start(GTK_BOX(box1), table, TRUE, TRUE, 0); */
 	gtk_box_pack_start(GTK_BOX(box1), box2, FALSE, FALSE, 0);
 
-	hide_instruments = gtk_check_button_new_with_label("Hide unchecked instruments");
+	hide_instruments = gtk_check_button_new_with_label(HIDE_INSTRUMENTS_LABEL);
 	g_signal_connect(G_OBJECT (hide_instruments), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
-	gtk_tooltips_set_tip(tooltips, hide_instruments, 
-		"Hide the instruments below which do not have a "
-		"check beside them to reduce visual clutter.", NULL);
-	hide_volume_sliders = gtk_check_button_new_with_label("Hide instrument attributes");
+	gtk_tooltips_set_tip(tooltips, hide_instruments, HIDE_INSTRUMENTS_TIP, NULL);
+	hide_volume_sliders = gtk_check_button_new_with_label(HIDE_INSTRUMENT_ATTRS_LABEL);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hide_volume_sliders), TRUE);
 	g_signal_connect(G_OBJECT (hide_volume_sliders), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
-	gtk_tooltips_set_tip(tooltips, hide_volume_sliders, 
-		"Hide the volume sliders and drag settings which appear to the left of"
-		" the instrument buttons, below.", NULL);
-	snap_to_grid = gtk_check_button_new_with_label("Snap to grid");
+	gtk_tooltips_set_tip(tooltips, hide_volume_sliders, HIDE_VOL_SLIDERS_TIP, NULL);
+	snap_to_grid = gtk_check_button_new_with_label(SNAP_TO_GRID_LABEL);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(snap_to_grid), TRUE);
-	gtk_tooltips_set_tip(tooltips, snap_to_grid, 
-		"Force newly placed notes to line up with the timing lines.", NULL);
+	gtk_tooltips_set_tip(tooltips, snap_to_grid, SNAP_TO_GRID_TIP, NULL);
 	
 	drumkit_vbox = gtk_vbox_new(FALSE, 0);
-	save_drumkit_button = gtk_button_new_with_label("Save Drum Kit");
-	gtk_tooltips_set_tip(tooltips, save_drumkit_button, 
-		"Save instrument names, types, and MIDI note "
-		"assignments into a file for later re-use.  "
-		"Please consider sending your new drumkit file "
-		"to smcameron@users.sourceforge.net for inclusion with "
-		"future releases of Gneutronica.  Please include "
-		"the make and model of the MIDI device, and the name "
-		"of whatever preset you're using, if applicable.", NULL);
+	save_drumkit_button = gtk_button_new_with_label(SAVE_DRUMKIT_LABEL);
+	gtk_tooltips_set_tip(tooltips, save_drumkit_button, SAVE_DRUMKIT_TIP, NULL);
 	g_signal_connect(G_OBJECT (save_drumkit_button), "clicked", 
 			G_CALLBACK (save_drumkit_button_clicked), NULL);
-	edit_instruments_toggle = gtk_toggle_button_new_with_label("Edit Drum Kit");
+	edit_instruments_toggle = gtk_toggle_button_new_with_label(EDIT_DRUMKIT_LABEL);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(edit_instruments_toggle), FALSE);
-	remap_drumkit_button = gtk_button_new_with_label("Remap drum kit");
-	gtk_tooltips_set_tip(tooltips, remap_drumkit_button, 
-		"Remap drum kit instruments for this pattern "
-		"via General MIDI to the current drumkit (sorta kinda works.)", NULL);
+	remap_drumkit_button = gtk_button_new_with_label(REMAP_DRUMKIT_LABEL);
+	gtk_tooltips_set_tip(tooltips, remap_drumkit_button, REMAP_DRUMKIT_TIP, NULL);
 	g_signal_connect(G_OBJECT (remap_drumkit_button), "clicked", 
 			G_CALLBACK (remap_drumkit_button_clicked), NULL);
-	gtk_tooltips_set_tip(tooltips, edit_instruments_toggle, 
-		"Assign names, types, and MIDI note numbers to instruments.", NULL);
+	gtk_tooltips_set_tip(tooltips, edit_instruments_toggle,
+		EDIT_DRUMKIT_TIP, NULL);
 	g_signal_connect(G_OBJECT (edit_instruments_toggle), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
-	pattern_name_label = gtk_label_new("Pattern:");
+	pattern_name_label = gtk_label_new(PATTERN_LABEL);
 	gtk_label_set_justify(GTK_LABEL(pattern_name_label), GTK_JUSTIFY_RIGHT);
 	pattern_name_entry = gtk_entry_new();
 	widget_exclude_keypress(pattern_name_entry);
-	gtk_tooltips_set_tip(tooltips, pattern_name_entry, 
-		"Assign a name to this pattern.", NULL);
-	tempolabel1 = gtk_label_new("Beats/Min");
+	gtk_tooltips_set_tip(tooltips, pattern_name_entry, PATTERN_NAME_TIP, NULL);
+	tempolabel1 = gtk_label_new(BEATS_PER_MIN_LABEL);
 	gtk_label_set_justify(GTK_LABEL(tempolabel1), GTK_JUSTIFY_RIGHT);
 	tempospin1 = gtk_spin_button_new_with_range(10, 400, 1);
 	widget_exclude_keypress(tempospin1);
-	gtk_tooltips_set_tip(tooltips, tempospin1, "Controls tempo only for single pattern playback, "
-			"does not affect the tempo in the context of the song.", NULL);
-	tempolabel2 = gtk_label_new("Beats/Measure");
+	gtk_tooltips_set_tip(tooltips, tempospin1, PATTERN_TEMPO_TIP, NULL);
+	tempolabel2 = gtk_label_new(BEATS_PER_MEASURE_LABEL);
 	gtk_label_set_justify(GTK_LABEL(tempolabel2), GTK_JUSTIFY_RIGHT);
 	tempospin2 = gtk_spin_button_new_with_range(1,  400, 1);
 	widget_exclude_keypress(tempospin2);
-	gtk_tooltips_set_tip(tooltips, tempospin2, "Controls tempo for single pattern playback, "
-			"and DOES affect the tempo in the context of the song."
-			"  Also affects the instrument drag/rush control.", NULL);
+	gtk_tooltips_set_tip(tooltips, tempospin2, BEATS_PER_MEASURE_TIP, NULL);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) 120);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) 4);
 
@@ -4577,13 +4558,11 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (autocrunch), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
 	gtk_tooltips_set_tip(tooltips, autocrunch, "Turns on experimental UI feature...  You'll see. ;-)", NULL);
-	volume_zoom_label= gtk_label_new("Volume Zoom");
+	volume_zoom_label= gtk_label_new(VOLUME_ZOOM_LABEL);
 	volume_magnifier_adjustment = gtk_adjustment_new((gdouble) DEFAULT_AUTOMAG,
 			100.0, 600.0, 10.0, 1.0, 0.0);
 	volume_magnifier = gtk_hscale_new(GTK_ADJUSTMENT(volume_magnifier_adjustment));
-	gtk_tooltips_set_tip(tooltips, volume_magnifier, "Controls how much the volume scale is magnified"
-		" for the current instrument from no magnification to 6x.  It allows note volumes to be"
-		" more precisely specified.", NULL);
+	gtk_tooltips_set_tip(tooltips, volume_magnifier, VOLUME_ZOOM_TIP, NULL);
 	gtk_table_attach(GTK_TABLE(magbox), volume_zoom_label, 0, 1, 0, 1, 0, 0, 1,1);
 	gtk_table_attach(GTK_TABLE(magbox), volume_magnifier, 1, 2, 0, 1, GTK_FILL, 0, 1,1);
 	gtk_table_attach(GTK_TABLE(magbox), automag, 1, 2, 1, 2, GTK_FILL, 0, 1,1);
@@ -4608,30 +4587,25 @@ int main(int argc, char *argv[])
 			(gdouble) 0);
 		g_signal_connect(G_OBJECT (inst->drag_spin_button), "value-changed", 
 				G_CALLBACK (drag_spin_button_change), inst);
-		gtk_tooltips_set_tip(tooltips, inst->drag_spin_button,
-			"Set percentage of a beat to drag (or rush) this instrument.  "
-			"Use negative numbers for rushing.", NULL);
+		gtk_tooltips_set_tip(tooltips, inst->drag_spin_button, DRAG_RUSH_TIP, NULL);
 		inst->volume_adjustment = gtk_adjustment_new((gdouble) DEFAULT_VELOCITY, 
 			0.0, 127.0, 1.0, 1.0, 0.0);
 		inst->volume_slider = gtk_hscale_new(GTK_ADJUSTMENT(inst->volume_adjustment));
-		inst->clear_button = gtk_button_new_with_label("Clear");
-		gtk_tooltips_set_tip(tooltips, inst->clear_button, 
-			"Delete all the notes for this instrument in this pattern.", NULL);
+		inst->clear_button = gtk_button_new_with_label(CLEAR_LABEL);
+		gtk_tooltips_set_tip(tooltips, inst->clear_button, CLEAR_TIP, NULL);
 		g_signal_connect(G_OBJECT (inst->clear_button), "clicked",
 			G_CALLBACK(instrument_clear_button_pressed), (gpointer) inst);
 
 		inst->name_entry = gtk_entry_new();
 		widget_exclude_keypress(inst->name_entry);
-		gtk_tooltips_set_tip(tooltips, inst->name_entry, 
-			"Assign a name to this instrument", NULL);
+		gtk_tooltips_set_tip(tooltips, inst->name_entry, INST_NAME_TIP, NULL);
 		gtk_entry_set_text(GTK_ENTRY(inst->name_entry), inst->name);
 		g_signal_connect (G_OBJECT (inst->name_entry), "activate",
 		      G_CALLBACK (instrument_name_entered), (gpointer) inst);
 
 		inst->type_entry = gtk_entry_new();
 		widget_exclude_keypress(inst->type_entry);
-		gtk_tooltips_set_tip(tooltips, inst->type_entry, 
-			"Assign a type to this instrument", NULL);
+		gtk_tooltips_set_tip(tooltips, inst->type_entry, INST_TYPE_TIP, NULL);
 		gtk_entry_set_text(GTK_ENTRY(inst->type_entry), inst->type);
 		g_signal_connect (G_OBJECT (inst->type_entry), "activate",
 		      G_CALLBACK (instrument_type_entered), (gpointer) inst);
@@ -4643,7 +4617,7 @@ int main(int argc, char *argv[])
 		g_signal_connect(G_OBJECT (inst->midi_value_spin_button), "value-changed", 
 				G_CALLBACK (unsigned_char_spin_button_change), &inst->midivalue);
 		gtk_tooltips_set_tip(tooltips, inst->midi_value_spin_button, 
-			"Assign the MIDI note for this instrument", NULL);
+			INST_MIDINOTE_TIP, NULL);
 
 		inst->gm_value_spin_button = gtk_spin_button_new_with_range(0, 127, 1);
 		widget_exclude_keypress(inst->gm_value_spin_button);
@@ -4652,12 +4626,12 @@ int main(int argc, char *argv[])
 		g_signal_connect(G_OBJECT (inst->gm_value_spin_button), "value-changed", 
 				G_CALLBACK (unsigned_char_spin_button_change), &inst->gm_equivalent);
 		gtk_tooltips_set_tip(tooltips, inst->gm_value_spin_button, 
-			"Assign the closest General MIDI note for this instrument for remapping", NULL);
+			INST_GM_TIP, NULL);
 
 		gtk_widget_set_size_request(inst->volume_slider, 80, 33);
 		gtk_scale_set_digits(GTK_SCALE(inst->volume_slider), 0);
 		gtk_tooltips_set_tip(tooltips, inst->volume_slider, 
-			"Controls the default volume for this insrument.", NULL);
+			VOLUME_SLIDER_TIP, NULL);
 
 		inst->canvas = gtk_drawing_area_new();
 		g_signal_connect(G_OBJECT (inst->button), "clicked", 
@@ -4707,11 +4681,8 @@ int main(int argc, char *argv[])
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
 
-	scramble_button = gtk_button_new_with_label("Scramble");
-	gtk_tooltips_set_tip(tooltips, scramble_button,
-		"Scramble this measure by divisions randomly. "
-		"Is this a useful feature?  "
-		"A million monkeys can't be wrong all the time.", NULL);
+	scramble_button = gtk_button_new_with_label(SCRAMBLE_LABEL);
+	gtk_tooltips_set_tip(tooltips, scramble_button, SCRAMBLE_TIP, NULL);
 	g_signal_connect(G_OBJECT (scramble_button), "clicked",
 		G_CALLBACK(scramble_button_pressed), (gpointer) NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), scramble_button, FALSE, FALSE, 0);
@@ -4723,86 +4694,56 @@ int main(int argc, char *argv[])
 		g_signal_connect(G_OBJECT(timediv[i].spin), "value-changed", 
 			G_CALLBACK(timediv_spin_change), &timediv[i]);
 		if (i==0)
-			gtk_tooltips_set_tip(tooltips, timediv[i].spin,
-				"Use these to control the way the measure is "
-				"divided up for placement of beats.  "
-				"This first one is also used by the Scramble function.", NULL);
+			gtk_tooltips_set_tip(tooltips, timediv[i].spin, TIMEDIV_TIP, NULL);
 		else
-			gtk_tooltips_set_tip(tooltips, timediv[i].spin,
-				"Use these to control the way the measure is "
-				"divided up for placement of beats", NULL);
+			gtk_tooltips_set_tip(tooltips, timediv[i].spin, TIMEDIV2_TIP, NULL);
 
 		/* gtk_table_attach_defaults(GTK_TABLE(table), timediv[i].spin, 
 			2, 3, i, i+1); */
 		gtk_box_pack_start(GTK_BOX(linebox), timediv[i].spin, FALSE, FALSE, 0);
 	}
-	remove_space_before_button = gtk_button_new_with_label("Remove Space before");
+	remove_space_before_button = gtk_button_new_with_label(REMOVE_SPACE_BEFORE_LABEL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_before_button, FALSE, FALSE, 0);
 	gtk_tooltips_set_tip(tooltips, remove_space_before_button,
-			"Removes space from the beginning of the measure.  "
-			"Set the numerator and denominator to the fraction of the "
-			"measure to be deleted as measured prior to deleting.",
-			NULL);
+		REMOVE_SPACE_BEFORE_TIP, NULL);
 	g_signal_connect(G_OBJECT (remove_space_before_button), "clicked",
 		G_CALLBACK(remove_space_before_button_pressed), (gpointer) NULL);
-	add_space_before_button = gtk_button_new_with_label("Add Space before");
+	add_space_before_button = gtk_button_new_with_label(ADD_SPACE_BEFORE_LABEL);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_before_button, FALSE, FALSE, 0);
-	gtk_tooltips_set_tip(tooltips, add_space_before_button,
-			"Adds space to the beginning of the measure, "
-			"squeezing all the notes to the right.  Set the "
-			"numerator and denominator to indicate the fraction of "
-			"the total measure the new space should occupy as measured "
-			"after the operation of adding space is complete.  For instance "
-			"if the measure is 2 units long and you want to be 3 units, "
-			"use 1/3.  In general, if it's X units and you want (X + Y) units, "
-			"use (Y - X) / (X + Y).",
-			NULL);
+	gtk_tooltips_set_tip(tooltips, add_space_before_button, ADD_SPACE_BEFORE_TIP, NULL);
 	add_space_numerator_spin = gtk_spin_button_new_with_range(1, 400, 1);
-	gtk_tooltips_set_tip(tooltips, add_space_numerator_spin,
-			"Numerator.  Use this when adding/removing space to this measure.", NULL);
+	gtk_tooltips_set_tip(tooltips, add_space_numerator_spin, NUMERATOR_TIP, NULL);
 	g_signal_connect(G_OBJECT (add_space_before_button), "clicked",
 		G_CALLBACK(add_space_before_button_pressed), (gpointer) NULL);
 	widget_exclude_keypress(add_space_numerator_spin);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_numerator_spin, FALSE, FALSE, 0);
 	add_space_denominator_spin = gtk_spin_button_new_with_range(1, 400, 1);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_space_denominator_spin), (gdouble) 2.0);
-	gtk_tooltips_set_tip(tooltips, add_space_denominator_spin,
-			"Denominator.  Use this when adding/removing space to this measure.", NULL);
+	gtk_tooltips_set_tip(tooltips, add_space_denominator_spin, DENOMINATOR_TIP, NULL);
 	widget_exclude_keypress(add_space_denominator_spin);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_denominator_spin, FALSE, FALSE, 0);
-	add_space_after_button = gtk_button_new_with_label("Add Space after");
+	add_space_after_button = gtk_button_new_with_label(ADD_SPACE_AFTER_LABEL);
 	g_signal_connect(G_OBJECT (add_space_after_button), "clicked",
 		G_CALLBACK(add_space_after_button_pressed), (gpointer) NULL);
 	gtk_tooltips_set_tip(tooltips, add_space_after_button,
-			"Adds space to the end of the measure, "
-			"squeezing all the notes to the left.  Set the "
-			"numerator and denominator to indicate the fraction of "
-			"the total measure the new space should occupy as measured "
-			"after the operation of adding space is complete.  For instance "
-			"if the measure is 2 units long and you want to be 3 units, "
-			"use 1/3.  In general, if it's X units and you want (X + Y) units, "
-			"use (Y - X) / (X + Y).",
-			NULL);
+		ADD_SPACE_AFTER_TIP, NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), add_space_after_button, FALSE, FALSE, 0);
-	remove_space_after_button = gtk_button_new_with_label("Remove Space after");
+	remove_space_after_button = gtk_button_new_with_label(REMOVE_SPACE_AFTER_LABEL);
 	g_signal_connect(G_OBJECT (remove_space_after_button), "clicked",
 		G_CALLBACK(remove_space_after_button_pressed), (gpointer) NULL);
 	gtk_tooltips_set_tip(tooltips, remove_space_after_button,
-			"Removes space from the end of the measure."
-			"Set the numerator and denominator to the fraction of the "
-			"measure to be deleted as measured prior to deleting.",
-			NULL);
+		REMOVE_SPACE_AFTER_TIP, NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_after_button, FALSE, FALSE, 0);
 
-	pattern_loop_chbox = gtk_check_button_new_with_label("Loop");
-	prevbutton = gtk_button_new_with_label("<- Edit Previous Pattern");
-	nextbutton = gtk_button_new_with_label("Create Next Pattern ->");
-	pattern_clear_button = gtk_button_new_with_label("Clear Pattern");
-	pattern_select_button = gtk_button_new_with_label("Select Pattern");
-	pattern_paste_button = gtk_button_new_with_label("Paste Pattern");
-	pattern_record_button = gtk_button_new_with_label("Record");
-	pattern_play_button = gtk_button_new_with_label("Play");
-	pattern_stop_button = gtk_button_new_with_label("Stop");
+	pattern_loop_chbox = gtk_check_button_new_with_label(LOOP_LABEL);
+	prevbutton = gtk_button_new_with_label(EDIT_PREV_PATTERN_LABEL);
+	nextbutton = gtk_button_new_with_label(CREATE_NEXT_PATTERN_LABEL);
+	pattern_clear_button = gtk_button_new_with_label(CLEAR_PATTERN_LABEL);
+	pattern_select_button = gtk_button_new_with_label(SELECT_PATTERN_LABEL);
+	pattern_paste_button = gtk_button_new_with_label(PASTE_PATTERN_LABEL);
+	pattern_record_button = gtk_button_new_with_label(RECORD_LABEL);
+	pattern_play_button = gtk_button_new_with_label(PLAY_LABEL);
+	pattern_stop_button = gtk_button_new_with_label(STOP_LABEL);
 
 	g_signal_connect(G_OBJECT (nextbutton), "clicked",
 			G_CALLBACK (nextbutton_clicked), NULL);
@@ -4823,21 +4764,15 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (pattern_stop_button), "clicked",
 			G_CALLBACK (pattern_stop_button_clicked), NULL);
 
-	gtk_tooltips_set_tip(tooltips, pattern_loop_chbox,
-		"When checked, will cause playback to loop until 'Stop' is pressed.", NULL);
-	gtk_tooltips_set_tip(tooltips, nextbutton, "Create and edit the next pattern", NULL);
-	gtk_tooltips_set_tip(tooltips, prevbutton, "Edit the previous pattern", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_clear_button, "Clear all notes from this pattern", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_select_button,
-		"Select this pattern for later pasting.", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_paste_button, 
-		"Superimpose all the notes of a previously selected pattern onto this pattern.", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_record_button,
-		"Record from MIDI input device", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_play_button, 
-		"Send this pattern to MIDI device for playback", NULL);
-	gtk_tooltips_set_tip(tooltips, pattern_stop_button, 
-		"Stop any playback currently in progress.", NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_loop_chbox, PATTERN_LOOP_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, nextbutton, CREATE_NEXT_PATTERN_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, prevbutton, EDIT_PREV_PATTERN_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_clear_button, CLEAR_PATTERN_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_select_button, SELECT_GEN_PATTERN_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_paste_button, PASTE_PATTERN_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_record_button, RECORD_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_play_button, PATTERN_PLAY_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, pattern_stop_button, PATTERN_STOP_TIP, NULL);
 
 	gtk_box_pack_start(GTK_BOX(box2), pattern_loop_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), prevbutton, TRUE, TRUE, 0);
@@ -4870,24 +4805,16 @@ int main(int argc, char *argv[])
 	
 	arranger_table = gtk_table_new(6, ARRANGER_COLS, FALSE);
 
-	TempoLabel = gtk_label_new("Tempo changes");
-	SelectButton = gtk_button_new_with_label("Select measures");
-	PasteLabel = gtk_label_new("Paste measures");
-	InsertButton = gtk_button_new_with_label("Insert measures");
-	DeleteButton = gtk_button_new_with_label("Delete measures");
-	MeasureTransportLabel = gtk_label_new("Transport Location");
+	TempoLabel = gtk_label_new(TEMPO_CHANGES_LABEL);
+	SelectButton = gtk_button_new_with_label(SELECT_MEASURES_LABEL);
+	PasteLabel = gtk_label_new(PASTE_MEASURES_LABEL);
+	InsertButton = gtk_button_new_with_label(INSERT_MEASURES_LABEL);
+	DeleteButton = gtk_button_new_with_label(DELETE_MEASURES_LABEL);
+	MeasureTransportLabel = gtk_label_new(TRANSPORT_LOC_LABEL);
 	
-	gtk_tooltips_set_tip(tooltips, SelectButton, 
-		"Click this button to select all measures, or twice to select no measures.  "
-		"Click the buttons to the right to select a single measure.  "
-		"Click, drag, and release over the buttons to the right to select a range of measures.",
-		NULL);
-	gtk_tooltips_set_tip(tooltips, InsertButton, 
-		"Click the buttons to the right to insert a single measure, "
-		 "or use this button to insert blank measures for the selected measures.", NULL);
-	gtk_tooltips_set_tip(tooltips, DeleteButton, 
-		"Click the buttons to the right to delete a single measure, "
-		 "or use this button to delete the selected measures.", NULL);
+	gtk_tooltips_set_tip(tooltips, SelectButton, SELECT_MEASURES_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, InsertButton, INSERT_MEASURES_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, DeleteButton, DELETE_MEASURES_TIP, NULL);
 
 	g_signal_connect(G_OBJECT (SelectButton), "clicked",
 			G_CALLBACK (select_measures_button), NULL);
@@ -4956,16 +4883,15 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(arranger_table), Delete_da, 4, 5, 4, 5, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), measure_transport_da, 4, 5, 5, 6, 0, 0, 0, 0);
 
-	gtk_tooltips_set_tip(tooltips, Tempo_da, 
-		"Click the buttons to the right to insert tempo changes", NULL);
-	gtk_tooltips_set_tip(tooltips, Copy_da, 
-		"Click the buttons to the right to copy a measure", NULL);
-	gtk_tooltips_set_tip(tooltips, Paste_da, 
-		"Click the buttons to the right to insert a previously copied measure", NULL);
+/* I don't think these tool tips do anything... tooltips don't show for a drawing area...
+	gtk_tooltips_set_tip(tooltips, Tempo_da, TEMPO_CHANGES_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, Copy_da, COPY_MEASURE_TIP, NULL);
+	gtk_tooltips_set_tip(tooltips, Paste_da, PASTE_MEASURES_TIP, NULL);
 	gtk_tooltips_set_tip(tooltips, Insert_da, 
 		"Click the buttons to the right to insert a new blank measure", NULL);
 	gtk_tooltips_set_tip(tooltips, Delete_da, 
 		"Click the buttons to the right to delete a measure", NULL);
+*/
 
 	gtk_widget_set_size_request(Tempo_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 	gtk_widget_set_size_request(Copy_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
@@ -4981,23 +4907,19 @@ int main(int argc, char *argv[])
 	gtk_widget_show(Delete_da);
 	gtk_widget_show(measure_transport_da);
 
-	song_name_label = gtk_label_new("Song:");
+	song_name_label = gtk_label_new(SONG_LABEL);
 	song_name_entry = gtk_entry_new();
 	widget_exclude_keypress(song_name_entry);
 	g_signal_connect (G_OBJECT (song_name_entry), "activate",
 		      G_CALLBACK (song_name_entered), (gpointer) song_name_entry);
-	arr_loop_check_button = gtk_check_button_new_with_label("Loop");
-	gtk_tooltips_set_tip(tooltips, arr_loop_check_button, 
-		"When checked, will cause playback to loop until 'Stop' is pressed.", NULL);
-	arr_factor_check_button = gtk_check_button_new_with_label("Factor drum tabs");
+	arr_loop_check_button = gtk_check_button_new_with_label(LOOP_LABEL);
+	gtk_tooltips_set_tip(tooltips, arr_loop_check_button, SONG_LOOP_TIP, NULL);
+	arr_factor_check_button = gtk_check_button_new_with_label(FACTOR_DRUM_TAB_LABEL);
 	gtk_tooltips_set_tip(tooltips, arr_factor_check_button,
-		"When checked, pasted ASCII drum tabs will be factored "
-		"to reduce duplicate patterns on a per-instrument basis, "
-		"rather than a per-measure basis.", NULL);
-	midi_setup_activate_button = gtk_button_new_with_label("MIDI Setup");
+		FACTOR_DRUM_TAB_TIP, NULL);
+	midi_setup_activate_button = gtk_button_new_with_label(MIDI_SETUP_LABEL);
 	gtk_tooltips_set_tip(tooltips, midi_setup_activate_button,
-		"Set the MIDI channel to transmit on, and send "
-		"MIDI patch change messages.", NULL);
+		MIDI_SETUP_TIP, NULL);
 	g_signal_connect(G_OBJECT (midi_setup_activate_button), "clicked",
 			G_CALLBACK (midi_setup_activate), NULL);
 #if 0
@@ -5041,14 +4963,12 @@ int main(int argc, char *argv[])
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(arranger_scroller), 
 		arranger_table);
 	gtk_box_pack_start(GTK_BOX(abox), a_button_box, FALSE, FALSE, 0);
-	play_button = gtk_button_new_with_label("Play");
-	gtk_tooltips_set_tip(tooltips, play_button, 
-		"Send this song to MIDI device for playback", NULL);
-	play_selection_button = gtk_button_new_with_label("Play Selection");
-	gtk_tooltips_set_tip(tooltips, play_selection_button, 
-		"Send selected measures to MIDI device for playback", NULL);
-	stop_button = gtk_button_new_with_label("Stop");
-	gtk_tooltips_set_tip(tooltips, stop_button, "Stop any MIDI playback in progress", NULL);
+	play_button = gtk_button_new_with_label(PLAY_LABEL);
+	gtk_tooltips_set_tip(tooltips, play_button, PLAY_SONG_TIP, NULL);
+	play_selection_button = gtk_button_new_with_label(PLAY_SELECTION_LABEL);
+	gtk_tooltips_set_tip(tooltips, play_selection_button, PLAY_SELECTION_TIP, NULL);
+	stop_button = gtk_button_new_with_label(STOP_LABEL);
+	gtk_tooltips_set_tip(tooltips, stop_button, PATTERN_STOP_TIP, NULL);
 #if 0
 	save_button = gtk_button_new_with_label("Save");
 	gtk_tooltips_set_tip(tooltips, save_button, "Save this song to a file", NULL);

@@ -21,7 +21,7 @@ version.h:	versionnumber.txt
 
 gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
 		version.h gneutronica.h midi_file.h fractions.o drumtab.o \
-		midi_reader.o
+		midi_reader.o lang.h
 	gcc ${DEBUG} -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
 		midi_reader.o midi_file.o fractions.o drumtab.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
 
