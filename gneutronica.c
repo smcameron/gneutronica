@@ -4349,7 +4349,7 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
 	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
-	strcpy(midi_input_device, "");
+	strcpy(midi_input_device, "/dev/null");
         while ((c = getopt(argc, argv, "mi:k:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(output_device, optarg); break;
@@ -4841,8 +4841,7 @@ int main(int argc, char *argv[])
 
 	gtk_box_pack_start(GTK_BOX(box2), pattern_loop_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), prevbutton, TRUE, TRUE, 0);
-	if (ifd >= 0)
-		gtk_box_pack_start(GTK_BOX(box2), pattern_record_button, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box2), pattern_record_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_play_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_stop_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_clear_button, TRUE, TRUE, 0);
