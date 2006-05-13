@@ -4747,8 +4747,6 @@ int main(int argc, char *argv[])
 
 	g_signal_connect(G_OBJECT (nextbutton), "clicked",
 			G_CALLBACK (nextbutton_clicked), NULL);
-	g_signal_connect(G_OBJECT (nextbutton), "clicked",
-			G_CALLBACK (nextbutton_clicked), NULL);
 	g_signal_connect(G_OBJECT (prevbutton), "clicked",
 			G_CALLBACK (prevbutton_clicked), NULL);
 	g_signal_connect(G_OBJECT (pattern_clear_button), "clicked",
