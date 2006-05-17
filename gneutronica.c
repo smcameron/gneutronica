@@ -1281,14 +1281,23 @@ gint transport_update_callback (gpointer data)
 		    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(pattern_loop_chbox))) {
 			/* play it again Sam... */
 			pattern_play_button_clicked(NULL, NULL);
+			printf("Playing again...\n");
+		} else {
+			/* Turn off record mode, in case it's on. */
+			record_mode = 0;
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pattern_record_button),
+				(gboolean) 0);
 		}
 		return FALSE;
 	}
 
 	if (lastpercent != transport_location->percent || 
-		lastmeasure != transport_location->measure)
-		gtk_widget_queue_draw(measure_transport_da);
-	else
+		lastmeasure != transport_location->measure) {
+			struct instrument_struct *inst;
+			gtk_widget_queue_draw(measure_transport_da);
+			inst = &drumkit[kit].instrument[current_instrument];
+			gtk_widget_queue_draw(inst->canvas);
+	} else
 		return TRUE;
 
 	lastmeasure = transport_location->measure;
@@ -1490,6 +1499,8 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		if (autocrunch_is_on)
 			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
+		gdk_draw_line(w->window, gc, DRAW_WIDTH * transport_location->percent / 100,
+			0, DRAW_WIDTH * transport_location->percent / 100, height-1); 
 	} else if (!autocrunch_is_on || abs(current_instrument - instrument->instrument_num) < 9) {
 		height = DRAW_HEIGHT+1;
 		if (autocrunch_is_on)
@@ -1503,8 +1514,8 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		if (height < 1) height = 1;
 		gtk_widget_set_size_request(instrument->canvas, DRAW_WIDTH+1, height);
 	}
-	gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &whitecolor, FALSE, FALSE);
-	gdk_gc_set_background(gc, &whitecolor);
+	// gdk_colormap_alloc_color(gtk_widget_get_colormap(w), &whitecolor, FALSE, FALSE);
+	// gdk_gc_set_background(gc, &whitecolor);
 	
 /*	gdk_draw_line(w->window, gc, 0,height / 2, DRAW_WIDTH, height / 2);
 	gdk_draw_line(w->window, gc, 0,0, DRAW_WIDTH, height);
@@ -1611,7 +1622,7 @@ static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	if (autocrunch_is_on && abs(current_instrument - instrument->instrument_num) <= 4) 
 		return 0;
 
-	if (!autocrunch_is_on && automag_is_on) {
+	if (!autocrunch_is_on && automag_is_on || record_mode) {
 		old_inst = current_instrument; 
 		current_instrument =  instrument->instrument_num;
 		inst = &drumkit[kit].instrument[old_inst];
@@ -1664,6 +1675,9 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 {
 	printf("Pattern stop button.\n");
 	kill(player_process_pid, SIGUSR1);
+	record_mode = 0;
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pattern_record_button),
+					(gboolean) 0);
 	if (measure_transport_tag != -1 && measure_transport_tag != 0) {
 		g_source_remove(measure_transport_tag);
 		measure_transport_tag = -1;
@@ -1672,7 +1686,7 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 
 void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct timeval *base)
 {
-	struct timeval basetime;
+	struct timeval basetime, orig_basetime;
 	unsigned long measurelength;
 	unsigned long beats_per_minute, beats_per_measure;
 	struct hitpattern *this;
@@ -1718,7 +1732,27 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 			measure, pct, drag);
 	}
 	/* This no-op is just so the next measure doesn't before this one is really over. */
+	orig_basetime = basetime;
 	rc = sched_noop(&sched, &basetime, 0, measurelength, 1.0, 1000000, 127, measure, 100); 
+
+	if (record_mode) {
+		struct timeval tmpbase;
+		int metronome = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(pattern_metronome_chbox));
+		int timediv0, timediv1, note, volume;
+		if (pattern[cpattern]->timediv[0].division == 0)
+			timediv0 = -1;
+		else
+			timediv0 = 100 / pattern[cpattern]->timediv[0].division;
+		for (i=0;i<100;i++) {
+			tmpbase = orig_basetime;
+			if (metronome && timediv0 > 0 && ((i % timediv0) == 0))
+				sched_note(&sched, &tmpbase, 24, measurelength, (double) i / 100.0, 
+					1000000, 127, measure, i, 0); 
+			else
+				sched_noop(&sched, &tmpbase, 0, measurelength, (double) i / 100.0, 
+					1000000, 127, measure, i); 
+		}
+	}
 	if (base != NULL)
 		*base = basetime;
 }
@@ -1947,7 +1981,7 @@ void arranger_play_button_clicked(GtkWidget *widget,
 	/* print_schedule(&sched); */
 	send_schedule(&sched, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(arr_loop_check_button)));
 	free_schedule(&sched);
-	measure_transport_tag = g_timeout_add(100, /* 10x per sec? */
+	measure_transport_tag = g_timeout_add(record_mode ? 10 : 100, /* 10x per sec? */
 			transport_update_callback, NULL);
 }
 
@@ -1985,22 +2019,39 @@ void pattern_paste_button_clicked(GtkWidget *widget,
 	return;
 }
 
-void pattern_record_button_clicked(GtkWidget *widget,
-	gpointer data)
-{
-	printf("Record pattern button clicked\n");
-}
-
-void pattern_play_button_clicked(GtkWidget *widget,
-	gpointer data)
+void do_play()
 {
 	flatten_pattern(kit, cpattern);
 	schedule_pattern(kit, 0, cpattern, -1, NULL);
 	send_schedule(&sched, 0);
 	free_schedule(&sched);
 	pattern_play_mode = 1;
-	measure_transport_tag = g_timeout_add(100, /* 10x per sec? */
+	measure_transport_tag = g_timeout_add(record_mode ? 10 : 100, /* 10x per sec? */
 			transport_update_callback, NULL);
+}
+
+void pattern_play_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	do_play();
+#if 0
+	flatten_pattern(kit, cpattern);
+	schedule_pattern(kit, 0, cpattern, -1, NULL);
+	send_schedule(&sched, 0);
+	free_schedule(&sched);
+	pattern_play_mode = 1;
+	measure_transport_tag = g_timeout_add(record_mode ? 10 : 100, /* 10x per sec? */
+			transport_update_callback, NULL); */
+#endif
+}
+
+void pattern_record_button_clicked(GtkWidget *widget,
+	gpointer data)
+{
+	record_mode = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (pattern_record_button));
+	printf("Record pattern button clicked, record_mode = %d\n", record_mode);
+	if (record_mode)
+		do_play();
 }
 
 void set_arranger_window_title()
@@ -3878,6 +3929,9 @@ void receive_midi_data(int signal)
 	/* from a midi input device, eg. Akai MPD16, or some such. */
 	struct shared_info_struct *s = (struct shared_info_struct *) transport_location;
 	unsigned char data[3];
+	double thetime;
+	struct instrument_struct *inst;
+	int rc, i;
 
 	printf("Received MIDI data:");
 
@@ -3889,8 +3943,26 @@ void receive_midi_data(int signal)
 		data[0], data[1], data[2]);
 	fflush(stdout);
 	/* release semaphore */
-	if (data[0] == 0x90)
+	if (data[0] == 0x90) {
 		note_on(midi_fd, data[1], data[2]);
+		if (record_mode) {
+			/* There is quite likely a much better way to do this time calc... */ 
+			thetime = ((double) transport_location->percent);
+			printf("percent = %d, thetime = %g\n", transport_location->percent, thetime);
+
+			/* Find the instrument with this midi note. */
+			for (i=0;i<drumkit[kit].ninsts; i++) {
+				inst = &drumkit[kit].instrument[i];
+				if (inst->midivalue == data[1]) {
+					rc = add_hit(&inst->hit, (double) thetime, (double) 100.0, 
+						kit, inst->instrument_num, cpattern, data[2], 1);
+					
+					gtk_widget_queue_draw(inst->canvas);
+					break;
+				}
+			}
+		}
+	}
 	/* process data */
 	return;
 }
@@ -4311,7 +4383,6 @@ int main(int argc, char *argv[])
 	GtkWidget *a_button_box;
 	/* GtkWidget *save_button;
 	GtkWidget *load_button; */
-	GtkWidget *pattern_record_button;
 	GtkWidget *pattern_play_button;
 	GtkWidget *pattern_stop_button;
 	GtkWidget *pattern_clear_button;
@@ -4738,13 +4809,14 @@ int main(int argc, char *argv[])
 		REMOVE_SPACE_AFTER_TIP, NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_after_button, FALSE, FALSE, 0);
 
+	pattern_metronome_chbox = gtk_check_button_new_with_label(METRONOME_LABEL);
 	pattern_loop_chbox = gtk_check_button_new_with_label(LOOP_LABEL);
 	prevbutton = gtk_button_new_with_label(EDIT_PREV_PATTERN_LABEL);
 	nextbutton = gtk_button_new_with_label(CREATE_NEXT_PATTERN_LABEL);
 	pattern_clear_button = gtk_button_new_with_label(CLEAR_PATTERN_LABEL);
 	pattern_select_button = gtk_button_new_with_label(SELECT_PATTERN_LABEL);
 	pattern_paste_button = gtk_button_new_with_label(PASTE_PATTERN_LABEL);
-	pattern_record_button = gtk_button_new_with_label(RECORD_LABEL);
+	pattern_record_button = gtk_toggle_button_new_with_label(RECORD_LABEL);
 	pattern_play_button = gtk_button_new_with_label(PLAY_LABEL);
 	pattern_stop_button = gtk_button_new_with_label(STOP_LABEL);
 
@@ -4765,6 +4837,7 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (pattern_stop_button), "clicked",
 			G_CALLBACK (pattern_stop_button_clicked), NULL);
 
+	gtk_tooltips_set_tip(tooltips, pattern_metronome_chbox, PATTERN_METRONOME_TIP, NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_loop_chbox, PATTERN_LOOP_TIP, NULL);
 	gtk_tooltips_set_tip(tooltips, nextbutton, CREATE_NEXT_PATTERN_TIP, NULL);
 	gtk_tooltips_set_tip(tooltips, prevbutton, EDIT_PREV_PATTERN_TIP, NULL);
@@ -4775,6 +4848,7 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, pattern_play_button, PATTERN_PLAY_TIP, NULL);
 	gtk_tooltips_set_tip(tooltips, pattern_stop_button, PATTERN_STOP_TIP, NULL);
 
+	gtk_box_pack_start(GTK_BOX(box2), pattern_metronome_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_loop_chbox, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), prevbutton, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box2), pattern_record_button, TRUE, TRUE, 0);

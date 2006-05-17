@@ -103,8 +103,8 @@ int wait_for(struct timeval *tm)
 		if (diff <= TIMING_PRECISION) {
 			/* printf("returning within %lld usecs of request\n", diff); */
 			/* printf("."); fflush(stdout); */
-			if (diff < -MAX_ALLOWABLE_TARDINESS )
-				printf("Tardy: %lld usecs\n", -diff);
+			/* if (diff < -MAX_ALLOWABLE_TARDINESS )
+				printf("Tardy: %lld usecs\n", -diff); */
 			return 0;
 		}
 	}

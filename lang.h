@@ -217,6 +217,9 @@
 #define PASTE_DRUM_TAB_LABEL "Paste ASCII drum tablature"
 #define REMAP_DRUM_KIT_MENU_LABEL "_Remap drum kit for whole song via GM"
 
+#define METRONOME_LABEL "Metronome"
+#define PATTERN_METRONOME_TIP "Provide metronome sound when recording."
+
 
 #ifdef GNEUTRONICA_FRENCH
 /*
@@ -573,6 +576,9 @@
 #define PASTE_DRUM_TAB_LABEL "Coller le tablature de tambour d'ASCII"
 #undef REMAP_DRUM_KIT_MENU_LABEL
 #define REMAP_DRUM_KIT_MENU_LABEL "Remap le kit de tambour pour la chanson entière par l'intermédiaire du GM"
+
+#undef METRONOME_LABEL
+#define METRONOME_LABEL "Metronome"
 
 #endif /* GNEUTRONICA_FRENCH */
 

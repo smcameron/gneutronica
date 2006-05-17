@@ -25,7 +25,7 @@
 #define NOTE_OFF 2
 #define NO_OP 3
 #define SEC 1000000
-#define MAXEVENTS 100000
+#define MAXEVENTS 1000000
 #define TIMING_PRECISION 10 /* microseconds */
 
 struct event_details {
