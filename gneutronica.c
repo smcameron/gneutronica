@@ -542,6 +542,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	gtk_tooltips_set_tip(tooltips, p->del_button, 
 		DELETE_PATTERN_TIP, NULL);
 	p->arr_darea = gtk_drawing_area_new();
+	gtk_widget_modify_bg(p->arr_darea, GTK_STATE_NORMAL, &whitecolor);
 	gtk_tooltips_set_tip(tooltips, p->arr_darea, ASSIGN_P_TO_M_TIP, NULL);
 	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
 			G_CALLBACK (arr_darea_event), p);
@@ -2125,6 +2126,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	p->del_button = gtk_button_new_with_label("Del");
 	gtk_tooltips_set_tip(tooltips, p->del_button, DELETE_PATTERN_TIP, NULL);
 	p->arr_darea = gtk_drawing_area_new();
+	gtk_widget_modify_bg(p->arr_darea, GTK_STATE_NORMAL, &whitecolor);
 	gtk_tooltips_set_tip(tooltips, p->arr_darea, ASSIGN_P_TO_M_TIP, NULL);
 	g_signal_connect(G_OBJECT (p->arr_darea), "expose_event",
 			G_CALLBACK (arr_darea_event), p);
@@ -4634,6 +4636,7 @@ int main(int argc, char *argv[])
 			VOLUME_SLIDER_TIP, NULL);
 
 		inst->canvas = gtk_drawing_area_new();
+		gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &whitecolor);
 		g_signal_connect(G_OBJECT (inst->button), "clicked", 
 				G_CALLBACK (instrument_button_pressed), inst);
 		g_signal_connect(G_OBJECT (inst->canvas), "expose_event",
@@ -4841,6 +4844,7 @@ int main(int argc, char *argv[])
 	Delete_da = gtk_drawing_area_new();
 	measure_transport_da = gtk_drawing_area_new();
 
+	gtk_widget_modify_bg(measure_transport_da, GTK_STATE_NORMAL, &whitecolor);
 	gtk_widget_add_events(Tempo_da, GDK_BUTTON_PRESS_MASK); 
 	gtk_widget_add_events(Copy_da, GDK_BUTTON_PRESS_MASK); 
 	gtk_widget_add_events(Paste_da, GDK_BUTTON_PRESS_MASK); 
