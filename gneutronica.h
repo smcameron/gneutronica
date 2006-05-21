@@ -278,6 +278,7 @@ GLOBAL int INIT(instrument_in_copy_buffer, -1);
 
 GLOBAL int INIT(start_copy_measure,-1);
 GLOBAL int INIT(end_copy_measure, -1);
+GLOBAL int INIT(start_paint_measure,-1);
 
 /* Widgets for the top part of the arranger table */
 	/* Labels for the "buttons," below */

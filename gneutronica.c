@@ -800,11 +800,41 @@ void timediv_spin_change(GtkSpinButton *spinbutton, struct division_struct *data
 		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 }
 
+static void mark_selection_endpoint(int m, int end)
+{
+	int s, e;
+
+	s = start_copy_measure;
+	e = end_copy_measure;
+	if (!end) {
+		start_copy_measure = m;
+		if (m > end_copy_measure || end_copy_measure == -1)
+			end_copy_measure = m;
+	} else {
+		end_copy_measure = m;
+		if (start_copy_measure == -1)
+			start_copy_measure = m;
+		if (end_copy_measure < start_copy_measure) {
+			int tmp = end_copy_measure;
+			end_copy_measure = start_copy_measure;
+			start_copy_measure = tmp;
+		}
+	}
+	if (s != start_copy_measure || e != end_copy_measure)
+		redraw_arranger();
+}
+
 static int arr_darea_button_press(GtkWidget *w, GdkEventButton *event, 
 		struct pattern_struct *data)
 {
-	int m, i;
+	int m, s, e;
+
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
+
+	if (event->button == 1)
+		start_paint_measure = m;
+	else if (event->button == 3)
+		mark_selection_endpoint(m, 0);
 }
 
 void redraw_measure_op_buttons()
@@ -1147,41 +1177,58 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 {
 	struct measure_struct *m;
 	int mn, i;
+	int begin_measure, end_measure;
 	mn = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
 	if (mn > nmeasures || mn == MAXMEASURES)
 		return TRUE;
 
+	begin_measure = start_paint_measure;
 	if (mn == nmeasures) /* creating a new measure? */
 		measure[mn].npatterns = 0;
-	/* printf("selected measure m = %d\n", m); */
+	if (begin_measure == -1)
+		begin_measure = mn;
+
 	if (event->button == 1) {
-		m = &measure[mn];
-		int j, found;
-		int p = data->pattern_num; 
-		/* See if this pattern is already selected, if so, unselect it. */
-		found = 0;
-		for (i=0;i<m->npatterns;i++) {
-			if (m->pattern[i] == p) {
-				for (j=i;j<m->npatterns-1;j++)
-					m->pattern[j] = m->pattern[j+1];
-				m->npatterns--;
-				found = 1;
+		if (mn < begin_measure) {
+			int tmp = mn;
+			mn = begin_measure;
+			begin_measure = mn;
+		}
+		end_measure = mn;
+		printf("end_measure = %d\n", mn);
+		for (mn = begin_measure; mn <= end_measure; mn++) {
+			/* printf("selected measure m = %d\n", m); */
+			m = &measure[mn];
+			int j, found;
+			int p = data->pattern_num;
+			/* See if this pattern is already selected, if so, unselect it. */
+			found = 0;
+			for (i=0;i<m->npatterns;i++) {
+				if (m->pattern[i] == p) {
+					for (j=i;j<m->npatterns-1;j++)
+						m->pattern[j] = m->pattern[j+1];
+					m->npatterns--;
+					found = 1;
+				}
+			}
+
+			/* If not found and removed, then add it, if room */
+			if (!found && m->npatterns < MAXPATSPERMEASURE) {
+				m->pattern[m->npatterns] = p;
+				m->npatterns++;
+			}
+
+			gtk_widget_queue_draw(w);
+			if (mn+1 > nmeasures) {
+				nmeasures++;
+				redraw_arranger();
 			}
 		}
-
-		/* If not found and removed, then add it, if room */
-		if (!found && m->npatterns < MAXPATSPERMEASURE) {
-			m->pattern[m->npatterns] = p;
-			m->npatterns++;
-		}
-
-		gtk_widget_queue_draw(w);
-		if (mn+1 > nmeasures) {
-			nmeasures++;
-			redraw_arranger();
-		}
+		start_paint_measure = -1; /* ready for next painting operation  */
 	} else if (event->button == 2)
 		paste_drumtab_selection();
+	else if (event->button == 3)
+		mark_selection_endpoint(mn, 1);
 	return TRUE;
 }
 
