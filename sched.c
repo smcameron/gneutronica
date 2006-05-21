@@ -31,7 +31,6 @@
 #include "midi_file.h"
 
 #define SEC 1000000
-#define MAXEVENTS 100000
 #define TIMING_PRECISION 10 /* microseconds */
 #define MAX_ALLOWABLE_TARDINESS 200 /* microseconds */ 
 
