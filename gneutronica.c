@@ -1721,7 +1721,8 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	printf("Pattern stop button.\n");
-	kill(player_process_pid, SIGUSR1);
+	if (player_process_pid != -1)
+		kill(player_process_pid, SIGUSR1);
 	record_mode = 0;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pattern_record_button),
 					(gboolean) 0);
@@ -2559,6 +2560,7 @@ void prevbutton_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	int i;
+	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern <= 0) {
 		g_print("No previous pattern.\n");
 		return;
@@ -2582,6 +2584,7 @@ void nextbutton_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	int i;
+	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern >= MAXPATTERNS-1) {
 		g_print("No room for more patterns\n");
 		return;
