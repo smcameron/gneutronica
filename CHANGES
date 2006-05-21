@@ -117,3 +117,17 @@ gneutronica 0.30
 	* You can now import ASCII drum tablature either from a file or
 	  by cutting and pasting with the mouse.
 
+gneutronica 0.31
+
+	* Minor changes to drum tab reading code
+	* Allow looping of playback of patterns
+	* Added a "recording mode" which records from MIDI input device
+          (e.g. Akai MPD16 drumpad through Midiman MIDI to USB converter
+	  is the only device I've tried)
+	* Add French translations (very bad machine-made translations, but the
+	  code to handle different languages is sort of there now.)
+	* change some widgets background color to white.
+	* Now you can activate/deactivate or select multiple measures in
+	  the arranger window by clicking and dragging with the first or
+	  third mouse button in the pattern area.
+
