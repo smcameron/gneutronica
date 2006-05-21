@@ -4,13 +4,18 @@ BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share/${PROGRAM}
 DEBUG=-g
 
+GNEUTRONICA_LANGUAGE=
+# GNEUTRONICA_LANGUAGE=-DGNEUTRONICA_FRENCH
+
+CFLAGS=${DEBUG} ${GNEUTRONICA_LANGUAGE}
+
 all:	gneutronica documentation/gneutronica.1
 
 drumtab.o:	drumtab.c drumtab.h dt_known_insts.h
-	gcc ${DEBUG} -c drumtab.c
+	gcc ${CFLAGS} -c drumtab.c
 
 fractions.o:	fractions.c fractions.h
-	gcc ${DEBUG} -c fractions.c
+	gcc ${CFLAGS} -c fractions.c
 
 documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.txt
 	chmod +x ./make_manpage
@@ -22,7 +27,7 @@ version.h:	versionnumber.txt
 gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
 		version.h gneutronica.h midi_file.h fractions.o drumtab.o \
 		midi_reader.o lang.h
-	gcc ${DEBUG} -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
+	gcc ${CFLAGS} -o gneutronica -I/usr/include/libgnomecanvas-2.0 old_fileformats.o sched.o \
 		midi_reader.o midi_file.o fractions.o drumtab.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
 
 midi_reader.o:	midi_reader.c midi_reader.h
@@ -32,7 +37,7 @@ sched.o:	sched.c sched.h	midi_file.h
 midi_file.o:	midi_file.c midi_file.h
 
 old_fileformats.o:	old_fileformats.c old_fileformats.h gneutronica.h
-		gcc ${DEBUG} -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
+		gcc ${CFLAGS} -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
 
 install:	gneutronica
 	echo "Installing ${BINDIR}/${PROGRAM} and ${SHAREDIR}/drumkits"
