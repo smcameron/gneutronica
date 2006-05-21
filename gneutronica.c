@@ -2817,8 +2817,10 @@ void destroy_event(GtkWidget *widget,
 
 	printf("\n\n\n\n\n\n      Gneutronica quits... your File is saved in /tmp/zzz.gdt\n\n\n\n\n\n");
 	save_to_file("/tmp/zzz.gdt");
-	kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
-	kill(midi_reader_process_id, SIGTERM);
+	if (player_process_pid != -1)
+		kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
+	if (midi_reader_process_id != -1)
+		kill(midi_reader_process_id, SIGTERM);
 	gtk_main_quit();
 }
 
