@@ -5,7 +5,7 @@
 <p align=center><a href="http://sourceforge.net/projects/gneutronica/">Download Source Code</a>.
 <p align=center><img src="gneutronica_robot.png">
 <p align=center><a href="http://sourceforge.net"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=143063&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" /></a>
-<p align=center><font size=-1>Last Updated Apr 29, 2005,2006, by Stephen Cameron</font>
+<p align=center><font size=-1>Last Updated May 21, 2006, by Stephen Cameron</font>
 <hr>
 <h1>Introduction</h1>
 <p>Gneutronica is a simple MIDI drum machine program modeled to a large extent
@@ -41,9 +41,28 @@ are what led me to create Gneutronica.
 cc    -c -o sched.o sched.c
 gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 sched.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
 [scameron@zuul gneutronica]$
-</pre><p>And running it . . .  (eh, I left some debugging output in there still.)
+</pre>
+<p>
+<p>If you want Gneutronica to be built with for the French language,
+edit the make file and uncomment the GNEUTRONICA_LANGUAGE= line
+for French. (The translations aren't very good, they are done 
+by machine.)
+
+<p>Change:
 <pre>
-[scameron@zuul gneutronica]$ ./gneutronica -d /dev/snd/midi1 -k generic.dk
+GNEUTRONICA_LANGUAGE=
+# GNEUTRONICA_LANGUAGE=-DGNEUTRONICA_FRENCH
+</pre>
+to
+<pre>
+# GNEUTRONICA_LANGUAGE=
+GNEUTRONICA_LANGUAGE=-DGNEUTRONICA_FRENCH
+</pre>
+for French language support.
+ 
+<p>And running it . . .  
+<pre>
+[scameron@zuul gneutronica]$ ./gneutronica -d /dev/snd/midiC1D0 -i /dev/snd/midiC2D0 -k generic.dk
 pid = 0
 
 Player waiting for requests
@@ -265,7 +284,9 @@ the whole song, lowercase x for just this pattern.)
 <p>The idea is you have all your patterns lined up in a column on the left, and 
 a grid representing what measures are played in what sequence on the right.
 Each column in the grid represents one measure, and you click in the square
-next to each pattern which is to be played in any given measure.
+next to each pattern which is to be played in any given measure.  You can
+toggle multiple measures by clicking and dragging across several measures
+with the left mouse button.
 <p>Notice that you can have more than one pattern playing
 in a given measure.  For example if I wanted to add a ride cymbal
 to a sequence of patterns in the 2nd half of the song, I could make a pattern
@@ -292,7 +313,9 @@ can also be deleted if you change your mind, by using the same buttons.
 if any are already selected.  Additionally, clicking on the buttons to the
 right of the "Select" button will select individual measures.  Or, if you
 click on one of those buttons, then drag to another button before releasing,
-you can select multiple measures.
+you can select multiple measures.  You can also use the right mouse button
+and click and drag in the measures boxes (beside the pattern name buttons)
+to select multiple measures.
 <p>The "<b>Delete measures</b>" button will delete selected measures.  Or, selecting the
 individual buttons to the right of the "Delete" button will delete 
 single measures.
@@ -602,14 +625,27 @@ virtual midi device corresponding to client 80. (/dev/snd/midiC2D0)
 Now, gneutronica should be driving the softsynth, just use it as
 you normally would.
 </ol>
+<h2>Using Gneutronica with MIDI input devices</h2>
+Invoke gneutronica with the '-i' option, specifying the device
+file for your MIDI input device.  I have tried this with an Akai
+MPD16 drumpad through an M-Audio Midisport 2x2 USB to MIDI converter.
+(Though the Akai has a USB port, it does not appear to work with
+linux just yet.  I have had some progress in making the driver
+work with the Akai's USB port, but not total success yet, so for
+now, the Midisport is required for the Akai.  Other devices obviouly
+may work better.)
 
+<p>Use the Metronome and Loop check boxes in the Pattern window in
+conjunction with the record button to tap in patterns with your
+MIDI input device.  The first set of time division lines also controls
+the Metronome.  (Note:  If the '-i' option is not used to specify an
+input device, the "Record" button will not be present.)
 
 <p><b>Some things Gneutronica doesn't do</b>
 
 <ul>
 <li>Interconnect with Jack.  (I don't really know if it even makes sense for a MIDI app.)
-<li>Import MIDI files.  Reading MIDI input from a keyboard or 
-drumpads seems extremely unlikely to ever occur, however.
+<li>Import MIDI files.  
 <li>... probably some other stuff.
 </ul>
 

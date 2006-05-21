@@ -2,7 +2,7 @@
 .SH NAME
 PROGRAMNAME \- a MIDI drum machine application 
 .SH SYNOPSIS
-.B PROGRAMNAME [ -d device ] [ -k drumkit ] [ -m ]
+.B PROGRAMNAME [ -d outputdevice ] [ -i inputdevice ] [ -k drumkit ] [ -m ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .PP
@@ -13,8 +13,15 @@ for tempo changes at measure boundaries, specification of arbitrary
 measure length (in beats) and allows for arbitrary placement of notes,
 .TP
 \fB\-d device\fR
-Specify the device file to which MIDI commands are sent.  
-The default is /dev/snd/midi1
+Specify the device file to which MIDI commands are sent. (e.g.
+a percussion sound module, or a softsynth.)
+The default is /dev/snd/midi1.
+.TP
+\fB\-i inputdevice\fR
+Specify the device file from which MIDI commands are read.
+(e.g. a MIDI input device of some sort, a keyboard or
+drum pad, for instance.)  Probably something like 
+/dev/snd/MIDIC?D0
 .TP
 \fB\-k drumkit\fR
 Specify a drumkit file.  There are a number of drumkit files included
