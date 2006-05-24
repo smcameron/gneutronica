@@ -12,6 +12,7 @@ Known bugs:
 	`accel_path[0] == '<' && strchr (accel_path, '/')' failed
   Started happenning when I put in the pull down menu code.  If you know
   how to fix it, let me know.  <smcameron@users.sourceforge.net>
+  I think this is fixed now (in 0.30, or maybe it was 0.31)
 
 * It appears that "rushing" (using negative drag) on an instrument
   does not actually work.
@@ -35,4 +36,8 @@ Known bugs:
 * finer control than integer amounts of Beats Per Minute is needed.  The
   difference between 1 BPM and 2 BPM is huge, but there is no way to have
   1.5 BPM.
+
+* When you remap a song to a different drumkit via GM mappings, 
+  all the pattern names get screwed.  I have a suspicion there 
+  may be some other, more subtle anomalies in there as well.
 
