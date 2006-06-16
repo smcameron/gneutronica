@@ -64,6 +64,7 @@
 #include "midioutput_alsa.h"
 struct midi_method *midi = &midi_method_raw;
 struct midi_handle *midi_handle = NULL;
+#define MIDI_CHANNEL (drumkit[kit].midi_channel & 0x0f)
 
 #include "version.h"
 
@@ -1270,8 +1271,8 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	if (event->button == 1 || event->button == 2) {
 		rc = add_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH, 
 			kit, data->instrument_num, cpattern, velocity, change_velocity);
-		if (midi_fd >= 0)
-			access_device->note_on(midi_fd, data->midivalue, velocity);
+		if (midi->isopen(midi_handle))
+			midi->noteon(midi_handle, MIDI_CHANNEL, data->midivalue, velocity);
 		if (rc == -2) /* Note was already there, so we really want to remove it. */
 			remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
 				kit, data->instrument_num, cpattern);
@@ -2857,8 +2858,8 @@ void instrument_button_pressed(GtkWidget *widget,
 		int prev = current_instrument;
 		printf("%s\n", data->name);
 		/* should be changed to *schedule* a noteon + noteoff */
-		if (midi_fd >= 0)
-			access_device->note_on(midi_fd, data->midivalue, velocity);
+		if (midi->isopen(midi_handle))
+			midi->noteon(midi_handle, MIDI_CHANNEL, data->midivalue, velocity);
 		current_instrument = data->instrument_num;
 		gtk_widget_queue_draw(drumkit[kit].instrument[prev].canvas);
 		gtk_widget_queue_draw(data->canvas);
@@ -3871,68 +3872,11 @@ int save_to_file(char *filename)
 	return 0;
 }
 
-void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch)
-{
-	/* sends a MIDI bank change and patch change message to a MIDI device */
-	unsigned short b;
-	char bank_ch[3];
-	char patch_ch[2];
-
-	printf("Changing MIDI device to bank %d, patch %d\n", bank, patch);
-
-	bank_ch[0] = 0xb0 | (0x0f & drumkit[kit].midi_channel);
-	b = htons(bank); /* put it in big endian order */
-	memcpy(&bank_ch[1], &b, sizeof(b)); 
-
-	patch_ch[0] = 0xc0 | (0x0f & drumkit[kit].midi_channel);
-	patch_ch[1] = patch;
-
-	write(fd, bank_ch, 3);
-	write(fd, patch_ch, 2);
-
-	return;
-}
-
-void int_note_on(int fd, unsigned char value, unsigned char volume)
-{
-	printf("Internal note_on access method not yet implemented.\n");
-}
-
-void int_note_off(int fd, unsigned char value, unsigned char volume)
-{
-	printf("Internal note_off access method not yet implemented.\n");
-}
-
-void int_send_midi_patch_change(int fd, unsigned short bank, unsigned char patch)
-{
-	printf("Internal send_midi_patch_change  access method not yet implemented.\n");
-}
-
-void note_on(int fd, unsigned char value, unsigned char volume)
-{
-	unsigned char data[3];
-	/* printf("NOTE ON, value=%d, volume=%d\n", value, volume); */
-	data[0] = 0x90 | (drumkit[kit].midi_channel & 0x0f);
-	data[1] = value;
-	data[2] = volume; 
-	write(fd, data, 3); /* This needs to be atomic */
-}
-
-void note_off(int fd, unsigned char value, unsigned char volume)
-{
-	unsigned char data[3];
-	/* printf("NOTE OFF, value=%d, volume=%d\n", value, volume); */
-	data[0] = 0x80 | (drumkit[kit].midi_channel & 0x0f);
-	data[1] = value;
-	data[2] = volume; 
-	write(fd, data, 3); /* This needs to be atomic */
-}
-
-void silence(int fd)
+void silence(struct midi_handle *mh)
 {
 	int i;
 	for (i=0;i<127;i++)
-		access_device->note_off(fd, i, 0);
+		midi->noteoff(mh, 0, i);
 }
 
 void init_measures()
@@ -4002,7 +3946,7 @@ void receive_midi_data(int signal)
 	fflush(stdout);
 	/* release semaphore */
 	if (data[0] == 0x90) {
-		note_on(midi_fd, data[1], data[2]);
+		midi->noteon(midi_handle, MIDI_CHANNEL, data[1], data[2]);
 		if (record_mode) {
 			/* There is quite likely a much better way to do this time calc... */ 
 			thetime = ((double) transport_location->percent);
@@ -4064,7 +4008,7 @@ void player_process_requests(int fd)
 	sigemptyset(&action.sa_mask);
 	sigaction(SIGUSR1, &action, NULL);
 
-	silence(midi_fd);
+	silence(midi_handle);
 
 	if (rc) {
 		free_schedule(&sched);	/* does nothing first time through, but after longjmp . . . */
@@ -4121,7 +4065,7 @@ void player_process_requests(int fd)
 				break;
 				}
 			case PLAYER_QUIT:
-				silence(midi_fd);
+				silence(midi_handle);
 				transport_location->measure = -1;
 				exit(0);
 			case PERFORM_PATCH_CHANGE: {
@@ -4130,7 +4074,7 @@ void player_process_requests(int fd)
 				read(fd, &bank, sizeof(bank));
 				read(fd, &patch, sizeof(patch));
 				printf("Player: Changing to bank %d, patch %d\n", bank, patch);
-				access_device->send_midi_patch_change(midi_fd, bank, patch);
+				midi->patch_change(midi_handle, MIDI_CHANNEL, bank, patch);
 				break;
 			}
 			default:
@@ -4488,39 +4432,10 @@ int main(int argc, char *argv[])
 		case 'm': maximize_windows = 0; break;
                 }
         }
-	fd = open(output_device, O_RDWR);
-	if (fd >= 0) {
-		unsigned char bankchange[] = { 0xb0, 0x00, 0x00 };
-		unsigned char patchchange[] = { 0xc0, 117};
-		struct stat statbuf;
 
-		/* Check to see that it's a device file at least... */
-		rc = fstat(fd, &statbuf);
-		if (rc < 0) {
-			printf("Can't stat MIDI device file %s, %s\n",
-				output_device, strerror(errno));
-			close(fd);
-		} else if (!S_ISCHR(statbuf.st_mode)) {
-			printf("%s is not a character special device file\n",
-				output_device);
-			close(fd);
-		} else
-			midi_fd = fd;
-
-		/* do some ioctl or something here to determine how to access 
-		   the device, then set access_device pointer to the correct
-		   set of access methods for the device type, like:
-
-		   if (device type is internal)
-			access_device = &access_method[INTERNAL_DEVICE];
-
-		   If you get this working with soundfonts on soundcard
-		   midi devices, send me a patch. <smcameron@users.sourceforge.net>
-
-		 */
-	} else {
-		printf("Can't open MIDI device file %s, oh well, NO SOUND FOR YOU!!!\n", output_device);
-		close(fd);
+	midi_handle = midi->open(output_device);
+	if (midi_handle == NULL) {
+		printf("Can't open MIDI device file %s\n", output_device);
 	}
 	
 	player_process_pid = fork_player_process(output_device, &player_process_fd);

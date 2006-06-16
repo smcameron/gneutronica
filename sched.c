@@ -29,6 +29,7 @@
 
 #include "sched.h"
 #include "midi_file.h"
+#include "midioutput.h"
 
 #define SEC 1000000
 #define TIMING_PRECISION 10 /* microseconds */
@@ -44,9 +45,8 @@ static int *pmeasure = &dummy_measure;
 static int *ppercent = &dummy_percent;
 
 
-extern int midi_fd;
-extern void note_on(int fd, unsigned char value, unsigned char volume);
-extern void note_off(int fd, unsigned char value, unsigned char volume);
+extern struct midi_method *midi;
+extern struct midi_handle *midi_handle;
 
 int rtime_to_atime(struct timeval *basetime, 
 		struct timeval *rtime,
@@ -121,17 +121,17 @@ void do_event(struct event *e)
 		e->rtime.tv_sec, e->rtime.tv_usec,
 		e->e.eventtype, e->e.note, e->e.velocity); */
 
-	if (midi_fd < 0)
+	if (midi->isopen(midi_handle) < 0)
 		return;
 
 	switch (e->e.eventtype) {
 	case NOTE_ON: 
 		set_transport_location(e->e.measure, e->e.percent);
-		note_on(midi_fd, e->e.note, e->e.velocity);
+		midi->noteon(midi_handle, 0, e->e.note, e->e.velocity);
 		break;
 	case NOTE_OFF: 
 		set_transport_location(e->e.measure, e->e.percent);
-		note_off(midi_fd, e->e.note, e->e.velocity);
+		midi->noteoff(midi_handle, 0, e->e.note);
 		break;
 	case NO_OP:
 		set_transport_location(e->e.measure, e->e.percent);

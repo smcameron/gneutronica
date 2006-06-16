@@ -154,40 +154,12 @@ struct instrument_struct {
 	GtkWidget *gm_value_spin_button;
 }; 
 
-GLOBAL void note_on(int fd, unsigned char value, unsigned char volume);
-GLOBAL void note_off(int fd, unsigned char value, unsigned char volume);
-GLOBAL void send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
-GLOBAL void int_note_on(int fd, unsigned char value, unsigned char volume);
-GLOBAL void int_note_off(int fd, unsigned char value, unsigned char volume);
-GLOBAL void int_send_midi_patch_change(int fd, unsigned short bank, unsigned char patch);
-
-
-#define EXTERNAL_DEVICE 0
-#define INTERNAL_DEVICE 1
-
-struct device_access_method {
-	void (*note_on)(int fd, unsigned char value, unsigned char volume);
-	void (*note_off)(int fd, unsigned char value, unsigned char volume);
-	void (*send_midi_patch_change)(int fd, unsigned short bank, unsigned char patch);
-};
-
-GLOBAL struct device_access_method access_method[] 
-#ifdef INSTANTIATE_GNEUTRONICA_GLOBALS
-= { 
-	{ note_on, note_off, send_midi_patch_change }, /* external MIDI device */
-	{ int_note_on, int_note_off, int_send_midi_patch_change }, /* internal MIDI device */
-}
-#endif
-;
-GLOBAL struct device_access_method INIT(*access_device, &access_method[EXTERNAL_DEVICE]);
-
 /* commands to send player process */
 #define PLAY_ONCE 0
 #define PLAY_LOOP 1
 #define PLAYER_QUIT 2
 #define PERFORM_PATCH_CHANGE 4
 
-GLOBAL int INIT(midi_fd, -1);
 GLOBAL int INIT(player_process_fd, -1);
 GLOBAL int INIT(player_process_pid, -1);
 GLOBAL int INIT(midi_reader_process_id, -1);
