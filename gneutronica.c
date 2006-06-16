@@ -59,6 +59,12 @@
 #include "drumtab.h"
 #include "midi_reader.h"
 
+#include "midioutput.h"
+#include "midioutput_raw.h"
+#include "midioutput_alsa.h"
+struct midi_method *midi = &midi_method_raw;
+struct midi_handle *midi_handle = NULL;
+
 #include "version.h"
 
 /* commands to send player process */
