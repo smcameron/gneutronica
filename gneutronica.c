@@ -1030,7 +1030,7 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 		for (i=nmeasures;i>m;i--)
 			measure[i] = measure[i-1];
 		for (i=0;i<ntempochanges;i++)
-			if (tempo_change[i].measure >= m)
+			if (tempo_change[i].measure > m)
 				tempo_change[i].measure++;
 		measure[m].npatterns = 0;
 		nmeasures++;
