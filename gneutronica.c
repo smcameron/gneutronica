@@ -63,6 +63,7 @@
 #include "midioutput_raw.h"
 #include "midioutput_alsa.h"
 struct midi_method *midi = &midi_method_raw;
+/* struct midi_method *midi = &midi_method_alsa;  Does not yet work for unknown reasons */
 struct midi_handle *midi_handle = NULL;
 #define MIDI_CHANNEL (drumkit[kit].midi_channel & 0x0f)
 
@@ -2750,7 +2751,7 @@ void scramble_button_pressed(GtkWidget *widget,
 	   those divisions.  Worthwhile thing to do?  Who knows. */
 
 	struct pattern_struct *p = pattern[cpattern];
-	int divisions;
+	long int divisions;
 	int *map;
 	int i;
 	struct hitpattern *hp;
@@ -2759,6 +2760,7 @@ void scramble_button_pressed(GtkWidget *widget,
 	struct hit_struct temp;
 	struct hitpattern *next_h;
 	int done;
+	long int r;
 
 	divisions = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(timediv[0].spin));
 	/* printf("Scramble button pressed, divisions = %d.\n", divisions); */
@@ -2776,7 +2778,9 @@ void scramble_button_pressed(GtkWidget *widget,
 		int tmp, s;
 
 		/* swap with a random division */
-		s = random() * divisions / RAND_MAX;
+		r = random();
+		s = (int) (r  / (RAND_MAX / divisions));
+		/* printf("random returns, %ld, i=%d, s=%d\n", r, i, s); */
 		tmp = map[i];
 		map[i] = map[s];
 		map[s] = tmp;
@@ -2805,8 +2809,8 @@ void scramble_button_pressed(GtkWidget *widget,
 
 		/* printf("from_div = %d, to_div = %d, divisions = %d"
 			" time = %g sub = %g, add=%g, new time = %g\n",
-			from_div, to_div, divisions,
-			hit->time, sub, add, hit->time - sub  + add); */
+			from_div, to_div, divisions, */
+			hit->time, sub, add, hit->time - sub  + add); 
 
 		hit->time = hit->time - sub + add;
 		hit->beat = (int) (hit->time * DRAW_WIDTH);
