@@ -276,6 +276,7 @@ GLOBAL int INIT(start_paint_measure,-1);
 GLOBAL GtkWidget *pattern_scroller;
 GLOBAL GtkWidget *top_window; /* Pattern editor window */
 GLOBAL GtkWidget *arranger_window;
+GLOBAL GtkWidget *notebook;
 GLOBAL GtkWidget *arranger_box;
 #define ARRANGER_COLS 5
 #define ARRANGER_HEIGHT (MEASUREWIDTH) 

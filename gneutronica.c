@@ -2128,7 +2128,7 @@ void set_pattern_window_title()
 		sprintf(pattern_name, "Pattern %d", cpattern);
 	sprintf(window_title, "%s v. %s - Pattern Editor: %s", 
 		PROGNAME, VERSION, pattern_name);
-	gtk_window_set_title(GTK_WINDOW(top_window), window_title);
+	/* gtk_window_set_title(GTK_WINDOW(top_window), window_title); */
 	gtk_entry_set_text(GTK_ENTRY(pattern_name_entry), pattern_name);
 }
 
@@ -4400,6 +4400,9 @@ int main(int argc, char *argv[])
 	GtkWidget *magbox;
 	GtkWidget *volume_zoom_label;
 	GtkWidget *scramble_button;
+	GtkWidget *pattern_editor_label;
+	GtkWidget *arranger_label;
+	GtkWidget *arranger_top_box;
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
@@ -4490,17 +4493,24 @@ int main(int argc, char *argv[])
 	gdk_color_parse("blue", &bluecolor);
 	gdk_color_parse("black", &blackcolor);
 
-	top_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	g_signal_connect(G_OBJECT (top_window), "key_press_event",
+	arranger_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
+	/* top_window = gtk_window_new(GTK_WINDOW_TOPLEVEL); */
+	top_window = gtk_vbox_new(FALSE,0); /* contains everything in pattern editor tab */
+	arranger_top_box = gtk_vbox_new(FALSE,0); /* Contains everything in arranger notebook tab */
+
+	g_signal_connect(G_OBJECT (arranger_window), "key_press_event",
 			G_CALLBACK (key_press_cb), "main_window");
 
 	tooltips = gtk_tooltips_new();
 
+#if 0
 	g_signal_connect(G_OBJECT (top_window), "delete_event", 
 		// G_CALLBACK (delete_event), NULL);
 		G_CALLBACK (destroy_event), NULL);
 	g_signal_connect(G_OBJECT (top_window), "destroy", 
 		G_CALLBACK (destroy_event), NULL);
+#endif
 
 	gtk_container_set_border_width(GTK_CONTAINER (top_window), 15);
 
@@ -4840,7 +4850,6 @@ int main(int argc, char *argv[])
 	
 
 	/* ---------------- arranger window ------------------ */
-	arranger_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	g_signal_connect(G_OBJECT (arranger_window), "key_press_event",
 			G_CALLBACK (key_press_cb), "arranger");
 	g_signal_connect(G_OBJECT (arranger_window), "selection_received",
@@ -4982,17 +4991,25 @@ int main(int argc, char *argv[])
 			G_CALLBACK (about_activate), NULL);
 #endif
 
+	notebook = gtk_notebook_new();
+	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_BOTTOM); /* Tabs at the bottom */
+
 	abox = gtk_vbox_new(FALSE, 0);
 	menu_box = gtk_vbox_new(FALSE, 0);
 	a_button_box = gtk_hbox_new(FALSE, 0);
 	arranger_box = gtk_hbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER (arranger_window), abox);
+	gtk_container_add(GTK_CONTAINER (arranger_window), arranger_top_box);
+	arranger_label = gtk_label_new("Arranger");
+	pattern_editor_label = gtk_label_new("Pattern Editor");
+
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), abox, arranger_label);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), top_window, pattern_editor_label);
 
 	/* Menu code taken from gtk tutorial . . .  */
 
 	/* Get the three types of menu.  Note: all three menus are */
 	/* separately created, so they are not the same menu */
-	main_menubar = get_menubar_menu(top_window);
+	main_menubar = get_menubar_menu(arranger_window);
 	main_popup_button = get_popup_menu();
 	main_option_menu = get_option_menu();
 
@@ -5003,7 +5020,11 @@ int main(int argc, char *argv[])
 
 	/* . . . End menu code taken from gtk tutorial. */
 
-	gtk_box_pack_start(GTK_BOX(abox), menu_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(arranger_top_box), menu_box, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(arranger_top_box), notebook, TRUE, TRUE, 0);
+	/* gtk_box_pack_start(GTK_BOX(arranger_top_box), abox, FALSE, FALSE, 0); */
+
+	/* gtk_box_pack_start(GTK_BOX(abox), menu_box, FALSE, FALSE, 0); */
 	gtk_box_pack_start(GTK_BOX(abox), arranger_box, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(arranger_box), song_name_entry, FALSE, FALSE, 0);
@@ -5061,12 +5082,13 @@ int main(int argc, char *argv[])
 	setup_midi_setup_window();
 	/* ---------------- start showing stuff ------------------ */
 	if (maximize_windows) {
-		gtk_window_maximize((GtkWindow *) top_window);
+		/* gtk_window_maximize((GtkWindow *) top_window); */
 		gtk_window_maximize((GtkWindow *) arranger_window);
 	}
 	gtk_widget_show_all(arranger_window);
-	gtk_widget_show_all(top_window);
-	gc = gdk_gc_new(dk->instrument[0].canvas->window);
+	/* gtk_widget_show_all(top_window); */
+	/* gc = gdk_gc_new(dk->instrument[0].canvas->window); */
+	gc = gdk_gc_new(GTK_WIDGET(arranger_window)->window);
 
 	for (i=0;i<drumkit[kit].ninsts;i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
