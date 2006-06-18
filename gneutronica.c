@@ -596,7 +596,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	gtk_widget_show(p->copy_button);
 	gtk_widget_show(p->arr_button);
 	gtk_widget_show(p->arr_darea);
-	gtk_widget_show_all(arranger_window);
+	/* gtk_widget_show_all(arranger_window); */
 	gtk_widget_queue_draw(arranger_table);
 	return;
 }
@@ -4892,11 +4892,11 @@ int main(int argc, char *argv[])
 	gtk_table_attach(GTK_TABLE(arranger_table), DeleteButton, 3, 4, 4, 5, 0, 0, 0, 0);
 	gtk_table_attach(GTK_TABLE(arranger_table), MeasureTransportLabel, 3, 4, 5, 6, 0, 0, 0, 0);
 
-	gtk_widget_show(TempoLabel);
+	/* gtk_widget_show(TempoLabel);
 	gtk_widget_show(SelectButton);
 	gtk_widget_show(PasteLabel);
 	gtk_widget_show(InsertButton);
-	gtk_widget_show(DeleteButton);
+	gtk_widget_show(DeleteButton); */
 
 	Tempo_da = gtk_drawing_area_new();
 	Copy_da = gtk_drawing_area_new();
@@ -4963,12 +4963,12 @@ int main(int argc, char *argv[])
 	gtk_widget_set_size_request(Delete_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 	gtk_widget_set_size_request(measure_transport_da, ARRANGER_WIDTH, ARRANGER_HEIGHT);
 
-	gtk_widget_show(Tempo_da);
+	/* gtk_widget_show(Tempo_da);
 	gtk_widget_show(Copy_da);
 	gtk_widget_show(Paste_da);
 	gtk_widget_show(Insert_da);
 	gtk_widget_show(Delete_da);
-	gtk_widget_show(measure_transport_da);
+	gtk_widget_show(measure_transport_da); */
 
 	song_name_label = gtk_label_new(SONG_LABEL);
 	song_name_entry = gtk_entry_new();
@@ -5002,8 +5002,8 @@ int main(int argc, char *argv[])
 	arranger_label = gtk_label_new("Arranger");
 	pattern_editor_label = gtk_label_new("Pattern Editor");
 
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), abox, arranger_label);
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), top_window, pattern_editor_label);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), abox, arranger_label);
 
 	/* Menu code taken from gtk tutorial . . .  */
 
