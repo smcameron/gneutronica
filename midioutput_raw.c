@@ -42,7 +42,8 @@ void midi_close_raw(struct midi_handle *mh)
 	free(mhr);
 }
 
-struct midi_handle *midi_open_raw(unsigned char *name)
+struct midi_handle *midi_open_raw(unsigned char *name, 
+	__attribute__((unused)) int nports)
 {
 	struct midi_handle_raw *mhr;
 	int fd;
@@ -80,6 +81,7 @@ cleanup:
 }
 
 void noteon_raw(struct midi_handle *mh,
+	unsigned char __attribute__((unused)) port, /* not used for raw midi */
 	unsigned char channel,
 	unsigned char value,
 	unsigned char volume)
@@ -94,7 +96,9 @@ void noteon_raw(struct midi_handle *mh,
 	write(mhr->fd, data, 3); /* This needs to be atomic */
 }
 
-void noteoff_raw(struct midi_handle *mh, unsigned char channel, unsigned char value)
+void noteoff_raw(struct midi_handle *mh, 
+	unsigned char __attribute__((unused)) port, /* not used for raw midi */
+	unsigned char channel, unsigned char value)
 {
 	struct midi_handle_raw *mhr = (struct midi_handle_raw *) mh;
 	unsigned char data[3];
@@ -108,6 +112,7 @@ void noteoff_raw(struct midi_handle *mh, unsigned char channel, unsigned char va
 }
 
 void patch_change_raw(struct midi_handle *mh,
+	unsigned char __attribute__((unused)) port, /* not used for raw midi */
 	unsigned char channel,
 	unsigned short bank,
 	unsigned char patch)

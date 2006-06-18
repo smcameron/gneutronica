@@ -799,6 +799,12 @@ int add_hit(struct hitpattern **hit,
 			velocity, change_velocity));
 }
 
+void track_spin_change(GtkSpinButton *spinbutton, void *data)
+{
+	int i;
+	pattern[cpattern]->tracknum = 
+		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
+}
 
 void timediv_spin_change(GtkSpinButton *spinbutton, struct division_struct *data)
 {
@@ -1273,7 +1279,7 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		rc = add_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH, 
 			kit, data->instrument_num, cpattern, velocity, change_velocity);
 		if (midi->isopen(midi_handle))
-			midi->noteon(midi_handle, MIDI_CHANNEL, data->midivalue, velocity);
+			midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data->midivalue, velocity);
 		if (rc == -2) /* Note was already there, so we really want to remove it. */
 			remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
 				kit, data->instrument_num, cpattern);
@@ -1749,6 +1755,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 	int rc, i;
 	long drag; /* microsecs */
 	long dragsecs;
+	int track;
 
 	/* printf("schedule_pattern called\n"); */
 	basetime.tv_usec = 0L;
@@ -1768,6 +1775,8 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 
 	measurelength = (60000000 / beats_per_minute) * beats_per_measure;
 
+	track = pattern[cpattern]->tracknum;
+
 	for (this = pattern[cpattern]->hitpattern; this != NULL; this = this->next) {
 		struct drumkit_struct *dk = &drumkit[this->h.drumkit];
 		struct instrument_struct *inst = &dk->instrument[this->h.instrument_num];
@@ -1783,13 +1792,14 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 			pct = 100;
 		
 		/* printf("this->h.time = %g\n", this->h.time); */
-		rc = sched_note(&sched, &basetime, inst->midivalue, 
+		rc = sched_note(&sched, &basetime, track, inst->midivalue, 
 			measurelength, this->h.time, 1000000, this->h.velocity, 
 			measure, pct, drag);
 	}
 	/* This no-op is just so the next measure doesn't before this one is really over. */
 	orig_basetime = basetime;
-	rc = sched_noop(&sched, &basetime, 0, measurelength, 1.0, 1000000, 127, measure, 100); 
+	rc = sched_noop(&sched, &basetime, track, 
+		0, measurelength, 1.0, 1000000, 127, measure, 100); 
 
 	if (record_mode) {
 		struct timeval tmpbase;
@@ -1802,10 +1812,12 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 		for (i=0;i<100;i++) {
 			tmpbase = orig_basetime;
 			if (metronome && timediv0 > 0 && ((i % timediv0) == 0))
-				sched_note(&sched, &tmpbase, 24, measurelength, (double) i / 100.0, 
+				sched_note(&sched, &tmpbase, track,
+					24, measurelength, (double) i / 100.0, 
 					1000000, 127, measure, i, 0); 
 			else
-				sched_noop(&sched, &tmpbase, 0, measurelength, (double) i / 100.0, 
+				sched_noop(&sched, &tmpbase, track,
+					0, measurelength, (double) i / 100.0, 
 					1000000, 127, measure, i); 
 		}
 	}
@@ -2180,6 +2192,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 		return;
 	memset(p, 0, sizeof(*p));
 	p->pattern_num = data->pattern_num;
+	p->tracknum = data->tracknum;
 	p->hitpattern = NULL;
 	sprintf(p->patname, "New%d", npatterns+1);
 
@@ -2863,7 +2876,7 @@ void instrument_button_pressed(GtkWidget *widget,
 		printf("%s\n", data->name);
 		/* should be changed to *schedule* a noteon + noteoff */
 		if (midi->isopen(midi_handle))
-			midi->noteon(midi_handle, MIDI_CHANNEL, data->midivalue, velocity);
+			midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data->midivalue, velocity);
 		current_instrument = data->instrument_num;
 		gtk_widget_queue_draw(drumkit[kit].instrument[prev].canvas);
 		gtk_widget_queue_draw(data->canvas);
@@ -3142,6 +3155,7 @@ int flatten_pattern(int ckit, int cpattern)
 	
 	p->beats_per_minute = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin1));
 	p->beats_per_measure = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin2));
+	p->tracknum = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(trackspin));
 	strncpy(p->patname, gtk_entry_get_text(GTK_ENTRY(pattern_name_entry)), 39);
 	if (p->arr_button != NULL)
 		gtk_button_set_label(GTK_BUTTON(p->arr_button), p->patname);
@@ -3175,6 +3189,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num)
 	if (p == NULL)
 		return NULL;
 	memset(p, 0, sizeof(*p));
+	p->tracknum = 0;
 	p->hitpattern = NULL;
 	p->pattern_num = pattern_num;
 	p->beats_per_measure = 4;
@@ -3210,6 +3225,7 @@ int unflatten_pattern(int ckit, int cpattern)
 		if (cpattern > 0) {
 			pattern[cpattern]->beats_per_measure = pattern[cpattern-1]->beats_per_measure;
 			pattern[cpattern]->beats_per_minute = pattern[cpattern-1]->beats_per_minute;
+			pattern[cpattern]->tracknum = pattern[cpattern-1]->tracknum;
 			/* printf("copying tempo, %d, %d\n", 
 				pattern[cpattern]->beats_per_measure,
 				pattern[cpattern]->beats_per_minute); */
@@ -3221,6 +3237,7 @@ int unflatten_pattern(int ckit, int cpattern)
 
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) pattern[cpattern]->beats_per_minute);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) pattern[cpattern]->beats_per_measure);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(trackspin), (gdouble) pattern[cpattern]->tracknum);
 	for (h = pattern[cpattern]->hitpattern; h != NULL; h = h->next) {
 		/* g_print("inst = %d, beat=%d, bpm =%d\n", h->h.instrument_num, 
 			h->h.beat, h->h.beats_per_measure); fflush(stdout); */
@@ -3263,7 +3280,7 @@ int xpect(FILE *f, int *lc, char *line, char *value)
 	return 0;	
 }
 
-int load_from_file_version_3(FILE *f)
+int load_from_file_version_4(FILE *f)
 {
 	char line[255];
 	int linecount;
@@ -3330,8 +3347,11 @@ int load_from_file_version_3(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
-				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		rc = fscanf(f, "Pattern %*d: %d %d %d %[^\n]%*c", 
+				&pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, 
+				&pattern[i]->tracknum,
+				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
 		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
 			&pattern[i]->timediv[0].division,
@@ -3503,7 +3523,7 @@ int find_tempo(int measure)
 
 void init_measures();
 
-int import_patterns_v3(FILE *f)
+int import_patterns_v4(FILE *f)
 {
 	char line[255];
 	int linecount;
@@ -3554,8 +3574,10 @@ int import_patterns_v3(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
-				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		fscanf(f, "Pattern %*d: %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, 
+				&pattern[i]->tracknum, 
+				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
 		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
 			&pattern[i]->timediv[0].division,
@@ -3729,6 +3751,8 @@ int import_patterns_from_file(const char *filename)
 			break;
 		case 3: rc = import_patterns_v3(f);
 			break;
+		case 4: rc = import_patterns_v4(f);
+			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
 			return -1;
@@ -3786,6 +3810,8 @@ int load_from_file(const char *filename)
 			break;
 		case 3: rc = load_from_file_version_3(f);
 			break;
+		case 4: rc = load_from_file_version_4(f);
+			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
 			return -1;
@@ -3796,7 +3822,7 @@ int load_from_file(const char *filename)
 }
 
 
-int current_file_format_version = 3;
+int current_file_format_version = 4;
 int save_to_file(char *filename)
 {
 	int i,j;
@@ -3830,8 +3856,10 @@ int save_to_file(char *filename)
 		int count;
 		long drag;
 		struct hitpattern *h;
-		fprintf(f, "Pattern %d: %d %d %s\n", i, pattern[i]->beats_per_measure,
-			pattern[i]->beats_per_minute, pattern[i]->patname);
+		fprintf(f, "Pattern %d: %d %d %d %s\n", i, pattern[i]->beats_per_measure,
+			pattern[i]->beats_per_minute, 
+			pattern[i]->tracknum, 
+			pattern[i]->patname);
 		fprintf(f, "Divisions: %d %d %d %d %d\n", 
 			pattern[i]->timediv[0].division,
 			pattern[i]->timediv[1].division,
@@ -3878,9 +3906,10 @@ int save_to_file(char *filename)
 
 void silence(struct midi_handle *mh)
 {
-	int i;
+	int i,j;
 	for (i=0;i<127;i++)
-		midi->noteoff(mh, 0, i);
+		for (j=0;j<16;j++)
+			midi->noteoff(mh, j, 0, i);
 }
 
 void init_measures()
@@ -3950,7 +3979,7 @@ void receive_midi_data(int signal)
 	fflush(stdout);
 	/* release semaphore */
 	if (data[0] == 0x90) {
-		midi->noteon(midi_handle, MIDI_CHANNEL, data[1], data[2]);
+		midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data[1], data[2]);
 		if (record_mode) {
 			/* There is quite likely a much better way to do this time calc... */ 
 			thetime = ((double) transport_location->percent);
@@ -4078,7 +4107,7 @@ void player_process_requests(int fd)
 				read(fd, &bank, sizeof(bank));
 				read(fd, &patch, sizeof(patch));
 				printf("Player: Changing to bank %d, patch %d\n", bank, patch);
-				midi->patch_change(midi_handle, MIDI_CHANNEL, bank, patch);
+				midi->patch_change(midi_handle, 0, MIDI_CHANNEL, bank, patch);
 				break;
 			}
 			default:
@@ -4403,6 +4432,7 @@ int main(int argc, char *argv[])
 	GtkWidget *pattern_editor_label;
 	GtkWidget *arranger_label;
 	GtkWidget *arranger_top_box;
+	GtkWidget *track_box;
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
@@ -4440,7 +4470,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-	midi_handle = midi->open(output_device);
+	midi_handle = midi->open(output_device, 16);
 	if (midi_handle == NULL) {
 		printf("Can't open MIDI device file %s\n", output_device);
 	}
@@ -4742,6 +4772,17 @@ int main(int argc, char *argv[])
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
 
+	track_box = gtk_hbox_new(FALSE, 0);
+	track_label = gtk_label_new(TRACK_LABEL);
+	trackspin = gtk_spin_button_new_with_range(0, 15, 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(trackspin), (gdouble) 0.0);
+	g_signal_connect(G_OBJECT(trackspin), "value-changed", 
+		G_CALLBACK(track_spin_change), NULL);
+	widget_exclude_keypress(trackspin);
+	gtk_box_pack_start(GTK_BOX(track_box), track_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(track_box), trackspin, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(linebox), track_box, FALSE, FALSE, 0);
+
 	scramble_button = gtk_button_new_with_label(SCRAMBLE_LABEL);
 	gtk_tooltips_set_tip(tooltips, scramble_button, SCRAMBLE_TIP, NULL);
 	g_signal_connect(G_OBJECT (scramble_button), "clicked",
@@ -4795,6 +4836,7 @@ int main(int argc, char *argv[])
 	gtk_tooltips_set_tip(tooltips, remove_space_after_button,
 		REMOVE_SPACE_AFTER_TIP, NULL);
 	gtk_box_pack_start(GTK_BOX(linebox), remove_space_after_button, FALSE, FALSE, 0);
+
 
 	pattern_metronome_chbox = gtk_check_button_new_with_label(METRONOME_LABEL);
 	pattern_loop_chbox = gtk_check_button_new_with_label(LOOP_LABEL);

@@ -128,6 +128,8 @@
 	"measure.  Set the numerator and denominator to the fraction of the " \
 	"measure to be deleted as measured prior to deleting."
 
+#define TRACK_LABEL "Track:"
+
 #define ADD_SPACE_BEFORE_LABEL "Add Space Before"
 #define ADD_SPACE_BEFORE_TIP "Adds space to the beginning of the measure, " \
 	" squeezing all the notes to the right.  Set the numerator and " \

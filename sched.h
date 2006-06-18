@@ -30,6 +30,7 @@
 
 struct event_details {
 	int eventtype;
+	unsigned char track;
 	unsigned char note;
 	unsigned char velocity;
 	int measure; /* transport location, measure, and percent through measure */
@@ -55,6 +56,7 @@ void schedule(struct schedule_t *s);
 int add_to_schedule(struct schedule_t *s, struct event *e);
 int sched_note(struct schedule_t *s,
 		struct timeval *measure_begins,
+		unsigned char track,
 		unsigned char noteval,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
@@ -66,6 +68,7 @@ int sched_note(struct schedule_t *s,
 		);
 int sched_noop(struct schedule_t *s,
 		struct timeval *measure_begins,
+		unsigned char track,
 		unsigned char noteval,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */

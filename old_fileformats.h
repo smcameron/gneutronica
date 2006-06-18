@@ -23,6 +23,8 @@
 
 extern int load_from_file_version_1(FILE *f);
 extern int load_from_file_version_2(FILE *f);
+extern int load_from_file_version_3(FILE *f);
 extern int import_patterns_v2(FILE *f);
+extern int import_patterns_v3(FILE *f);
 
 #endif

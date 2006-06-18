@@ -335,3 +335,258 @@ int import_patterns_v2(FILE *f)
 	npatterns += newpatterns;
 	return 0;
 }
+
+int load_from_file_version_3(FILE *f)
+{
+	char line[255];
+	int linecount;
+	int ninsts;
+	int i,j,count, rc;
+	int hidden;
+	int fileformatversion;
+	int gm_equiv;
+	char dkmake[100];
+	char dkmodel[100];
+	char dkname[100];
+	int same_drumkit;
+
+	linecount = 1;
+	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
+	linecount++;
+
+	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
+
+	rc = fscanf(f, "Drumkit Make:%[^\n]%*c", dkmake); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit make\n");
+	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit model\n");
+	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit name\n");
+
+	
+	
+	same_drumkit = (strcmp(drumkit[kit].make, dkmake) == 0 && 
+		strcmp(drumkit[kit].model, dkmodel) == 0 &&
+		strcmp(drumkit[kit].name, dkname) == 0);
+
+	/* printf("'%s','%s','%s'\n", dkmake, dkmodel, dkname);
+	printf(same_drumkit ? "Same drumkit\n" : "Different drumkit\n"); */
+
+	if (!same_drumkit)
+		printf("WARNING: Different drum kit for this song, remap to adjust to current drum kit...\n");
+
+	rc = fscanf(f, "Instruments: %d\n", &ninsts);
+	if (rc != 1)  {
+		printf("%d: error\n", linecount);
+		return -1;
+	}
+	linecount++;
+
+	for (i=0;i<ninsts;i++) {
+		fscanf(f, "Instrument %*d: '%*[^']%*c %d %d\n", &hidden, &gm_equiv);
+		/* this is questionable if drumkits don't match... */
+		if (i<drumkit[kit].ninsts) {
+			struct instrument_struct *inst = &drumkit[kit].instrument[i];
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(inst->hidebutton),
+				(gboolean) hidden);
+			song_gm_map[i] = inst->gm_equivalent; 
+		}
+		if (!same_drumkit)
+			song_gm_map[i] = gm_equiv;
+		/* printf("song_gm_map[%d] = %d\n", i, song_gm_map[i]); */
+	}
+	rc = fscanf(f, "Patterns: %d\n", &npatterns);
+	for (i=0;i<npatterns;i++) {
+		struct hitpattern **h;
+		pattern[i] = pattern_struct_alloc(i);
+		h = &pattern[i]->hitpattern;
+		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
+		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
+			&pattern[i]->timediv[0].division,
+			&pattern[i]->timediv[1].division,
+			&pattern[i]->timediv[2].division,
+			&pattern[i]->timediv[3].division,
+			&pattern[i]->timediv[4].division);
+		if (rc != 5)
+			printf("Bad divisions...\n");
+		pattern[i]->gm_converted = 0;
+		while (1) {
+			rc = fscanf(f, "%[^\n]%*c", line);
+			if (strcmp(line, "END-OF-PATTERN") == 0) {
+				/* printf("end of pattern\n"); fflush(stderr); */
+				break;
+			}
+			*h = malloc(sizeof(struct hitpattern));
+			(*h)->next = NULL;
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
+				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
+				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
+			/* Holy shit, scanf with %g doesn't actually work! */
+			if ((*h)->h.beats_per_measure == 0) {
+				printf("Corrupted file?  beats_per_measure was zero... Guessing 4.\n");
+				(*h)->h.beats_per_measure = 4;
+			}
+			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+
+			/* printf("new time is %g\n", (*h)->h.time); */
+			if (rc != 6) 
+				printf("rc != 6!\n");
+			h = &(*h)->next;
+		}
+		rc = fscanf(f, "dragging count: %d\n", &count);
+		for (j=0;j<count;j++) {
+			int ins;
+			long drag;
+			fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			pattern[i]->drag[ins] = (double) (drag / 1000.0);
+		}
+		make_new_pattern_widgets(i, i+1);
+	}
+	rc = fscanf(f, "Measures: %d\n", &nmeasures);
+	for (i=0;i<nmeasures;i++) {
+		fscanf(f, "m:%*d np:%d\n", &measure[i].npatterns);
+		if (measure[i].npatterns != 0) {
+			for (j=0;j<measure[i].npatterns;j++)
+				fscanf(f, "%d ", &measure[i].pattern[j]);
+			fscanf(f, "\n");
+		}
+		/* printf("m:%*d t:%d p:%d\n", measure[i].tempo, measure[i].pattern); */
+	}
+	rc = fscanf(f, "Tempo changes: %d\n", &ntempochanges);
+	for (i=0;i<ntempochanges;i++) {
+		fscanf(f, "m:%d bpm:%d\n", &tempo_change[i].measure,
+			&tempo_change[i].beats_per_minute);
+	}
+	fclose(f);
+
+	edit_pattern(0);
+/*
+	cpattern = 0;
+	unflatten_pattern(kit, cpattern);
+	for (i=0;i<drumkit[kit].ninsts; i++)
+		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas); */
+
+	return 0;
+}
+
+int import_patterns_v3(FILE *f)
+{
+	char line[255];
+	int linecount;
+	int ninsts;
+	int i,j,k,count, rc;
+	int hidden;
+	int fileformatversion;
+	int fake_ninsts;
+	int newpatterns;
+	char dkmake[100], dkmodel[100], dkname[100];
+	int same_drumkit;
+	int import_inst_map[MAXINSTS], gm;
+
+	linecount = 1;
+	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
+	linecount++;
+	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
+
+	rc = fscanf(f, "Drumkit Make:%[^\n]%*c", dkmake); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit make\n");
+	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit model\n");
+	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	if (rc != 1)
+		printf("Failed to read Drumkit name\n");
+
+	same_drumkit = (strcmp(drumkit[kit].make, dkmake) == 0 && 
+		strcmp(drumkit[kit].model, dkmodel) == 0 &&
+		strcmp(drumkit[kit].name, dkname) == 0);
+
+	if (!same_drumkit)
+		printf("Import file uses different drumkit... will attempt to remap.\n");
+
+	rc = fscanf(f, "Instruments: %d\n", &fake_ninsts);
+	if (rc != 1)  {
+		printf("%d: error\n", linecount);
+		return -1;
+	}
+	linecount++;
+
+	for (i=0;i<fake_ninsts;i++)
+		fscanf(f, "Instrument %*d: '%*[^']%*c %*d %d\n", &import_inst_map[i]);
+
+	rc = fscanf(f, "Patterns: %d\n", &newpatterns);
+	for (i=npatterns;i<npatterns+newpatterns;i++) {
+		struct hitpattern **h;
+		pattern[i] = pattern_struct_alloc(i);
+		h = &pattern[i]->hitpattern;
+		fscanf(f, "Pattern %*d: %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+				&pattern[i]->beats_per_minute, pattern[i]->patname);
+		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
+		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
+			&pattern[i]->timediv[0].division,
+			&pattern[i]->timediv[1].division,
+			&pattern[i]->timediv[2].division,
+			&pattern[i]->timediv[3].division,
+			&pattern[i]->timediv[4].division);
+		if (rc != 5)
+			printf("Bad divisions...\n");
+		while (1) {
+			rc = fscanf(f, "%[^\n]%*c", line);
+			if (strcmp(line, "END-OF-PATTERN") == 0) {
+				/* printf("end of pattern\n"); fflush(stderr); */
+				break;
+			}
+			*h = malloc(sizeof(struct hitpattern));
+			(*h)->next = NULL;
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			gm = import_inst_map[(*h)->h.instrument_num];
+			if (gm != -1)
+				for (k=0;k<drumkit[kit].ninsts;k++) {
+					if (gm == drumkit[kit].instrument[k].gm_equivalent) {
+						/* printf("remapping %d to %d\n", (*h)->h.instrument_num, k); */
+						(*h)->h.instrument_num = k;
+						break;	
+					}
+				}
+
+			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
+				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
+				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
+			/* Holy shit, scanf with %g doesn't actually work! */
+			if ((*h)->h.beats_per_measure == 0) {
+				printf("Corrupted file?  beats_per_measure was zero... Guessing 4.\n");
+				(*h)->h.beats_per_measure = 4;
+			}
+			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+
+			/* printf("new time is %g\n", (*h)->h.time); */
+			if (rc != 6) 
+				printf("rc != 6!\n");
+			h = &(*h)->next;
+		}
+		rc = fscanf(f, "dragging count: %d\n", &count);
+		for (j=0;j<count;j++) {
+			int ins;
+			long drag;
+			fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			pattern[i]->drag[ins] = (double) (drag / 1000.0);
+		}
+		make_new_pattern_widgets(i, i+1);
+	}
+	fclose(f);
+	npatterns += newpatterns;
+	return 0;
+}

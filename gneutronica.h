@@ -94,6 +94,7 @@ struct pattern_struct {
 	char patname[40];
 	struct hitpattern *hitpattern;
 	struct division_struct timediv[MAXTIMEDIVS];
+	int tracknum;
 	int pattern_num;
 	int beats_per_measure; /* this is tempo information for this pattern */
 	int beats_per_minute; /* this is tempo information for this pattern for single pattern playback
@@ -196,6 +197,7 @@ GLOBAL int ndivisions
 ;
 
 GLOBAL GtkWidget *tempolabel1, *tempolabel2, *tempospin1, *tempospin2;
+GLOBAL GtkWidget *trackspin, *track_label;
 GLOBAL GtkWidget *song_name_entry, *song_name_label;
 GLOBAL GtkWidget *pattern_name_entry, *pattern_name_label;
 GLOBAL GtkWidget *SaveBox;

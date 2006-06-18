@@ -24,20 +24,22 @@
 struct midi_handle;
 
 typedef void midi_noteon_function(struct midi_handle *mh,
+	unsigned char port,
 	unsigned char channel,
 	unsigned char value,
 	unsigned char volume);
 
 typedef void midi_noteoff_function(struct midi_handle *mh,
+	unsigned char port,
 	unsigned char channel,
 	unsigned char value);
 
-typedef struct midi_handle * midi_open_function(unsigned char *name);
+typedef struct midi_handle * midi_open_function(unsigned char *name, int nports);
 
 typedef void midi_close_function(struct midi_handle *mh);
 
 typedef void  midi_patch_change_function(struct midi_handle *mh,
-	unsigned char channel, unsigned short bank, unsigned char patch);
+	unsigned char port, unsigned char channel, unsigned short bank, unsigned char patch);
 
 typedef int midi_isopen_function(struct midi_handle *mh);
 

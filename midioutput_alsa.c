@@ -31,9 +31,12 @@
 #define INSTANTIATE_MIDIOUTPUT_ALSA_GLOBALS
 #include "midioutput_alsa.h"
 
+#define MAX_PORTS 16
+
 struct midi_handle_alsa {
 	snd_seq_t *seqp; /* alsa sequencer port */
-	int outputport;
+	int outputport[MAX_PORTS];
+	int nports;
 	int queue;
 };
 
@@ -43,9 +46,10 @@ void midi_close_alsa(struct midi_handle *mh)
 		 __FILE__, __LINE__, __FUNCTION__);
 }
 
-struct midi_handle *midi_open_alsa(unsigned char *name)
+struct midi_handle *midi_open_alsa(unsigned char *name, int nports)
 {
 	int rc;
+	int i;
 	struct midi_handle_alsa *mh;
 	unsigned char clientname[255], portname[255];
 
@@ -54,6 +58,9 @@ struct midi_handle *midi_open_alsa(unsigned char *name)
 	mh = (struct midi_handle_alsa *) malloc(sizeof(*mh));
 	if (mh == NULL)
 		return NULL;
+
+	if (nports > MAX_PORTS)
+		nports = MAX_PORTS;
 
 	rc = snd_seq_open(&mh->seqp, name, SND_SEQ_OPEN_OUTPUT, 0666);
 	if (rc < 0) {
@@ -64,12 +71,14 @@ struct midi_handle *midi_open_alsa(unsigned char *name)
 	rc = snd_seq_set_client_name(mh->seqp, clientname);
 	if (rc < 0)
 		printf("snd_seq_set_client_name failed \n");
-	sprintf(portname, "Gneutronica output (%d:%d)", getpid(), 0);
-	mh->outputport = snd_seq_create_simple_port(mh->seqp, portname,
-                        SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
-                        SND_SEQ_PORT_TYPE_MIDI_GENERIC);
-	if (mh->outputport < 0)
-		printf("snd_seq_create_simple_port failed\n");
+	for (i=0;i<nports;i++) {
+		sprintf(portname, "Gneutronica (%d) Track:%d", getpid(), i);
+		mh->outputport[i] = snd_seq_create_simple_port(mh->seqp, portname,
+				SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
+				SND_SEQ_PORT_TYPE_MIDI_GENERIC);
+		if (mh->outputport < 0)
+			printf("snd_seq_create_simple_port %d failed\n", i);
+	}
 
 	mh->queue = snd_seq_alloc_queue(mh->seqp);
 	if (mh->queue < 0)
@@ -81,6 +90,7 @@ struct midi_handle *midi_open_alsa(unsigned char *name)
 }
 
 void midi_noteon_alsa(struct midi_handle *mh,
+	unsigned char port,
 	unsigned char channel,
 	unsigned char value,
 	unsigned char volume)
@@ -90,9 +100,12 @@ void midi_noteon_alsa(struct midi_handle *mh,
 	struct snd_seq_real_time tstamp;
 	int rc;
 
+	if (port < 0 || port >= MAX_PORTS)
+		return;
+
 	memset(&tstamp, 0, sizeof(tstamp));
 	snd_seq_ev_clear(&ev);
-	snd_seq_ev_set_source(&ev, mha->outputport);
+	snd_seq_ev_set_source(&ev, mha->outputport[port]);
 	snd_seq_ev_set_subs(&ev);
 	/* snd_seq_ev_set_dest(&ev, 128, 0); */
 	snd_seq_ev_set_subs(&ev);
@@ -112,6 +125,7 @@ void midi_noteon_alsa(struct midi_handle *mh,
 }
 
 void midi_patch_change_alsa(struct midi_handle *mh,
+	unsigned char port,
 	unsigned char channel,
 	unsigned short bank,
 	unsigned char patch)
@@ -120,9 +134,10 @@ void midi_patch_change_alsa(struct midi_handle *mh,
 	return;
 }
 
-void midi_noteoff_alsa(struct midi_handle *mh, unsigned char channel, unsigned char value)
+void midi_noteoff_alsa(struct midi_handle *mh,
+	unsigned char port, unsigned char channel, unsigned char value)
 {
-	midi_noteon_alsa(mh, channel, value, 0);
+	midi_noteon_alsa(mh, port, channel, value, 0);
 	return;
 }
 
