@@ -62,8 +62,8 @@
 #include "midioutput.h"
 #include "midioutput_raw.h"
 #include "midioutput_alsa.h"
-struct midi_method *midi = &midi_method_raw;
-/* struct midi_method *midi = &midi_method_alsa;  Does not yet work for unknown reasons */
+/* struct midi_method *midi = &midi_method_raw; */
+struct midi_method *midi = &midi_method_alsa;
 struct midi_handle *midi_handle = NULL;
 #define MIDI_CHANNEL (drumkit[kit].midi_channel & 0x0f)
 
@@ -2809,8 +2809,8 @@ void scramble_button_pressed(GtkWidget *widget,
 
 		/* printf("from_div = %d, to_div = %d, divisions = %d"
 			" time = %g sub = %g, add=%g, new time = %g\n",
-			from_div, to_div, divisions, */
-			hit->time, sub, add, hit->time - sub  + add); 
+			from_div, to_div, divisions, 
+			hit->time, sub, add, hit->time - sub  + add); */
 
 		hit->time = hit->time - sub + add;
 		hit->beat = (int) (hit->time * DRAW_WIDTH);

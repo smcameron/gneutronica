@@ -34,6 +34,7 @@
 struct midi_handle_alsa {
 	snd_seq_t *seqp; /* alsa sequencer port */
 	int outputport;
+	int queue;
 };
 
 void midi_close_alsa(struct midi_handle *mh)
@@ -69,6 +70,13 @@ struct midi_handle *midi_open_alsa(unsigned char *name)
                         SND_SEQ_PORT_TYPE_MIDI_GENERIC);
 	if (mh->outputport < 0)
 		printf("snd_seq_create_simple_port failed\n");
+
+	mh->queue = snd_seq_alloc_queue(mh->seqp);
+	if (mh->queue < 0)
+		printf("snd_seq_alloc_queue failed.\n");
+
+	snd_seq_start_queue(mh->seqp, mh->queue, 0);
+
 	return (struct midi_handle *) mh;
 }
 
@@ -80,24 +88,26 @@ void midi_noteon_alsa(struct midi_handle *mh,
 	struct midi_handle_alsa *mha = (struct midi_handle_alsa *) mh;
 	snd_seq_event_t ev;
 	struct snd_seq_real_time tstamp;
+	int rc;
 
 	memset(&tstamp, 0, sizeof(tstamp));
 	snd_seq_ev_clear(&ev);
 	snd_seq_ev_set_source(&ev, mha->outputport);
 	snd_seq_ev_set_subs(&ev);
-	snd_seq_ev_set_direct(&ev);
-	/* snd_seq_ev_schedule_tick(&ev,  SND_SEQ_EVENT_PORT_SUBSCRIBED, 1, 0); */
-	snd_seq_ev_schedule_real(&ev,  SND_SEQ_EVENT_PORT_SUBSCRIBED, 1, &tstamp);
-	ev.type = SND_SEQ_EVENT_NOTEON;
-	ev.data.note.channel = 0;
-	ev.data.note.note = value;
-	ev.data.note.velocity = volume;
-	ev.data.note.off_velocity = 0;
-	ev.data.note.duration = 100; /* it's drums... there is no note off. */
+	/* snd_seq_ev_set_dest(&ev, 128, 0); */
+	snd_seq_ev_set_subs(&ev);
 
-	printf("Sending event to port %d, note=%d, vel=%d, pid=%d\n",
-		mha->outputport, ev.data.note.note, ev.data.note.velocity, getpid());
-        snd_seq_event_output(mha->seqp, &ev);
+	snd_seq_ev_set_noteon(&ev, channel, value, volume);
+	/* ev.data.note.duration = 1000; */ /* it's drums... there is no note off. */
+
+	snd_seq_ev_schedule_real(&ev, mha->queue, 1, &tstamp);
+	/* printf("Sending event to port %d, chan=%d, note=%d, vel=%d, pid=%d\n",
+		mha->outputport, ev.data.note.channel,
+		ev.data.note.note, ev.data.note.velocity, getpid()); */
+        rc = snd_seq_event_output(mha->seqp, &ev);
+	if (rc < 0)
+		printf("Failed to output note.\n");
+	snd_seq_drain_output(mha->seqp);
 	return;
 }
 
