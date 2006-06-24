@@ -48,6 +48,7 @@ static int *ppercent = &dummy_percent;
 extern struct midi_method *midi;
 extern struct midi_handle *midi_handle;
 
+/* Relative to absolute time ... */
 int rtime_to_atime(struct timeval *basetime, 
 		struct timeval *rtime,
 		struct timeval *atime)
@@ -192,8 +193,8 @@ int add_to_schedule(struct schedule_t *s,
 	/* Put the event in the spot */
 	s->e[spot] = e;
 	s->nevents++;
-	// print_schedule(s);
-	// printf("--------------------------\n");
+	/* print_schedule(s);
+	printf("--------------------------\n"); */
 	return 0;
 }
 

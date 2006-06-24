@@ -1962,6 +1962,11 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 			measurelength, this->h.time, 1000000, this->h.velocity, 
 			measure, pct, drag);
 		/* schedule note off if not percussion */
+		pct = (int) (100.0 * (((this->h.noteoff_time * measurelength) + drag) / measurelength));
+		if (pct < 0)
+			pct = 0;
+		else if (pct > 100)
+			pct = 100;
 		if (pattern[cpattern]->music_type != PERCUSSION)
 			rc = sched_note(&sched, &tmpbase, track, inst->midivalue, 
 				measurelength, this->h.noteoff_time, 1000000, /* velocity zero */ 0, 
