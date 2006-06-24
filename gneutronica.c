@@ -206,6 +206,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	struct drumkit_struct *drumkit, int format)
 {
 	struct drumkit_struct *dk;
+	int i;
 	int rc, line, n;
 	char cmd[255];
 
@@ -231,6 +232,18 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 		return -1;
 	}
 	memset(dk->instrument, 0, sizeof(struct instrument_struct)*MAXINSTS);
+	
+	for (i=0;i<MAXINSTS;i++) {
+		strcpy(dk->instrument[i].name, "x");
+		strcpy(dk->instrument[i].type, "x");
+		dk->instrument[i].midivalue = i;
+		dk->instrument[i].gm_equivalent = i;
+		dk->instrument[i].hit = NULL;
+		dk->instrument[i].button = NULL;
+		dk->instrument[i].hidebutton = NULL;
+		dk->instrument[i].canvas = NULL;
+		dk->instrument[i].instrument_num = i;
+	}
 
 	n = 0;
 	line++;
@@ -282,7 +295,7 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 	int rc, i;
 
 	dk = &drumkit[*ndrumkits];
-	dk->ninsts = 127;
+	dk->ninsts = MAXINSTS;
 	strcpy(dk->make, "No name");
 	strcpy(dk->model, "No name");
 	strcpy(dk->name, "No name");
@@ -297,7 +310,7 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 	}
 	memset(dk->instrument, 0, sizeof(struct instrument_struct)*MAXINSTS);
 
-	for (i=0;i<127;i++) {
+	for (i=0;i<MAXINSTS;i++) {
 
 		/* No space in name so editing later is easier, double click instead of triple click
 		   to highlight and replace with real name. */
@@ -602,13 +615,16 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 }
 
 int lowlevel_add_hit(struct hitpattern **hit,
-		int dkit, int pattern, int instnum, int beat, int beats_per_measure, 
+		int dkit, int pattern, int instnum, 
+		int beat, int beats_per_measure, 
+		int noteoff_beat, int noteoff_beats_per_measure, 
 		unsigned char velocity, int change_velocity)
 {
 	struct hitpattern *prev, *this, *next;
-	double percent;
+	double percent, noteoff_percent;
 
 	percent = (double) beat / (double) beats_per_measure;
+	noteoff_percent = (double) noteoff_beat / (double) noteoff_beats_per_measure;
 
 	/* g_print("Adding hit to %s at beat %d of %d beats, percent = %g\n",
 		drumkit[dkit].instrument[instnum].name, 
@@ -622,6 +638,9 @@ int lowlevel_add_hit(struct hitpattern **hit,
 		this->h.time = percent; /* as a percentage of the measure */
 		this->h.beat = beat;
 		this->h.beats_per_measure = beats_per_measure;
+		this->h.noteoff_beat = noteoff_beat;
+		this->h.noteoff_beats_per_measure = noteoff_beats_per_measure;
+		this->h.noteoff_time = (double) noteoff_beat / (double) noteoff_beats_per_measure;
 		this->h.drumkit = dkit;
 		this->h.pattern = pattern;
 		this->h.instrument_num = instnum;
@@ -656,6 +675,9 @@ int lowlevel_add_hit(struct hitpattern **hit,
 			this->h.time = percent; /* as a percentage of the measure */
 			this->h.beat = beat;
 			this->h.beats_per_measure = beats_per_measure;
+			this->h.noteoff_beat = noteoff_beat;
+			this->h.noteoff_beats_per_measure = noteoff_beats_per_measure;
+			this->h.noteoff_time = (double) noteoff_beat / (double) noteoff_beats_per_measure;
 			this->h.drumkit = dkit;
 			this->h.pattern = pattern;
 			this->h.instrument_num = instnum;
@@ -674,6 +696,9 @@ int lowlevel_add_hit(struct hitpattern **hit,
 	this->h.time = percent; /* as a percentage of the measure */
 	this->h.beat = beat;
 	this->h.beats_per_measure = beats_per_measure;
+	this->h.noteoff_beat = noteoff_beat;
+	this->h.noteoff_beats_per_measure = noteoff_beats_per_measure;
+	this->h.noteoff_time = (double) noteoff_beat / (double) noteoff_beats_per_measure;
 	this->h.drumkit = dkit;
 	this->h.pattern = pattern;
 	this->h.instrument_num = instnum;
@@ -722,18 +747,59 @@ void remove_hit(struct hitpattern **hit,
 	}
 }
 
+void find_bestbeat(double percent, double measurelength, 
+	int *bestbeat, int *bestdivision)
+{
+	int i;
+	double zero, diff, bestdiff;
+	double target, divlen, x;
+
+	*bestbeat = -1;
+	*bestdivision = -1;
+
+	for (i=0;i<ndivisions;i++) {
+		zero =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
+		if (zero < 0.0)
+			zero = -zero;
+		if (zero < 0.00001)
+			continue;
+
+		divlen = measurelength / zero; 
+		x = percent * measurelength / divlen;
+		/* g_print("x = %g, == %g * %g / %g, zero = %G\n", percent, measurelength, divlen, zero);
+		g_print("x = %g\n", x); */
+		if (x - trunc(x) > 0.5) {
+			target = (trunc(x) + 1.0);
+			diff = (target - x) * divlen;
+		} else {
+			target = trunc(x);
+			diff = (x - target) * divlen;
+		}
+		/* g_print("%d: diff = %g, target= %g, x = %g\n", i, diff, target,  x); */
+		if (i == 0 || diff < bestdiff) {
+			bestdiff = diff;
+			*bestbeat = (int) target;
+			*bestdivision = (int) zero;
+			/* bestpercent = (target / zero); */
+			/* g_print("i=%d, bestdiff = %g\n", i, bestdiff); */
+		}
+	}
+	return;
+}
+
 
 int add_hit(struct hitpattern **hit, 
-		double thetime, double measurelength, 
-		int dkit, int instnum, int pattern, unsigned char velocity, 
+		double thetime, double duration, double measurelength, 
+		int dkit, int instnum, int tpattern, unsigned char velocity, 
 		int change_velocity)
 {
 	/* figure out the nearest place */
+	int noteoff_bestbeat = -1;
 	int bestbeat = -1;
-	int best_division;
+	int noteoff_best_division, best_division;
 	int found, i;
 	int stg;
-	double percent, bestpercent, diff, bestdiff;
+	double noteoff_percent, percent, diff, bestdiff;
 	double target, divlen, x;
 	double zero;
 
@@ -743,6 +809,7 @@ int add_hit(struct hitpattern **hit,
 		return;
 
 	percent = thetime / measurelength;
+	noteoff_percent = (thetime+duration) / measurelength;
 
 	stg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (snap_to_grid));
 	
@@ -751,43 +818,27 @@ int add_hit(struct hitpattern **hit,
 	bestdiff = 1000.0;
 
 	if (stg) {
-		for (i=0;i<ndivisions;i++) {
-			zero =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
-			if (zero < 0.0)
-				zero = -zero;
-			if (zero < 0.00001)
-				continue;
 
-			divlen = measurelength / zero; 
-			x = percent * measurelength / divlen;
-			/* g_print("x = %g, == %g * %g / %g, zero = %G\n", percent, measurelength, divlen, zero);
-			g_print("x = %g\n", x); */
-			if (x - trunc(x) > 0.5) {
-				target = (trunc(x) + 1.0);
-				diff = (target - x) * divlen;
-			} else {
-				target = trunc(x);
-				diff = (x - target) * divlen;
-			}
-			/* g_print("%d: diff = %g, target= %g, x = %g\n", i, diff, target,  x); */
-			if (i == 0 || diff < bestdiff) {
-				bestdiff = diff;
-				bestbeat = (int) target;
-				best_division = (int) zero;
-				bestpercent = (target / zero);
-				/* g_print("i=%d, bestdiff = %g\n", i, bestdiff); */
-			}
-		}
+		find_bestbeat(percent, measurelength, &bestbeat, &best_division);
 		if (bestbeat == -1) {
-			g_print("No best beat found\n");
-			return;
+			bestbeat = (int) thetime; 
+			best_division = (int) measurelength;
+		}
+		find_bestbeat(noteoff_percent, measurelength, 
+			&noteoff_bestbeat, &noteoff_best_division);
+		if (noteoff_bestbeat == -1) {
+			noteoff_bestbeat = (int) (thetime + duration);
+			noteoff_best_division = (int) measurelength;
 		}
 	} else {
 		bestbeat = (int) thetime; /* cast should be ok, it's mouse coord */
 		best_division = (int) measurelength;
+		noteoff_bestbeat = (int) (thetime + duration);
+		noteoff_best_division = best_division;
 	}
 
 	reduce_fraction(&bestbeat, &best_division);
+	reduce_fraction(&noteoff_bestbeat, &noteoff_best_division);
 
 	/* If there are 16 beats, that's 0 thru 15, beat 16 belongs to the next measure... */
 	if (bestbeat == best_division) {
@@ -795,7 +846,8 @@ int add_hit(struct hitpattern **hit,
 			bestbeat+1, best_division); */
 		return;
 	}
-	return (lowlevel_add_hit(hit, dkit, pattern, instnum, bestbeat, best_division, 
+	return (lowlevel_add_hit(hit, dkit, tpattern, instnum, bestbeat, best_division, 
+			noteoff_bestbeat, noteoff_best_division,
 			velocity, change_velocity));
 }
 
@@ -810,7 +862,7 @@ void timediv_spin_change(GtkSpinButton *spinbutton, struct division_struct *data
 {
 	int i;
 	/* Make the timing lines redraw . . . */
-	for (i=0;i<drumkit[kit].ninsts;i++)
+	for (i=0;i<NINSTS;i++)
 		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 }
 
@@ -1251,6 +1303,15 @@ static int canvas_key_pressed(GtkWidget *w, GdkEventButton *event, struct instru
 	printf("canvas key pressed\n");
 }
 
+static int canvas_mousedown(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
+{
+	if (!melodic_mode) 
+		return; /* Drums don't have a duration, you just hit 'em..., on mouseup */
+	mousedownx = event->x;
+	mousedowny = event->y; 
+	printf("mousedown, x=%d, y=%d\n", mousedownx, mousedowny);
+}
+
 static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
 {
 	/* if (data != NULL)
@@ -1259,12 +1320,31 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	unsigned char velocity = DEFAULT_VELOCITY;
 	int change_velocity = (event->button == 1);
 	int height;
+	int hitx, duration;
+
+	if (melodic_mode) {
+		/* whichever is leftmost, mouseup/mousedown, we take as noteon time, */
+		/* the other we take as noteoff time */
+		if (mousedownx < event->x) {
+			hitx = mousedownx;
+			duration = event->x - mousedownx;
+		} else {
+			hitx = event->x;
+			duration = mousedownx - hitx;;
+		}
+		if (duration < 0)
+			duration = -duration;
+	} else {
+		/* percussion mode, mouseup is the one we want */
+		hitx = event->x;
+		duration = -1; 
+	}
 
 	if (current_instrument != data->instrument_num)
 		height = DRAW_HEIGHT;
 	else {
 		height = (int) (((double) 
-			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * (melodic_mode ? 3.0 : 1.0) *
 				(double) DRAW_HEIGHT / (double) 100.0) + 1;
 	}
 
@@ -1276,15 +1356,15 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		velocity = (unsigned char) gtk_range_get_value(GTK_RANGE(data->volume_slider));
 
 	if (event->button == 1 || event->button == 2) {
-		rc = add_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH, 
+		rc = add_hit(&data->hit, (double) hitx, (double) duration, (double) DRAW_WIDTH, 
 			kit, data->instrument_num, cpattern, velocity, change_velocity);
-		if (midi->isopen(midi_handle))
+		if (midi->isopen(midi_handle) && !melodic_mode)
 			midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data->midivalue, velocity);
 		if (rc == -2) /* Note was already there, so we really want to remove it. */
-			remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
+			remove_hit(&data->hit, (double) hitx, (double) DRAW_WIDTH,
 				kit, data->instrument_num, cpattern);
 	} else if (event->button == 3)
-		remove_hit(&data->hit, (double) event->x, (double) DRAW_WIDTH,
+		remove_hit(&data->hit, (double) hitx, (double) DRAW_WIDTH,
 			kit, data->instrument_num, cpattern);
 	if (current_instrument != data->instrument_num) {
 		int i;
@@ -1487,6 +1567,14 @@ static int hide_all_the_canvas_widgets(struct instrument_struct *inst)
 static void bring_back_right_widgets(struct instrument_struct *inst,
 	int vshidden, int unchecked_hidden, int editdrumkit)
 {
+	melodic_mode = (int) !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (percussion_toggle));
+
+	if (melodic_mode) {
+		vshidden = 1;
+		editdrumkit = 1;
+		unchecked_hidden = 0;
+	}
+
 	if (vshidden) {
 		gtk_widget_hide(GTK_WIDGET(inst->clear_button));
 		gtk_widget_hide(GTK_WIDGET(inst->volume_slider));
@@ -1519,8 +1607,15 @@ static void bring_back_right_widgets(struct instrument_struct *inst,
 			gtk_widget_hide(GTK_WIDGET(inst->drag_spin_button));
 		}
 	} else {
-		gtk_widget_show(GTK_WIDGET(inst->canvas));
-		gtk_widget_show(GTK_WIDGET(inst->button));
+		if (melodic_mode) {
+			gtk_widget_show(GTK_WIDGET(inst->canvas));
+			gtk_widget_hide(GTK_WIDGET(inst->button));
+			gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
+		} else {
+			gtk_widget_show(GTK_WIDGET(inst->canvas));
+			gtk_widget_show(GTK_WIDGET(inst->button));
+			gtk_widget_show(GTK_WIDGET(inst->hidebutton));
+		}
 		if (!editdrumkit) {/* otherwise, already hidden */
 			gtk_widget_show(GTK_WIDGET(inst->name_entry));
 			gtk_widget_show(GTK_WIDGET(inst->type_entry));
@@ -1533,6 +1628,58 @@ static void bring_back_right_widgets(struct instrument_struct *inst,
 			gtk_widget_show(GTK_WIDGET(inst->drag_spin_button));
 		}
 	}
+}
+
+static void check_melodic_mode()
+{
+	int i;
+	int automag_is_on;
+	int autocrunch_is_on;
+	int vshidden, unchecked_hidden, editdrumkit;
+
+	melodic_mode = (int) !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (percussion_toggle));
+
+	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
+	autocrunch_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (autocrunch));
+	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
+	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
+	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
+
+
+	for (i=0;i<MAXINSTS;i++) {
+		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+		if (melodic_mode) {
+			gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
+			gtk_widget_hide(GTK_WIDGET(inst->button));
+			gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+			gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+			gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+			gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
+			gtk_widget_set_size_request(inst->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
+			gtk_widget_show(GTK_WIDGET(inst->canvas));
+		} else {
+			if (i>=drumkit[kit].ninsts) {
+				gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
+				gtk_widget_hide(GTK_WIDGET(inst->button));
+				gtk_widget_hide(GTK_WIDGET(inst->name_entry));
+				gtk_widget_hide(GTK_WIDGET(inst->type_entry));
+				gtk_widget_hide(GTK_WIDGET(inst->midi_value_spin_button));
+				gtk_widget_hide(GTK_WIDGET(inst->gm_value_spin_button));
+				gtk_widget_set_size_request(inst->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
+				gtk_widget_hide(GTK_WIDGET(inst->canvas));
+			} else {
+				gtk_widget_show(GTK_WIDGET(inst->button));
+				gtk_widget_set_size_request(inst->canvas, DRAW_WIDTH+1, DRAW_HEIGHT+1);
+				gtk_widget_show(GTK_WIDGET(inst->canvas));
+				bring_back_right_widgets(inst, vshidden, unchecked_hidden, editdrumkit);
+			}
+		}
+	}
+}
+
+void percussion_toggle_callback(GtkWidget *widget, gpointer data)
+{
+	check_melodic_mode();
 }
 
 static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
@@ -1553,9 +1700,11 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
 	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
 
+	/* Calculate the height of the horizontal strip for this instrument... */
 	if (current_instrument == instrument->instrument_num) {
+		/* melodic mode is narrow, percussion taller, depending on volume zoom too... */
 		height = (int) (((double) 
-			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * (melodic_mode ? 3.0 : 1.0) *
 				(double) DRAW_HEIGHT / (double) 100.0) + 1;
 		if (autocrunch_is_on)
 			bring_back_right_widgets(instrument, vshidden, unchecked_hidden, editdrumkit);
@@ -1586,6 +1735,7 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	gdk_draw_line(w->window, gc, 0,0, 0, height);
 	gdk_draw_line(w->window, gc, DRAW_WIDTH,0, DRAW_WIDTH, height);
 
+	/* Put a rectangle around the instrument selected for copying */
 	if (instrument_in_copy_buffer == instrument->instrument_num) {
 		/* probably could do something better with color... */
 		gdk_draw_line(w->window, gc, 0, height-3, DRAW_WIDTH, height-3); 
@@ -1594,6 +1744,7 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		gdk_draw_line(w->window, gc, DRAW_WIDTH-2,0, DRAW_WIDTH-2, height);
 	}
 
+	/* Draw the timing lines... */
 	for (i=ndivisions-1;i>=0;i--) {
 		int k;
 		divs =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
@@ -1632,6 +1783,7 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		g_print("instrument hit is NOT null\n");
 	*/
 
+	/* Draw the note-ons/note-offs for this perc. instrument/note... */
 	for (this = instrument->hit; this != NULL; this = this->next) {
 		double x1,y1,x2,y2;
 
@@ -1639,15 +1791,27 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 		x1 = this->h.time * DRAW_WIDTH /* - 5 */ ;
 		y1 = height - (int) (((double) height * (double) this->h.velocity) / 127.0);
 		y2 = height;
-		x2 = x1 + 10;
+
 		/* g_print("x1=%g, y1=%g, x2=%g, y2=%g\n", x1, y1, x2, y2); */
-		gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y2);
-		// gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x2, (int) y1);
-		gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x1, (int) y1);
-		// gdk_draw_line(w->window, gc, (int) x2, (int) y2, (int) x2, (int) y1);
-		// gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y1);
-		gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x2, (int) y2);
-		gdk_draw_line(w->window, gc, (int) x1-8, (int) y1, (int) x1+8, (int) y1);
+
+		/* Draw the "note" */
+		if (melodic_mode) {
+			if (this->h.noteoff_time < 0)
+				x2 = x1 + 10; /* fill in something "sensible"... is this really needed? */
+			else
+				x2 = this->h.noteoff_time * DRAW_WIDTH /* - 5 */ ;
+			gdk_draw_rectangle(w->window, gc, TRUE, x1, y1, x2-x1, y2-y1);
+		} else {
+			x2 = x1 + 10;
+			/* front vertical line... */
+			gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x1, (int) y1);
+			/* bottom line... */
+			gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x2, (int) y2);
+			/* slanty line */
+			gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y2);
+			/* horizontal line on top... */
+			gdk_draw_line(w->window, gc, (int) x1-8, (int) y1, (int) x1+8, (int) y1);
+		}
 	}
 
 	/* if (instrument != NULL) 
@@ -1702,7 +1866,7 @@ static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	}
 
 	if (autocrunch_is_on) {	
-		for (i=0;i<drumkit[kit].ninsts;i++) {
+		for (i=0;i<NINSTS;i++) {
 			struct instrument_struct *inst = &drumkit[kit].instrument[i];
 			canvas_event(inst->canvas, NULL, inst);
 		}
@@ -1720,7 +1884,7 @@ void pattern_clear_button_clicked(GtkWidget *widget,
 	printf("Pattern clear button.\n");
 	int i;
 	/* Clear out anything old */
-	for (i=0;i<drumkit[kit].ninsts; i++) {
+	for (i=0;i<NINSTS; i++) {
 		struct instrument_struct *inst = &drumkit[kit].instrument[i];
 		if (inst->hit != NULL) {
 			clear_hitpattern(inst->hit);
@@ -1755,6 +1919,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 	int rc, i;
 	long drag; /* microsecs */
 	long dragsecs;
+	struct timeval tmpbase;
 	int track;
 
 	/* printf("schedule_pattern called\n"); */
@@ -1792,17 +1957,24 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 			pct = 100;
 		
 		/* printf("this->h.time = %g\n", this->h.time); */
+		tmpbase = basetime;
 		rc = sched_note(&sched, &basetime, track, inst->midivalue, 
 			measurelength, this->h.time, 1000000, this->h.velocity, 
 			measure, pct, drag);
+		/* schedule note off if not percussion */
+		if (pattern[cpattern]->music_type != PERCUSSION)
+			rc = sched_note(&sched, &tmpbase, track, inst->midivalue, 
+				measurelength, this->h.noteoff_time, 1000000, /* velocity zero */ 0, 
+				measure, pct, drag);
 	}
 	/* This no-op is just so the next measure doesn't before this one is really over. */
 	orig_basetime = basetime;
 	rc = sched_noop(&sched, &basetime, track, 
 		0, measurelength, 1.0, 1000000, 127, measure, 100); 
 
+	/* FIXME, instead of scheduling all these crazy noops, probably should build them
+	   into the player code algorithmically or something. */
 	if (record_mode) {
-		struct timeval tmpbase;
 		int metronome = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(pattern_metronome_chbox));
 		int timediv0, timediv1, note, volume;
 		if (pattern[cpattern]->timediv[0].division == 0)
@@ -2079,10 +2251,11 @@ void pattern_paste_button_clicked(GtkWidget *widget,
 	for (f = pattern[from]->hitpattern; f != NULL; f=f->next) {
 		lowlevel_add_hit(&pattern[cpattern]->hitpattern, kit, cpattern, 
 			f->h.instrument_num, f->h.beat, f->h.beats_per_measure, 
+			f->h.noteoff_beat, f->h.noteoff_beats_per_measure,
 			f->h.velocity, 1);
 	}
 	unflatten_pattern(kit, cpattern);
-	for (i=0;i<drumkit[kit].ninsts; i++)
+	for (i=0;i<NINSTS; i++)
 		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 	return;
 }
@@ -2159,7 +2332,8 @@ void edit_pattern(int new_pattern)
 		gtk_tooltips_set_tip(tooltips, nextbutton, EDIT_NEXT_PATTERN_TIP, NULL);
 	}
 	/* Make the timing lines redraw . . . */
-	for (i=0;i<drumkit[kit].ninsts;i++)
+	check_melodic_mode();
+	for (i=0;i<NINSTS;i++)
 		gtk_widget_queue_draw(GTK_WIDGET(drumkit[kit].instrument[i].canvas));
 }
 
@@ -2193,6 +2367,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	memset(p, 0, sizeof(*p));
 	p->pattern_num = data->pattern_num;
 	p->tracknum = data->tracknum;
+	p->music_type = data->music_type;
 	p->hitpattern = NULL;
 	sprintf(p->patname, "New%d", npatterns+1);
 
@@ -2488,11 +2663,13 @@ void paste_current_instrument_hit_pattern()
 	printf("Paste current instrument... %d into %d\n", instrument_in_copy_buffer, current_instrument);
 
 	/* Something to copy from? */
-	if (instrument_in_copy_buffer < 0 || instrument_in_copy_buffer >= dk->ninsts)
+	if (instrument_in_copy_buffer < 0 || 
+		instrument_in_copy_buffer >= NINSTS)
 		return;
 
 	/* Something to copy to? */
-	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+	if (current_instrument < 0 || 
+		current_instrument >= NINSTS)
 		return;
 
 	/* Copy the hit pattern ... */
@@ -2500,7 +2677,9 @@ void paste_current_instrument_hit_pattern()
  	to = &dk->instrument[current_instrument];
 	for (h = from->hit; h != NULL; h=h->next)
 		lowlevel_add_hit(&to->hit, kit, cpattern, to->instrument_num, 
-			h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+			h->h.beat, h->h.beats_per_measure, 
+			h->h.noteoff_beat, h->h.noteoff_beats_per_measure, 
+			h->h.velocity, 1);
 	gtk_widget_queue_draw(GTK_WIDGET(to->canvas));
 	return;
 }
@@ -2515,11 +2694,13 @@ void paste_all_current_instrument_hit_pattern()
 	printf("Paste all current instrument... %d into %d\n", instrument_in_copy_buffer, current_instrument);
 
 	/* Something to copy from? */
-	if (instrument_in_copy_buffer < 0 || instrument_in_copy_buffer >= dk->ninsts)
+	if (instrument_in_copy_buffer < 0 || 
+		instrument_in_copy_buffer >= NINSTS)
 		return;
 
 	/* Something to copy to? */
-	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+	if (current_instrument < 0 || 
+		current_instrument >= NINSTS)
 		return;
 
 	flatten_pattern(kit, cpattern); /* save current pattern */
@@ -2531,7 +2712,9 @@ void paste_all_current_instrument_hit_pattern()
 		to = &dk->instrument[current_instrument];
 		for (h = from->hit; h != NULL; h=h->next)
 			lowlevel_add_hit(&to->hit, kit, i, to->instrument_num, 
-				h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+				h->h.beat, h->h.beats_per_measure, 
+				h->h.noteoff_beat, h->h.noteoff_beats_per_measure, 
+				h->h.velocity, 1);
 		flatten_pattern(kit, i);
 	}
 	unflatten_pattern(kit, cpattern);
@@ -2549,7 +2732,8 @@ void clear_all_current_instrument_hit_pattern()
 	printf("Clear all current instrument... %d\n", current_instrument);
 
 	/* Something to clear? */
-	if (current_instrument < 0 || current_instrument >= dk->ninsts)
+	if (current_instrument < 0 || 
+		current_instrument >= NINSTS)
 		return;
 
 	flatten_pattern(kit, cpattern); /* save current pattern */
@@ -2664,8 +2848,12 @@ void adjust_space(double add, double multiply)
 		h = h->next;
 	}
 	unflatten_pattern(kit, cpattern);
-	for (i=0;i<drumkit[kit].ninsts; i++)
-		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
+	check_melodic_mode();
+	for (i=0;i<NINSTS; i++)
+		if (drumkit[kit].instrument[i].canvas == NULL)
+			printf("drumkit[kit].instrument[%d] is null\n", i);
+		else
+			gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 }
 
 int check_num_denom_ok(double *numerator, double *denominator)
@@ -2851,7 +3039,8 @@ void scramble_button_pressed(GtkWidget *widget,
 	} while (!done); /* repeat until we didn't swap anything */
 
 	unflatten_pattern(kit, cpattern);
-	for (i=0;i<drumkit[kit].ninsts; i++)
+	check_melodic_mode();
+	for (i=0;i<NINSTS; i++)
 		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 }
 
@@ -3136,6 +3325,7 @@ int flatten_pattern(int ckit, int cpattern)
 	int i;
 	struct drumkit_struct *dk = &drumkit[ckit];
 	struct pattern_struct *p = pattern[cpattern];
+	gboolean percussion;
 
 	if (npatterns < cpattern+1) {
 		npatterns = cpattern+1;
@@ -3156,6 +3346,11 @@ int flatten_pattern(int ckit, int cpattern)
 	p->beats_per_minute = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin1));
 	p->beats_per_measure = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin2));
 	p->tracknum = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(trackspin));
+	percussion  = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(percussion_toggle));
+	if (percussion)
+		p->music_type = PERCUSSION;
+	else
+		p->music_type = MELODIC;
 	strncpy(p->patname, gtk_entry_get_text(GTK_ENTRY(pattern_name_entry)), 39);
 	if (p->arr_button != NULL)
 		gtk_button_set_label(GTK_BUTTON(p->arr_button), p->patname);
@@ -3171,12 +3366,14 @@ int flatten_pattern(int ckit, int cpattern)
 	}
 
 	/* copy patterns from per instrument patterns area to single pattern */
-	for (i=0;i<dk->ninsts;i++) {
+	for (i=0;i<NINSTS;i++) {
 		struct hitpattern *h;
 		struct instrument_struct *inst = &dk->instrument[i];
 		for (h = inst->hit; h != NULL; h=h->next) {
 			lowlevel_add_hit(&p->hitpattern, ckit, cpattern, inst->instrument_num, 
-				h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+				h->h.beat, h->h.beats_per_measure, 
+				h->h.noteoff_beat, h->h.noteoff_beats_per_measure, 
+				h->h.velocity, 1);
 		}
 	}
 	return 0;
@@ -3190,6 +3387,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num)
 		return NULL;
 	memset(p, 0, sizeof(*p));
 	p->tracknum = 0;
+	p->music_type = PERCUSSION;
 	p->hitpattern = NULL;
 	p->pattern_num = pattern_num;
 	p->beats_per_measure = 4;
@@ -3207,7 +3405,7 @@ int unflatten_pattern(int ckit, int cpattern)
 	int i;
 
 	/* Clear out anything old */
-	for (i=0;i<drumkit[ckit].ninsts; i++) {
+	for (i=0;i<NINSTS; i++) {
 		struct instrument_struct *inst = &drumkit[ckit].instrument[i];
 		if (inst->hit != NULL) {
 			clear_hitpattern(inst->hit);
@@ -3226,6 +3424,7 @@ int unflatten_pattern(int ckit, int cpattern)
 			pattern[cpattern]->beats_per_measure = pattern[cpattern-1]->beats_per_measure;
 			pattern[cpattern]->beats_per_minute = pattern[cpattern-1]->beats_per_minute;
 			pattern[cpattern]->tracknum = pattern[cpattern-1]->tracknum;
+			pattern[cpattern]->music_type = pattern[cpattern-1]->music_type;
 			/* printf("copying tempo, %d, %d\n", 
 				pattern[cpattern]->beats_per_measure,
 				pattern[cpattern]->beats_per_minute); */
@@ -3238,6 +3437,13 @@ int unflatten_pattern(int ckit, int cpattern)
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) pattern[cpattern]->beats_per_minute);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) pattern[cpattern]->beats_per_measure);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(trackspin), (gdouble) pattern[cpattern]->tracknum);
+	if (pattern[cpattern]->music_type == PERCUSSION) 
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(percussion_toggle),
+			(gboolean) 1);
+	else
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(percussion_toggle),
+			(gboolean) 0);
+
 	for (h = pattern[cpattern]->hitpattern; h != NULL; h = h->next) {
 		/* g_print("inst = %d, beat=%d, bpm =%d\n", h->h.instrument_num, 
 			h->h.beat, h->h.beats_per_measure); fflush(stdout); */
@@ -3245,7 +3451,9 @@ int unflatten_pattern(int ckit, int cpattern)
 		if (h->h.instrument_num != -1)
 			lowlevel_add_hit(&drumkit[ckit].instrument[h->h.instrument_num].hit,
 				ckit, cpattern, h->h.instrument_num, 
-				h->h.beat, h->h.beats_per_measure, h->h.velocity, 1);
+				h->h.beat, h->h.beats_per_measure, 
+				h->h.noteoff_beat, h->h.noteoff_beats_per_measure, 
+				h->h.velocity, 1);
 		else
 			printf("Bad instrument number in pattern %d...\n", cpattern);
 		/* add_hit(&drumkit[ckit].instrument[h->h.instrument_num].hit, 
@@ -3258,7 +3466,7 @@ int unflatten_pattern(int ckit, int cpattern)
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(timediv[i].spin), 
 			(gdouble) timediv[i].division);
 	}
-	for (i=0;i<drumkit[ckit].ninsts; i++) {
+	for (i=0;i<NINSTS; i++) {
 		struct instrument_struct *inst = &drumkit[ckit].instrument[i];
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(inst->drag_spin_button), 
 			(gdouble) pattern[cpattern]->drag[i]);
@@ -3347,10 +3555,11 @@ int load_from_file_version_4(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		rc = fscanf(f, "Pattern %*d: %d %d %d %[^\n]%*c", 
+		rc = fscanf(f, "Pattern %*d: %d %d %d %d %[^\n]%*c", 
 				&pattern[i]->beats_per_measure,
 				&pattern[i]->beats_per_minute, 
 				&pattern[i]->tracknum,
+				&pattern[i]->music_type,
 				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
 		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
@@ -3574,9 +3783,10 @@ int import_patterns_v4(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+		fscanf(f, "Pattern %*d: %d %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
 				&pattern[i]->beats_per_minute, 
 				&pattern[i]->tracknum, 
+				&pattern[i]->music_type, 
 				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
 		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
@@ -3856,9 +4066,10 @@ int save_to_file(char *filename)
 		int count;
 		long drag;
 		struct hitpattern *h;
-		fprintf(f, "Pattern %d: %d %d %d %s\n", i, pattern[i]->beats_per_measure,
+		fprintf(f, "Pattern %d: %d %d %d %d %s\n", i, pattern[i]->beats_per_measure,
 			pattern[i]->beats_per_minute, 
 			pattern[i]->tracknum, 
+			pattern[i]->music_type, 
 			pattern[i]->patname);
 		fprintf(f, "Divisions: %d %d %d %d %d\n", 
 			pattern[i]->timediv[0].division,
@@ -3907,7 +4118,7 @@ int save_to_file(char *filename)
 void silence(struct midi_handle *mh)
 {
 	int i,j;
-	for (i=0;i<127;i++)
+	for (i=0;i<MAXINSTS;i++)
 		for (j=0;j<16;j++)
 			midi->noteoff(mh, j, 0, i);
 }
@@ -3986,15 +4197,23 @@ void receive_midi_data(int signal)
 			printf("percent = %d, thetime = %g\n", transport_location->percent, thetime);
 
 			/* Find the instrument with this midi note. */
-			for (i=0;i<drumkit[kit].ninsts; i++) {
-				inst = &drumkit[kit].instrument[i];
-				if (inst->midivalue == data[1]) {
-					rc = add_hit(&inst->hit, (double) thetime, (double) 100.0, 
-						kit, inst->instrument_num, cpattern, data[2], 1);
-					
-					gtk_widget_queue_draw(inst->canvas);
-					break;
+			if (!melodic_mode) {
+				for (i=0;i<drumkit[kit].ninsts; i++) {
+					inst = &drumkit[kit].instrument[i];
+					if (inst->midivalue == data[1]) {
+						rc = add_hit(&inst->hit, (double) thetime, -1.0, 
+							(double) 100.0, 
+							kit, inst->instrument_num, cpattern, data[2], 1);
+						
+						gtk_widget_queue_draw(inst->canvas);
+						break;
+					}
 				}
+			} else {
+				inst = &drumkit[kit].instrument[data[1]];
+				rc = add_hit(&inst->hit, (double) thetime, -1.0, (double) 100.0, 
+						kit, inst->instrument_num, cpattern, data[2], 1);
+				gtk_widget_queue_draw(inst->canvas);
 			}
 		}
 	}
@@ -4380,7 +4599,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case GDK_x:
 		if (mycontext == PATTERN_CONTEXT &&
 			current_instrument >= 0 && 
-			current_instrument < drumkit[kit].ninsts)
+			current_instrument < NINSTS)
 			instrument_clear_button_pressed(NULL, 
 				&drumkit[kit].instrument[current_instrument]);
 		return TRUE;
@@ -4520,6 +4739,7 @@ int main(int argc, char *argv[])
 		dk->make, dk->model, dk->name);
 
 	gdk_color_parse("white", &whitecolor);
+	gdk_color_parse("light gray", &lightgraycolor);
 	gdk_color_parse("blue", &bluecolor);
 	gdk_color_parse("black", &blackcolor);
 
@@ -4558,7 +4778,7 @@ int main(int argc, char *argv[])
 		PSCROLLER_WIDTH, PSCROLLER_HEIGHT);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (pattern_scroller),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	table = gtk_table_new(dk->ninsts + 1,  10, FALSE);
+	table = gtk_table_new(MAXINSTS,  10, FALSE);
 	gtk_box_pack_start(GTK_BOX(box1), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box1), middle_box, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(middle_box), pattern_scroller, TRUE, TRUE, 0);
@@ -4664,7 +4884,8 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (volume_magnifier), "value-changed", 
 				G_CALLBACK (volume_magnifier_changed), NULL);
 
-	for (i=0;i<dk->ninsts;i++) {
+	// for (i=0;i<dk->ninsts;i++) {
+	for (i=0;i<MAXINSTS;i++) {
 		int col;
 		struct instrument_struct *inst = &dk->instrument[i];
 
@@ -4724,7 +4945,15 @@ int main(int argc, char *argv[])
 			VOLUME_SLIDER_TIP, NULL);
 
 		inst->canvas = gtk_drawing_area_new();
-		gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &whitecolor);
+		if ((i % 12) == 1 ||
+			(i % 12) == 4 ||
+			(i % 12) == 6 ||
+			(i % 12) == 9 ||
+			(i % 12) == 11)
+			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &lightgraycolor);
+		else
+			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &whitecolor);
+
 		g_signal_connect(G_OBJECT (inst->button), "clicked", 
 				G_CALLBACK (instrument_button_pressed), inst);
 		g_signal_connect(G_OBJECT (inst->canvas), "expose_event",
@@ -4736,6 +4965,8 @@ int main(int argc, char *argv[])
 		gtk_widget_add_events(inst->canvas, GDK_BUTTON_RELEASE_MASK); 
 		g_signal_connect(G_OBJECT (inst->canvas), "button-release-event",
 				G_CALLBACK (canvas_clicked), inst);
+		g_signal_connect(G_OBJECT (inst->canvas), "button-press-event",
+				G_CALLBACK (canvas_mousedown), inst);
 
 		/* Hmm, this doesn't seem to work... can't get key press events in canvas...? */
 		widget_exclude_keypress(inst->canvas); /* filter */
@@ -4782,6 +5013,13 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(track_box), track_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(track_box), trackspin, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(linebox), track_box, FALSE, FALSE, 0);
+
+	percussion_toggle = gtk_check_button_new_with_label(PERCUSSION_LABEL);
+	gtk_box_pack_start(GTK_BOX(linebox), percussion_toggle, FALSE, FALSE, 0);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(percussion_toggle),
+				(gboolean) 1);
+	g_signal_connect(G_OBJECT (percussion_toggle), "toggled", 
+				G_CALLBACK (percussion_toggle_callback), NULL);
 
 	scramble_button = gtk_button_new_with_label(SCRAMBLE_LABEL);
 	gtk_tooltips_set_tip(tooltips, scramble_button, SCRAMBLE_TIP, NULL);
@@ -5141,6 +5379,20 @@ int main(int argc, char *argv[])
 		gtk_widget_hide(inst->volume_slider);
 		gtk_widget_hide(inst->clear_button);
 		gtk_widget_hide(inst->drag_spin_button);
+	}
+	for (i=drumkit[kit].ninsts;i<MAXINSTS;i++) {
+		struct instrument_struct *inst = &drumkit[kit].instrument[i];
+		gtk_widget_hide(inst->name_entry);
+		gtk_widget_hide(inst->type_entry);
+		gtk_widget_hide(inst->midi_value_spin_button);
+		gtk_widget_hide(inst->gm_value_spin_button);
+		gtk_widget_hide(inst->volume_slider);
+		gtk_widget_hide(inst->clear_button);
+		gtk_widget_hide(inst->drag_spin_button);
+		gtk_widget_hide(inst->drag_spin_button);
+		gtk_widget_hide(inst->hidebutton);
+		gtk_widget_hide(inst->canvas);
+		gtk_widget_hide(inst->button);
 	}
 
 	flatten_pattern(kit, cpattern);

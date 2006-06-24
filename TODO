@@ -57,6 +57,10 @@
   possibly embed fluidsynth?    Right now alsa-virmidi works to route
   midi to softsynths.
 
+* Add JACK transport support
+
+* Add LASH support
+
 * Anything else?
 
 

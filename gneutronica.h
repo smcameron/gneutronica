@@ -44,7 +44,9 @@
 #define MAXKITS 100
 #define MAXINSTS 128
 #define DRAW_WIDTH 600
-#define DRAW_HEIGHT 25
+
+GLOBAL int INIT(melodic_mode, 0);
+#define DRAW_HEIGHT (melodic_mode ? 8 : 25)
 #define MAGNIFIED_DRAW_HEIGHT 130 
 #define MAXTIMEDIVS 5
 #define MEASUREWIDTH 20 
@@ -61,9 +63,13 @@ struct hit_struct {
 	int instrument_num;
 	int drumkit;
 	unsigned char velocity;
-	double time; /* as a percentage of the measure */
+	double time;		/* noteon time, as a fraction of the measure */
 	int beat;
 	int beats_per_measure; /* this is a per-note value, used to position the note within a measure,
+				/* and does not really reflect tempo information */
+	double noteoff_time;		/* noteon time, as a fraction of the measure */
+	int noteoff_beat;
+	int noteoff_beats_per_measure; /* this is a per-note value, used to position the note within a measure,
 				/* and does not really reflect tempo information */
 };
 
@@ -94,6 +100,9 @@ struct pattern_struct {
 	char patname[40];
 	struct hitpattern *hitpattern;
 	struct division_struct timediv[MAXTIMEDIVS];
+	int music_type; 
+#define PERCUSSION 0
+#define MELODIC 1
 	int tracknum;
 	int pattern_num;
 	int beats_per_measure; /* this is tempo information for this pattern */
@@ -132,6 +141,7 @@ struct drumkit_struct {
 };
 
 GLOBAL struct drumkit_struct drumkit[MAXKITS];
+#define NINSTS (melodic_mode ? 128 : drumkit[kit].ninsts)
 
 GLOBAL int song_gm_map[MAXINSTS];
 
@@ -196,8 +206,12 @@ GLOBAL int ndivisions
 #endif
 ;
 
+GLOBAL int INIT(mousedownx, -1);
+GLOBAL int INIT(mousedowny, -1);
+
 GLOBAL GtkWidget *tempolabel1, *tempolabel2, *tempospin1, *tempospin2;
 GLOBAL GtkWidget *trackspin, *track_label;
+GLOBAL GtkWidget *percussion_toggle;
 GLOBAL GtkWidget *song_name_entry, *song_name_label;
 GLOBAL GtkWidget *pattern_name_entry, *pattern_name_label;
 GLOBAL GtkWidget *SaveBox;
@@ -318,6 +332,7 @@ GLOBAL char arranger_title[255];
 GLOBAL char songname[100];
 
 GLOBAL GdkColor whitecolor;
+GLOBAL GdkColor lightgraycolor;
 GLOBAL GdkColor bluecolor;
 GLOBAL GdkColor blackcolor;
 GLOBAL GdkGC INIT(*gc, NULL);
