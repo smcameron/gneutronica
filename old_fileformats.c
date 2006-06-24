@@ -24,6 +24,12 @@
 
 /* Keep old file format reading code in here so as not
    to clutter up the main code base */
+void set_old_noteoff(struct hitpattern *h)
+{
+	h->h.noteoff_time = 1.0;
+	h->h.noteoff_beat = 4;
+	h->h.noteoff_beats_per_measure = 4;	
+}
 
 int load_from_file_version_2(FILE *f)
 {
@@ -89,6 +95,8 @@ int load_from_file_version_2(FILE *f)
 			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			set_old_noteoff(*h);
 
 			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
 				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
@@ -307,6 +315,8 @@ int import_patterns_v2(FILE *f)
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 
+			set_old_noteoff(*h);
+
 			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
 				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
 				(*h)->h.velocity, (*h)->h.beat, (*h)->h.beats_per_measure); */
@@ -426,6 +436,7 @@ int load_from_file_version_3(FILE *f)
 			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+			set_old_noteoff(*h);
 
 			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
 				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
@@ -551,6 +562,8 @@ int import_patterns_v3(FILE *f)
 			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+
+			set_old_noteoff(*h);
 
 			gm = import_inst_map[(*h)->h.instrument_num];
 			if (gm != -1)

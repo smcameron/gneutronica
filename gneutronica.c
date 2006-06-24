@@ -3579,9 +3579,12 @@ int load_from_file_version_4(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
-				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure,
+				&(*h)->h.noteoff_time,
+				&(*h)->h.noteoff_beat,
+				&(*h)->h.noteoff_beats_per_measure);
 
 			/* printf("T: %g DK: %d I: %d v: %d b:%d bpm:%d\n", 
 				(*h)->h.time, (*h)->h.drumkit, (*h)->h.instrument_num,
@@ -4078,9 +4081,12 @@ int save_to_file(char *filename)
 			pattern[i]->timediv[3].division,
 			pattern[i]->timediv[4].division);
 		for (h = pattern[i]->hitpattern; h != NULL; h=h->next) {
-			fprintf(f, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			fprintf(f, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
 				h->h.time, h->h.drumkit, h->h.instrument_num, h->h.velocity,
-				h->h.beat, h->h.beats_per_measure);
+				h->h.beat, h->h.beats_per_measure, 
+				h->h.noteoff_time,
+				h->h.noteoff_beat,
+				h->h.noteoff_beats_per_measure);
 		}
 		fprintf(f, "END-OF-PATTERN\n");
 		count = 0;
