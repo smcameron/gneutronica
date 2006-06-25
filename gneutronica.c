@@ -3637,8 +3637,8 @@ int load_from_file_version_4(FILE *f)
 			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
 
 			/* printf("new time is %g\n", (*h)->h.time); */
-			if (rc != 6) 
-				printf("rc != 6!\n");
+			if (rc != 9) 
+				printf("rc != 9!\n");
 			h = &(*h)->next;
 		}
 		rc = fscanf(f, "dragging count: %d\n", &count);
@@ -3849,9 +3849,12 @@ int import_patterns_v4(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
-				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
+				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure,
+				&(h)->h.noteoff_time,
+				&(h)->h.noteoff_beat,
+				&(h)->h.noteoff_beats_per_measure);
 
 			gm = import_inst_map[(*h)->h.instrument_num];
 			if (gm != -1)
@@ -4723,7 +4726,7 @@ int main(int argc, char *argv[])
 	transport_location->measure = 0;
 	transport_location->percent = 0;
 
-        strcpy(output_device, "/dev/snd/midi1");
+	strcpy(output_device, midi->default_file());
 	strcpy(drumkitfile, "drumkits/default_drumkit.dk");
 	strcpy(drumkitfile, "drumkits/generic.dk");
 	strcpy(drumkitfile, "drumkits/Roland_Dr660_Standard.dk");

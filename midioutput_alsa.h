@@ -35,6 +35,7 @@ GLOBAL midi_noteon_function midi_noteon_alsa;
 GLOBAL midi_noteoff_function midi_noteoff_alsa;
 GLOBAL midi_patch_change_function midi_patch_change_alsa;
 GLOBAL midi_isopen_function midi_isopen_alsa;
+GLOBAL midi_default_file_function midi_default_file_alsa;
 
 GLOBAL struct midi_method midi_method_alsa
 #ifdef INSTANTIATE_MIDIOUTPUT_ALSA_GLOBALS
@@ -45,6 +46,7 @@ GLOBAL struct midi_method midi_method_alsa
 	midi_noteoff_alsa,
 	midi_patch_change_alsa,
 	midi_isopen_alsa,
+	midi_default_file_alsa,
 }
 #endif
 ;

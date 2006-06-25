@@ -35,6 +35,7 @@ GLOBAL midi_noteon_function noteon_raw;
 GLOBAL midi_noteoff_function noteoff_raw;
 GLOBAL midi_patch_change_function patch_change_raw;
 GLOBAL midi_isopen_function isopen_raw;
+GLOBAL midi_default_file_function default_file_raw;
 
 GLOBAL struct midi_method midi_method_raw
 #ifdef INSTANTIATE_MIDIOUTPUT_RAW_GLOBALS
@@ -45,6 +46,7 @@ GLOBAL struct midi_method midi_method_raw
 	noteoff_raw,
 	patch_change_raw,
 	isopen_raw,
+	default_file_raw,
 }
 #endif
 ;

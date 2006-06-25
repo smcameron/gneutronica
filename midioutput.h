@@ -43,6 +43,8 @@ typedef void  midi_patch_change_function(struct midi_handle *mh,
 
 typedef int midi_isopen_function(struct midi_handle *mh);
 
+typedef const char *midi_default_file_function();
+
 struct midi_method {
 	midi_open_function *open;
 	midi_close_function *close;
@@ -50,6 +52,7 @@ struct midi_method {
 	midi_noteoff_function *noteoff;
 	midi_patch_change_function *patch_change;
 	midi_isopen_function *isopen;
+	midi_default_file_function *default_file;
 };
 
 #endif

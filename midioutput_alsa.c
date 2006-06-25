@@ -100,7 +100,7 @@ void midi_noteon_alsa(struct midi_handle *mh,
 	struct snd_seq_real_time tstamp;
 	int rc;
 
-	if (port < 0 || port >= MAX_PORTS)
+	if (port >= MAX_PORTS)
 		return;
 
 	memset(&tstamp, 0, sizeof(tstamp));
@@ -147,4 +147,10 @@ int midi_isopen_alsa(struct midi_handle *mh)
 	if (mha == NULL)
 		return 0;
 	return 1;
+}
+
+const char *midi_default_file_alsa()
+{
+	static const char *filename = "hw";
+	return(filename);
 }
