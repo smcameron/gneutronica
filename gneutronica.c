@@ -851,6 +851,13 @@ int add_hit(struct hitpattern **hit,
 			velocity, change_velocity));
 }
 
+void channel_spin_change(GtkSpinButton *spinbutton, void *data)
+{
+	int i;
+	pattern[cpattern]->channel = 
+		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
+}
+
 void track_spin_change(GtkSpinButton *spinbutton, void *data)
 {
 	int i;
@@ -1359,7 +1366,8 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		rc = add_hit(&data->hit, (double) hitx, (double) duration, (double) DRAW_WIDTH, 
 			kit, data->instrument_num, cpattern, velocity, change_velocity);
 		if (midi->isopen(midi_handle) && !melodic_mode)
-			midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data->midivalue, velocity);
+			midi->noteon(midi_handle, pattern[cpattern]->tracknum, 
+				pattern[cpattern]->channel, data->midivalue, velocity);
 		if (rc == -2) /* Note was already there, so we really want to remove it. */
 			remove_hit(&data->hit, (double) hitx, (double) DRAW_WIDTH,
 				kit, data->instrument_num, cpattern);
@@ -1920,7 +1928,8 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 	long drag; /* microsecs */
 	long dragsecs;
 	struct timeval tmpbase;
-	int track;
+	int track, channel;
+	unsigned char note;
 
 	/* printf("schedule_pattern called\n"); */
 	basetime.tv_usec = 0L;
@@ -1941,6 +1950,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 	measurelength = (60000000 / beats_per_minute) * beats_per_measure;
 
 	track = pattern[cpattern]->tracknum;
+	channel = pattern[cpattern]->channel;
 
 	for (this = pattern[cpattern]->hitpattern; this != NULL; this = this->next) {
 		struct drumkit_struct *dk = &drumkit[this->h.drumkit];
@@ -1956,9 +1966,13 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 		else if (pct > 100)
 			pct = 100;
 		
+		if (pattern[cpattern]->music_type != PERCUSSION)
+			note = this->h.instrument_num;
+		else 
+			note = inst->midivalue;
 		/* printf("this->h.time = %g\n", this->h.time); */
 		tmpbase = basetime;
-		rc = sched_note(&sched, &basetime, track, inst->midivalue, 
+		rc = sched_note(&sched, &basetime, track, channel, note, 
 			measurelength, this->h.time, 1000000, this->h.velocity, 
 			measure, pct, drag);
 		/* schedule note off if not percussion */
@@ -1968,7 +1982,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 		else if (pct > 100)
 			pct = 100;
 		if (pattern[cpattern]->music_type != PERCUSSION)
-			rc = sched_note(&sched, &tmpbase, track, inst->midivalue, 
+			rc = sched_note(&sched, &tmpbase, track, channel, note, 
 				measurelength, this->h.noteoff_time, 1000000, /* velocity zero */ 0, 
 				measure, pct, drag);
 	}
@@ -1989,7 +2003,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 		for (i=0;i<100;i++) {
 			tmpbase = orig_basetime;
 			if (metronome && timediv0 > 0 && ((i % timediv0) == 0))
-				sched_note(&sched, &tmpbase, track,
+				sched_note(&sched, &tmpbase, track, channel,
 					24, measurelength, (double) i / 100.0, 
 					1000000, 127, measure, i, 0); 
 			else
@@ -2372,6 +2386,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	memset(p, 0, sizeof(*p));
 	p->pattern_num = data->pattern_num;
 	p->tracknum = data->tracknum;
+	p->channel = data->channel;
 	p->music_type = data->music_type;
 	p->hitpattern = NULL;
 	sprintf(p->patname, "New%d", npatterns+1);
@@ -3070,7 +3085,8 @@ void instrument_button_pressed(GtkWidget *widget,
 		printf("%s\n", data->name);
 		/* should be changed to *schedule* a noteon + noteoff */
 		if (midi->isopen(midi_handle))
-			midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data->midivalue, velocity);
+			midi->noteon(midi_handle, pattern[cpattern]->tracknum, 
+				pattern[cpattern]->channel, data->midivalue, velocity);
 		current_instrument = data->instrument_num;
 		gtk_widget_queue_draw(drumkit[kit].instrument[prev].canvas);
 		gtk_widget_queue_draw(data->canvas);
@@ -3351,6 +3367,7 @@ int flatten_pattern(int ckit, int cpattern)
 	p->beats_per_minute = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin1));
 	p->beats_per_measure = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(tempospin2));
 	p->tracknum = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(trackspin));
+	p->channel = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(channelspin));
 	percussion  = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(percussion_toggle));
 	if (percussion)
 		p->music_type = PERCUSSION;
@@ -3392,6 +3409,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num)
 		return NULL;
 	memset(p, 0, sizeof(*p));
 	p->tracknum = 0;
+	p->channel = 0;
 	p->music_type = PERCUSSION;
 	p->hitpattern = NULL;
 	p->pattern_num = pattern_num;
@@ -3429,6 +3447,7 @@ int unflatten_pattern(int ckit, int cpattern)
 			pattern[cpattern]->beats_per_measure = pattern[cpattern-1]->beats_per_measure;
 			pattern[cpattern]->beats_per_minute = pattern[cpattern-1]->beats_per_minute;
 			pattern[cpattern]->tracknum = pattern[cpattern-1]->tracknum;
+			pattern[cpattern]->channel = pattern[cpattern-1]->channel;
 			pattern[cpattern]->music_type = pattern[cpattern-1]->music_type;
 			/* printf("copying tempo, %d, %d\n", 
 				pattern[cpattern]->beats_per_measure,
@@ -3442,6 +3461,7 @@ int unflatten_pattern(int ckit, int cpattern)
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin1), (gdouble) pattern[cpattern]->beats_per_minute);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(tempospin2), (gdouble) pattern[cpattern]->beats_per_measure);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(trackspin), (gdouble) pattern[cpattern]->tracknum);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(channelspin), (gdouble) pattern[cpattern]->channel);
 	if (pattern[cpattern]->music_type == PERCUSSION) 
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(percussion_toggle),
 			(gboolean) 1);
@@ -3560,10 +3580,11 @@ int load_from_file_version_4(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		rc = fscanf(f, "Pattern %*d: %d %d %d %d %[^\n]%*c", 
+		rc = fscanf(f, "Pattern %*d: %d %d %d %d %d %[^\n]%*c", 
 				&pattern[i]->beats_per_measure,
 				&pattern[i]->beats_per_minute, 
 				&pattern[i]->tracknum,
+				&pattern[i]->channel,
 				&pattern[i]->music_type,
 				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
@@ -3791,9 +3812,10 @@ int import_patterns_v4(FILE *f)
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+		fscanf(f, "Pattern %*d: %d %d %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
 				&pattern[i]->beats_per_minute, 
 				&pattern[i]->tracknum, 
+				&pattern[i]->channel, 
 				&pattern[i]->music_type, 
 				pattern[i]->patname);
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
@@ -4074,9 +4096,10 @@ int save_to_file(char *filename)
 		int count;
 		long drag;
 		struct hitpattern *h;
-		fprintf(f, "Pattern %d: %d %d %d %d %s\n", i, pattern[i]->beats_per_measure,
+		fprintf(f, "Pattern %d: %d %d %d %d %d %s\n", i, pattern[i]->beats_per_measure,
 			pattern[i]->beats_per_minute, 
 			pattern[i]->tracknum, 
+			pattern[i]->channel, 
 			pattern[i]->music_type, 
 			pattern[i]->patname);
 		fprintf(f, "Divisions: %d %d %d %d %d\n", 
@@ -4201,7 +4224,8 @@ void receive_midi_data(int signal)
 	fflush(stdout);
 	/* release semaphore */
 	if (data[0] == 0x90) {
-		midi->noteon(midi_handle, pattern[cpattern]->tracknum, MIDI_CHANNEL, data[1], data[2]);
+		midi->noteon(midi_handle, pattern[cpattern]->tracknum, 
+			pattern[cpattern]->channel, data[1], data[2]);
 		if (record_mode) {
 			/* There is quite likely a much better way to do this time calc... */ 
 			thetime = ((double) transport_location->percent);
@@ -4663,6 +4687,7 @@ int main(int argc, char *argv[])
 	GtkWidget *arranger_label;
 	GtkWidget *arranger_top_box;
 	GtkWidget *track_box;
+	GtkWidget *channel_box;
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
@@ -4956,11 +4981,11 @@ int main(int argc, char *argv[])
 			VOLUME_SLIDER_TIP, NULL);
 
 		inst->canvas = gtk_drawing_area_new();
-		if ((i % 12) == 1 ||
+		if ((i % 12) == 9 ||
+			(i % 12) == 11 ||
+			(i % 12) == 1 ||
 			(i % 12) == 4 ||
-			(i % 12) == 6 ||
-			(i % 12) == 9 ||
-			(i % 12) == 11)
+			(i % 12) == 6)
 			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &lightgraycolor);
 		else
 			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &whitecolor);
@@ -5013,6 +5038,15 @@ int main(int argc, char *argv[])
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
+	channel_box = gtk_hbox_new(FALSE, 0);
+	channel_label = gtk_label_new(CHANNEL_LABEL);
+	channelspin = gtk_spin_button_new_with_range(0, 15, 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(channelspin), (gdouble) 0.0);
+	g_signal_connect(G_OBJECT(channelspin), "value-changed", 
+		G_CALLBACK(channel_spin_change), NULL);
+	widget_exclude_keypress(channelspin);
+	gtk_box_pack_start(GTK_BOX(channel_box), channel_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(channel_box), channelspin, FALSE, FALSE, 0);
 
 	track_box = gtk_hbox_new(FALSE, 0);
 	track_label = gtk_label_new(TRACK_LABEL);
@@ -5023,6 +5057,8 @@ int main(int argc, char *argv[])
 	widget_exclude_keypress(trackspin);
 	gtk_box_pack_start(GTK_BOX(track_box), track_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(track_box), trackspin, FALSE, FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(linebox), channel_box, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(linebox), track_box, FALSE, FALSE, 0);
 
 	percussion_toggle = gtk_check_button_new_with_label(PERCUSSION_LABEL);

@@ -104,6 +104,7 @@ struct pattern_struct {
 #define PERCUSSION 0
 #define MELODIC 1
 	int tracknum;
+	int channel;
 	int pattern_num;
 	int beats_per_measure; /* this is tempo information for this pattern */
 	int beats_per_minute; /* this is tempo information for this pattern for single pattern playback
@@ -211,6 +212,7 @@ GLOBAL int INIT(mousedowny, -1);
 
 GLOBAL GtkWidget *tempolabel1, *tempolabel2, *tempospin1, *tempospin2;
 GLOBAL GtkWidget *trackspin, *track_label;
+GLOBAL GtkWidget *channelspin, *channel_label;
 GLOBAL GtkWidget *percussion_toggle;
 GLOBAL GtkWidget *song_name_entry, *song_name_label;
 GLOBAL GtkWidget *pattern_name_entry, *pattern_name_label;

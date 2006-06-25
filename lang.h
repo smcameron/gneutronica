@@ -131,6 +131,7 @@
 #define TRACK_LABEL "Track:"
 #define PERCUSSION_LABEL "Percussion"
 #define MELODIC_LABEL "Melodic"
+#define CHANNEL_LABEL "CHannel:"
 
 #define ADD_SPACE_BEFORE_LABEL "Add Space Before"
 #define ADD_SPACE_BEFORE_TIP "Adds space to the beginning of the measure, " \

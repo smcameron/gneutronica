@@ -128,11 +128,11 @@ void do_event(struct event *e)
 	switch (e->e.eventtype) {
 	case NOTE_ON: 
 		set_transport_location(e->e.measure, e->e.percent);
-		midi->noteon(midi_handle, e->e.track, 0, e->e.note, e->e.velocity);
+		midi->noteon(midi_handle, e->e.track, e->e.channel, e->e.note, e->e.velocity);
 		break;
 	case NOTE_OFF: 
 		set_transport_location(e->e.measure, e->e.percent);
-		midi->noteoff(midi_handle, e->e.track, 0, e->e.note);
+		midi->noteoff(midi_handle, e->e.track, e->e.channel, e->e.note);
 		break;
 	case NO_OP:
 		set_transport_location(e->e.measure, e->e.percent);
@@ -210,6 +210,7 @@ int set_timing(int bpmeasure, int bpm)
 int sched_note(struct schedule_t *s,
 		struct timeval *measure_begins,
 		unsigned char track,
+		unsigned char channel,
 		unsigned char noteval,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
@@ -240,6 +241,7 @@ int sched_note(struct schedule_t *s,
 		return -1;
 
 	note->e.track = track;
+	note->e.channel = channel;
 	note->e.note = noteval;
 	note->e.eventtype = NOTE_ON;
 	note->e.velocity = velocity;
