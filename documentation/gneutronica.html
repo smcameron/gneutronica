@@ -9,17 +9,19 @@
 <p align=center><font size=-1>Last Updated May 21, 2006, by Stephen Cameron</font>
 <hr>
 <h1>Introduction</h1>
-<p>Gneutronica is a simple MIDI drum machine program modeled to a large extent
-on the Hydrogen sample-based drum machine software also available for linux.  
+<p>Gneutronica is a simple MIDI drum machine and rudimentary
+sequencer program.
 If you are familiar with Hydrogen,
 you'll find yourself pretty much at home with Gneutronica.  Gneutronica lets you create 
-patterns of drum beats one measure long, allows you to divide up the measure
+patterns of melody or drum beats one measure long, allows you to divide up each measure
 into however many beats you like (several times simultaneously, if you want)
 and then arrange those patterns into a sequence for playback.  Essentially it's
-a tool with which to create drum tracks and play them back via MIDI devices.
+a tool with which to create drum tracks and instrument tracks and play 
+them back via MIDI devices.
 
-<p>Right now (July 4, 2005), Gneutronica is quite small, less than
-3000 lines of code, last time I checked.  It doesn't try to do
+<p>About a year ago (July 4, 2005), Gneutronica was quite small, less than
+3000 lines of code.  Now, nearly a year later, it's about 9000 lines or so.
+It's a bit bigger, but still not too huge.  It doesn't try to do
 everything, and there are probably some strange things about the user interface
 which are due to my lack of knowledge about Gnome programming.  Gneutronica is
 my very first Gnome program ever, and it's been probably 8 or 10 years since
@@ -33,15 +35,34 @@ and it's pretty easy to use, so I thought I'd throw it out there in case anyone
 else might be wishing Hydrogen could talk to MIDI devices, or that it had a gnome 
 interface.  These two perceived shortcomings of Hydrogen, (at least I considered 
 them to be shortcomings,) plus a desire to learn gnome and MIDI programming
-are what led me to create Gneutronica.
+are what led me to create Gneutronica.  (By now, the shortcoming of Hydrogen
+which I was complaining about may well have been rectified, for all I know.)
 
 <h1>Building and running Gneutronica</h1>
 <p>Really easy, has not been "autoconfiscated" or anything, just type make.
+<p>You will need the ALSA library), which can be found here:
+<a href="http://alsa-project.org/">http://alsa-project.org/</a>, as 
+Gneutronica uses the ALSA sequencer interface.
 <pre>
 [scameron@zuul gneutronica]$ make
-cc    -c -o sched.o sched.c
-gcc -g -o gneutronica -I/usr/include/libgnomecanvas-2.0 sched.o gneutronica.c `pkg-config --cflags --libs gtk+-2.0`
+gcc -g  -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
+cc -g    -c -o sched.o sched.c
+cc -g    -c -o midi_file.o midi_file.c
+gcc -g  -c fractions.c
+gcc -g  -c drumtab.c
+cc -g    -c -o midi_reader.o midi_reader.c
+gcc -g  -c midioutput_raw.c
+gcc -g  -c midioutput_alsa.c
+gcc -g  -o gneutronica -I/usr/include/libgnomecanvas-2.0 -lasound \
+old_fileformats.o sched.o \
+midi_reader.o midi_file.o fractions.o drumtab.o \
+midioutput_raw.o midioutput_alsa.o \
+gneutronica.c `pkg-config --cflags --libs gtk+-2.0` \
+
+chmod +x ./make_manpage
+./make_manpage > documentation/gneutronica.1
 [scameron@zuul gneutronica]$
+
 </pre>
 <p>
 <p>If you want Gneutronica to be built with for the French language,
@@ -63,7 +84,7 @@ for French language support.
  
 <p>And running it . . .  
 <pre>
-[scameron@zuul gneutronica]$ ./gneutronica -d /dev/snd/midiC1D0 -i /dev/snd/midiC2D0 -k generic.dk
+[scameron@zuul gneutronica]$ ./gneutronica -d "hw" -i /dev/snd/midiC2D0 -k generic.dk
 pid = 0
 
 Player waiting for requests
@@ -80,27 +101,23 @@ connected via USB through an M-audio (or Midiman) MidiSport 2x2 USB to MIDI
 converter.  (Getting the Midisport to work with Fedora core 3 and 4 wasn't too 
 bad, the worst part was getting the necessary 
 firmware image.)
-For the BOSS DR-660 drum machine, I had to change the settings
-to make it receive on MIDI channel 1 instead of 10.  I'm not sure why, and I've
-since come to know that channel 10 is the General Midi channel for "drums," but
-I'm unclear on exactly what that means, and in any case, changing this parameter
-on the Roland drum machine to 1 made it work for me.  I also tried to use a 
-Roland keyboard, but have so far been unsuccessful.  I suspect this was related to MIDI channels.
-Anyway, there is some work to be done there.  However, for 3 of the 4 devices I 
-tried, you could just set the machine to a percussion preset via its front panel
+Many machines assume MIDI channel 9 (or 10?) for percussion presets.
+For the machines I've tried (excepting one Roland keyboard)  
+you could just set the machine to a percussion preset via its front panel
 controls, and then you were at least able to make some sound via the MIDI interface
 which corresponded to the front panel settings.  Gneutronica does not currently 
 try to send any MIDI program change messages by default, so setting things up 
-from the front panel of the device is currently necessary.  (However, I just
-added a "Midi Setup" button with the ability to send bank and patch change messages,
+from the front panel of the device is currently necessary.  (However, there is 
+a "Midi Setup" button with the ability to send bank and patch change messages,
 but it's not yet well tested, so I'm not completely sure it's all working right.
 Eventually it should work.)
 
-<p>I have also gotten Gneutronica to work with a softsynth (fluidsynth) by using
-alsa-virmidi to route the MIDI data.  More on that below.
+<p>Gneutronica will also work with softsynths (e.g: fluidsynth).  Use acconnect
+or JACK to connect Gneutronica's midi outputs to your MIDI devices or softsynths.
 
 <p>Once you have your device connected and fired up, you need to start Gneutronica.
-By default, it will use /dev/snd/midi1 as the MIDI device it talks to.  This can be
+By default, it will open the ALSA sequencer and create 16 sequencer 
+ports (You can think of those as "tracks" within Gneutronica).  This can be
 changed by the "-d" parameter.  When first firing it up you may also wish to 
 tell it to use an alternate drum specification file with the -k option.  
 There is a General MIDI standard
@@ -131,8 +148,9 @@ approximate GM MIDI note without having to think too hard abuot it.
 <p>BTW, if you make a new drumkit file for a new device, or a new preset on a device
 send it to me, (smcameron@users.sourceforge.net) and I'll include it in the next release.
 <h1>Making a pattern</h1>
-<p>When you first start up Gneutronica, you are presented with two windows, the Arrangement
-Editor, and the Pattern Editor.  The pattern editor lets you construct a pattern of 
+<p>When you first start up Gneutronica, you are presented with the Pattern Editor window.
+In a second tab near the bottom left, is the Arrangement Editor.
+The pattern editor lets you construct a pattern of 
 drum beats one measure long, and the arrangement editor lets you arrange those one-measure-long 
 patterns into a sequence.
 
@@ -148,8 +166,8 @@ divide the measure into quarters, and the blue lines divide the measure into
 right hand side of the screen.  A value of zero or one essentially makes a set
 of lines inactive.  A value of 2 divides the measure in half into 2 equal sized
 pieces, a value of 3 divides it into 3rds, 4 into 4ths, 5 into 5ths, etc.  You can divide
-the measure all the way down to mincemeat, that is, to 400ths.  Whether
-or not your MIDI device and Gneutronica can acutally perform a very dense 
+the measure all the way down to mincemeat, that is, to 300ths.  Whether
+or not your MIDI device and Gneutronica can actually perform a very dense 
 measure successfully is another
 question though.  And you can
 divide it 5 times independently to set up polyrhythms like 3 against 4, or even go
@@ -181,9 +199,7 @@ as one might one, since the area of pixels in which you click the mouse is only
 about 30 pixels high, you don't get the full 0-127 values, but only a
 down-sampled 30 values.  There is a "Volume Zoom" feature which allows you
 to expand the height of the area for the current instrument by a preset
-amount.  You can see this in action above for the instrument "HHPclRkStSW" (hey, that's
-what Yamaha called it -- it's a Hi hat.)  
-Using this, you get the same convenience of single-click
+amount.  Using this, you get the same convenience of single-click
 placement of notes in both time and velocity, and you get the needed 
 precision, and as each instrument is automatically expanded and contracted
 as you place notes, you still get to see plenty of instruments onscreen 
@@ -278,6 +294,26 @@ whole song, lowercase p for just this pattern.)
 <li>Move the mouse over the SNARE1 row, and press 'X' (shift X for
 the whole song, lowercase x for just this pattern.)
 </ol>
+
+<p>There is also a rudimentary melodic sequencer in Gneutronica now:
+<p align=center><img src="pattern_editor1.png">
+<p><b>Track:</b> this controls which ALSA sequencer port Gneutronica
+will transmit this pattern to.  Typically, you might have a bunch of
+drum patterns going out to say, a drum machine, you caould assign all
+those to Track 0, and use aconnect, or JACK to connect this sequencer
+port to the appropriate MIDI device or softsynth (your drum machine.)
+Then you might have, say, a bass part, and wish to sound that to a 
+different sound module or softsynth, so you set those bass patterns to
+track 1, and again, use aconnect or JACK to assign that sequencer port
+to the appropriate device or softsynth.
+
+<p><b>Channel:</b>If you have separate parts, say, a bass part, and a 
+drum part, you may wish to send both parts to the same device or softsynth,
+but to different instruments on that device.  Typically this is done with
+MIDI channels, on the device or softsynth, you arrange one instrument to
+receive on on channel, and another instrument to receive on another 
+channel.  Then you arrange your patterns in Gneutronica to transmit on
+the appropriate channel.
 
 <h1>Arranging patterns into a song</h1>
 <p>Here is the arranger window:
@@ -491,6 +527,17 @@ the original "A" as the front half, and the original
 
 
 <h2>Using Gneutronica with softsynths such as fluidsynth</h2>
+<table border=1>
+<tr><td>
+<b>Note -- this section is mostly obsolete, unless you fiddle
+with gneutronica.c and make "midi = midi_raw;" instead of 
+"midi = midi_alsa;".  But, you wouldn't do that.  Ignore
+this section, and instead just use aconnect or JACK to 
+connect Gneutronica's ALSA output MIDI ports to your
+MIDI devices or softsynths, like this:</b>
+<p align=center><img src="gneutronica_jack_connection.png">
+</td></tr>
+</table>
 Using alsa-virmidi, you can uee softsynths.
 
 <ol>
