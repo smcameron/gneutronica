@@ -190,6 +190,12 @@ GLOBAL struct tempo_change_t initial_change
 #endif
 ;
 
+GLOBAL char *notename[] 
+#ifdef INSTANTIATE_GNEUTRONICA_GLOBALS
+= { "C ", "C#", "D ", "D#", "E ", "F ", "F#", "G ", "G#", "A ", "A#", "B " }
+#endif
+;
+
 GLOBAL struct division_struct timediv[] 
 #ifdef INSTANTIATE_GNEUTRONICA_GLOBALS
 = {
@@ -206,6 +212,7 @@ GLOBAL int ndivisions
  = sizeof(timediv) / sizeof(struct division_struct)
 #endif
 ;
+GLOBAL GtkWidget *NoteLabel;
 
 GLOBAL int INIT(mousedownx, -1);
 GLOBAL int INIT(mousedowny, -1);

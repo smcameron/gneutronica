@@ -1690,6 +1690,19 @@ void percussion_toggle_callback(GtkWidget *widget, gpointer data)
 	check_melodic_mode();
 }
 
+set_notelabel(int note)
+{
+	int n = note % 12;
+	if (n < 0)
+		n = -n;
+	if (melodic_mode) {
+		gtk_label_set_text(GTK_LABEL(NoteLabel), notename[n]);
+	} else { 
+		gtk_label_set_text(GTK_LABEL(NoteLabel), "--");
+	}
+	gtk_widget_queue_draw(GTK_WIDGET(NoteLabel));
+}
+
 static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
 {
 	int i,j; 
@@ -1710,6 +1723,7 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 
 	/* Calculate the height of the horizontal strip for this instrument... */
 	if (current_instrument == instrument->instrument_num) {
+		set_notelabel(current_instrument);
 		/* melodic mode is narrow, percussion taller, depending on volume zoom too... */
 		height = (int) (((double) 
 			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * (melodic_mode ? 3.0 : 1.0) *
@@ -4981,11 +4995,11 @@ int main(int argc, char *argv[])
 			VOLUME_SLIDER_TIP, NULL);
 
 		inst->canvas = gtk_drawing_area_new();
-		if ((i % 12) == 9 ||
-			(i % 12) == 11 ||
-			(i % 12) == 1 ||
-			(i % 12) == 4 ||
-			(i % 12) == 6)
+		if ((i % 12) == 1 || /* .#.#..#.#.#. */
+			(i % 12) == 3 ||
+			(i % 12) == 6 ||
+			(i % 12) == 8 ||
+			(i % 12) == 10)
 			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &lightgraycolor);
 		else
 			gtk_widget_modify_bg(inst->canvas, GTK_STATE_NORMAL, &whitecolor);
@@ -5038,6 +5052,7 @@ int main(int argc, char *argv[])
 		gtk_table_attach(GTK_TABLE(table), inst->canvas, 
 			col, col+1, i, i+1, 0, 0, 0, 0); col++;
 	}
+	NoteLabel = gtk_label_new("--");
 	channel_box = gtk_hbox_new(FALSE, 0);
 	channel_label = gtk_label_new(CHANNEL_LABEL);
 	channelspin = gtk_spin_button_new_with_range(0, 15, 1);
@@ -5058,6 +5073,7 @@ int main(int argc, char *argv[])
 	gtk_box_pack_start(GTK_BOX(track_box), track_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(track_box), trackspin, FALSE, FALSE, 0);
 
+	gtk_box_pack_start(GTK_BOX(linebox), NoteLabel, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(linebox), channel_box, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(linebox), track_box, FALSE, FALSE, 0);
 
