@@ -1543,7 +1543,7 @@ static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct 
 			gdk_draw_line(w->window, gc, x+MEASUREWIDTH-1, ARRANGER_HEIGHT / 2, x+MEASUREWIDTH/2, 2*ARRANGER_HEIGHT/3); 
 		}
 		gdk_draw_line(w->window, gc, x, y1, x, y1+ARRANGER_HEIGHT);
-		if ((i % 10) == 0)
+		if ((i % 8) == 0)
 			gdk_draw_line(w->window, gc, x+1, y1, x+1, y1+ARRANGER_HEIGHT);
 		if (measure[i].npatterns != 0 && i<nmeasures ) {
 			for (j=0;j<measure[i].npatterns;j++) {
@@ -3852,9 +3852,9 @@ int import_patterns_v4(FILE *f)
 			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure,
-				&(h)->h.noteoff_time,
-				&(h)->h.noteoff_beat,
-				&(h)->h.noteoff_beats_per_measure);
+				&(*h)->h.noteoff_time,
+				&(*h)->h.noteoff_beat,
+				&(*h)->h.noteoff_beats_per_measure);
 
 			gm = import_inst_map[(*h)->h.instrument_num];
 			if (gm != -1)
