@@ -1316,7 +1316,7 @@ static int canvas_mousedown(GtkWidget *w, GdkEventButton *event, struct instrume
 		return; /* Drums don't have a duration, you just hit 'em..., on mouseup */
 	mousedownx = event->x;
 	mousedowny = event->y; 
-	printf("mousedown, x=%d, y=%d\n", mousedownx, mousedowny);
+	/* printf("mousedown, x=%d, y=%d\n", mousedownx, mousedowny); */
 }
 
 static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
@@ -4671,8 +4671,8 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		break;
 	}
 
-	printf("Keypress: GDK_%s\n", gdk_keyval_name(event->keyval));
 #if 0
+	printf("Keypress: GDK_%s\n", gdk_keyval_name(event->keyval));
 	if (gdk_keyval_is_lower(event->keyval)) {
 		printf("A non-uppercase key was pressed.\n");
 	} else if (gdk_keyval_is_upper(event->keyval)) {
