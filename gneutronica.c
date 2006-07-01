@@ -2978,6 +2978,26 @@ void remove_space_after_button_pressed(GtkWidget *widget,
 	adjust_space(add, multiply);
 }
 
+int transpose_hitpattern(struct hitpattern *p, int interval, int for_real);
+void transpose(int interval)
+{
+	/* pattern must be flattened */
+	struct pattern_struct *p = pattern[cpattern];
+	int rc;
+
+	flatten_pattern(kit, cpattern);
+
+	/* Dry run once, and see if any notes go out of bounds */
+	rc = transpose_hitpattern(p->hitpattern, interval, 0);
+	if (rc != 0)
+		return;
+	/* Must be ok, transpose for real. */
+	rc = transpose_hitpattern(p->hitpattern, interval, 1);
+	unflatten_pattern(kit, cpattern);
+	edit_pattern(cpattern);
+	return;
+}
+
 void scramble_button_pressed(GtkWidget *widget,
 	void *whatever)
 {
@@ -3228,6 +3248,28 @@ void check_hitpatterns(char *x)
 			if (pattern[i]->hitpattern != NULL)
 				g_print("%s, pattern %d has non null hitpattern\n", x, i);
 	}
+}
+
+int transpose_hitpattern(struct hitpattern *p, int interval, int for_real)
+{
+	int newvalue, oldvalue;
+	struct hitpattern *h, *next;
+	int out_of_bounds = 0;
+
+	if (p == NULL) {
+		return;
+	}
+	for (h = p; h != NULL; h = next) {
+		next = h->next;
+		newvalue = h->h.instrument_num + interval;
+		if (newvalue < 0 || newvalue > 127) {
+			out_of_bounds = 1;
+		} else {
+			if (for_real)
+				h->h.instrument_num = newvalue;
+		}
+	}
+	return out_of_bounds;
 }
 
 void clear_hitpattern(struct hitpattern *p)
@@ -4669,6 +4711,14 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case GDK_X:
 		if (mycontext == PATTERN_CONTEXT)
 			clear_all_current_instrument_hit_pattern();
+		return TRUE;
+	case GDK_K: /* transpose up -- like vi. */
+		if (mycontext == PATTERN_CONTEXT && melodic_mode)
+			transpose(-1);
+		return TRUE;
+	case GDK_J: /* transpose down -- like vi */
+		if (mycontext == PATTERN_CONTEXT && melodic_mode)
+			transpose(1);
 		return TRUE;
 	default:
 		break;
