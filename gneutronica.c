@@ -1351,7 +1351,8 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		height = DRAW_HEIGHT;
 	else {
 		height = (int) (((double) 
-			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * (melodic_mode ? 3.0 : 1.0) *
+			gtk_range_get_value(GTK_RANGE(volume_magnifier))) * 
+				(melodic_mode ? PIANO_NOTE_HEIGHT : 1.0) *
 				(double) DRAW_HEIGHT / (double) 100.0) + 1;
 	}
 

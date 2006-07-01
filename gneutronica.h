@@ -48,6 +48,7 @@
 GLOBAL int INIT(melodic_mode, 0);
 #define DRAW_HEIGHT (melodic_mode ? 8 : 25)
 #define MAGNIFIED_DRAW_HEIGHT 130 
+#define PIANO_NOTE_HEIGHT 5.0
 #define MAXTIMEDIVS 5
 #define MEASUREWIDTH 20 
 #define MINTEMPO 10
