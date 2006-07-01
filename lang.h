@@ -39,15 +39,15 @@
 
 #define ARRANGER_TITLE_ITEM "%s v. %s - Arrangement Editor: %s"
 
-#define CREATE_NEXT_PATTERN_LABEL "Create Next Pattern -->"
+#define CREATE_NEXT_PATTERN_LABEL " -->]"
 #define CREATE_NEXT_PATTERN_TIP "Create and edit the next pattern"
 
-#define EDIT_NEXT_PATTERN_LABEL "Edit Next Pattern -->"
+#define EDIT_NEXT_PATTERN_LABEL " --> "
 #define EDIT_NEXT_PATTERN_TIP "Edit the next pattern"
-#define EDIT_PREV_PATTERN_LABEL "<-- Edit Previous Pattern"
-#define CLEAR_PATTERN_LABEL "Clear Pattern"
-#define SELECT_PATTERN_LABEL "Select Pattern"
-#define PASTE_PATTERN_LABEL "Paste Pattern"
+#define EDIT_PREV_PATTERN_LABEL " <-- "
+#define CLEAR_PATTERN_LABEL "Clear"
+#define SELECT_PATTERN_LABEL "Select"
+#define PASTE_PATTERN_LABEL "Paste"
 #define RECORD_LABEL "Record"
 #define PLAY_LABEL "Play"
 #define STOP_LABEL "Stop"
