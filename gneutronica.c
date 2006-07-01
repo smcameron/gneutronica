@@ -3050,6 +3050,9 @@ void scramble_button_pressed(GtkWidget *widget,
 		hit->time = hit->time - sub + add;
 		hit->beat = (int) (hit->time * DRAW_WIDTH);
 		hit->beats_per_measure = DRAW_WIDTH;
+		hit->noteoff_time = hit->noteoff_time - sub + add;
+		hit->noteoff_beat = (int) (hit->noteoff_time * DRAW_WIDTH);
+		hit->noteoff_beats_per_measure = DRAW_WIDTH;
 		reduce_fraction(&hit->beat, &hit->beats_per_measure);
 	}
 	free(map);
