@@ -4631,7 +4631,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	char *x = (char *) data;
 	int mycontext;
 	GtkWidget *who_has_focus;
-	GtkWindow *this_window = NULL;
 
 #define ARRANGER_CONTEXT 1
 #define PATTERN_CONTEXT 2
@@ -4639,18 +4638,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 	mycontext = UNKNOWN_CONTEXT;
 
-	if (strcmp(x, "arranger") == 0) {
+	if (strcmp(x, "arranger") == 0)
 		mycontext = ARRANGER_CONTEXT;
-		this_window = (GtkWindow *) arranger_window;
-	} else if (strcmp(x, "main_window") == 0) {
+	else if (strcmp(x, "main_window") == 0)
 		mycontext = PATTERN_CONTEXT;
-		this_window = (GtkWindow *) top_window;
-	}
 
-	if (this_window == NULL)
-		return FALSE;
-
-	who_has_focus = this_window->focus_widget;
+	who_has_focus = GTK_WINDOW(arranger_window)->focus_widget;
 	if (who_has_focus != NULL && should_exclude_keypress(who_has_focus)) {
 		/* printf("Ignoring keypress due to widget with focus.\n"); */
 		return FALSE;
