@@ -3681,6 +3681,8 @@ int load_from_file_version_4(FILE *f)
 				(*h)->h.beats_per_measure = 4;
 			}
 			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+			(*h)->h.noteoff_time = (double) (*h)->h.noteoff_beat /
+				(double) (*h)->h.noteoff_beats_per_measure;
 
 			/* printf("new time is %g\n", (*h)->h.time); */
 			if (rc != 9) 
@@ -3921,6 +3923,8 @@ int import_patterns_v4(FILE *f)
 				(*h)->h.beats_per_measure = 4;
 			}
 			(*h)->h.time = (double) (*h)->h.beat / (double) (*h)->h.beats_per_measure;
+			(*h)->h.noteoff_time = (double) (*h)->h.noteoff_beat /
+				(double) (*h)->h.noteoff_beats_per_measure;
 
 			/* printf("new time is %g\n", (*h)->h.time); */
 			if (rc != 6) 
