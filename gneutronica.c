@@ -3136,6 +3136,7 @@ void instrument_button_pressed(GtkWidget *widget,
 }
 
 
+void silence(struct midi_handle *mh);
 void destroy_event(GtkWidget *widget,
 	gpointer data)
 {
@@ -3147,6 +3148,8 @@ void destroy_event(GtkWidget *widget,
 		kill(player_process_pid, SIGTERM); /* a little brutal, but effective . . . */
 	if (midi_reader_process_id != -1)
 		kill(midi_reader_process_id, SIGTERM);
+	usleep(100);
+	silence(midi_handle);
 	gtk_main_quit();
 }
 
