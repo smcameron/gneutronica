@@ -158,4 +158,7 @@ gneutronica 0.33
 	* Added ability to mute MIDI channels and tracks (in case
 	  you want to record those parts separately so they may be
 	  mixed independently later.)
+	* Fixed remapping of drumkits to not screw up melodic patterns
+	* Fuxed bug that freshly loaded songs didn't have noteoff data
+	* Made noteoff get sent when program quits.
 
