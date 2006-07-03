@@ -2035,7 +2035,7 @@ void schedule_measures(int start, int end)
 {
 	int i,j;
 	struct timeval base, tmpbase;
-	int tempo;
+	int tempo, track, chan;
 
 	/* Give ourself 1/10th millisecond per measure of lead time to 
 	   calculate the schedule, otherwise if we're slow, the first beat
@@ -2049,10 +2049,14 @@ void schedule_measures(int start, int end)
 	
 	for (i=start;i<end;i++) {
 		for (j=0;j<measure[i].npatterns;j++) {
+			struct pattern_struct *p = pattern[measure[i].pattern[j]];
 			tmpbase = base;
 			tempo = find_tempo(i);
+			track = p->tracknum;
+			chan = p->channel;
 			/* printf("Tempo for measure %d is %d beats per minute\n", i, tempo); */
-			schedule_pattern(kit, i, measure[i].pattern[j], tempo, &tmpbase);
+			if (!transport_location->muted[track][chan])
+				schedule_pattern(kit, i, measure[i].pattern[j], tempo, &tmpbase);
 		}
 		base = tmpbase;
 	}
@@ -4218,10 +4222,11 @@ int save_to_file(char *filename)
 
 void silence(struct midi_handle *mh)
 {
-	int i,j;
+	int i,j,k;
 	for (i=0;i<MAXINSTS;i++)
-		for (j=0;j<16;j++)
-			midi->noteoff(mh, j, 0, i);
+		for (j=0;j<MAXTRACKS;j++)
+			for (k=0;j<MAXCHANS;j++)
+				midi->noteoff(mh, j, k, i);
 }
 
 void init_measures()
@@ -4733,8 +4738,33 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	return FALSE;
 }
 
+void track_mute_toggle_callback(GtkWidget *widget, gpointer data)
+{
+	/* What's passed in in "data" ia a pointer to a specific element
+	   in the transport_location->muted array that corresponds to the
+	   toggle.  The entire transport_location structure is in shared
+	   memory with the player process.  The player process checks the
+	   track/channel as it plays each note, and if muted, substitutes
+	   a noteoff for noteon, thus muting the channel.  No synchronization
+	   needed because this is the only place that writes, and the player
+	   process is the only place that reads. */
+
+	int *muted = (int *) data;
+
+	/* mute (or unmute) the track/channel */
+	*muted = (int) gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget));
+}
+
 int main(int argc, char *argv[])
 {
+	GtkWidget *track_control_box;
+	GtkWidget *track_table;
+	GtkWidget *track_mute[MAXTRACKS][MAXCHANS];
+	GtkWidget *track_num_label[MAXTRACKS];
+	GtkWidget *chan_label[MAXCHANS];
+	GtkWidget *channel_mute_label;
+	GtkWidget *track_control_label;
+
 	GtkWidget *abox;
 	GtkWidget *menu_box;
 	GtkWidget *a_button_box;
@@ -4759,12 +4789,13 @@ int main(int argc, char *argv[])
 	int maximize_windows = 1;
 
 	struct drumkit_struct *dk;
-	int i, rc;
+	int i,j, rc;
 
 	/* ----- open the midi output device ------------------------ */
         int fd, ifd, c;
         char output_device[255], drumkitfile[255], midi_input_device[255];
 
+	memset(&transport_location, 0, sizeof(transport_location));
 	transport_location = (struct shared_info_struct *) 
 		mmap(shared_buf, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
 	
@@ -4773,6 +4804,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	set_transport_meter(&transport_location->measure, &transport_location->percent);
+	set_muted_array(&transport_location->muted[0][0], MAXTRACKS);
 
 	transport_location->measure = 0;
 	transport_location->percent = 0;
@@ -4793,7 +4825,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-	midi_handle = midi->open(output_device, 16);
+	midi_handle = midi->open(output_device, MAXTRACKS);
 	if (midi_handle == NULL) {
 		printf("Can't open MIDI device file %s\n", output_device);
 	}
@@ -5399,8 +5431,42 @@ int main(int argc, char *argv[])
 	arranger_label = gtk_label_new("Arranger");
 	pattern_editor_label = gtk_label_new("Pattern Editor");
 
+	/* Track control stuff */
+	track_control_box = gtk_vbox_new(FALSE, 0);
+	track_control_label = gtk_label_new("Track/Channel Mute");
+	track_table = gtk_table_new(MAXCHANS+2, MAXTRACKS+2, FALSE);
+	gtk_container_add(GTK_CONTAINER (track_control_box), track_table);
+	channel_mute_label = gtk_label_new("Channel:");
+	gtk_table_attach(GTK_TABLE(track_table), channel_mute_label, 0, 1, 0, 1, 0, 0, 0, 0);
+	/* Set up channel labels across the top */
+	for (i=0;i<MAXCHANS;i++) {
+		char chan_text[15];
+		sprintf(chan_text, " %d ", i);
+		chan_label[i] = gtk_label_new(chan_text);
+		gtk_table_attach(GTK_TABLE(track_table), chan_label[i], i+1, i+2, 0, 1, 0, 0, 0, 0);
+	}
+	/* Set up track labels down the side */
+	for (i=0;i<MAXTRACKS;i++) {
+		char track_text[15];
+		sprintf(track_text, "Track %d", i);
+		track_num_label[i] = gtk_label_new(track_text);
+		gtk_table_attach(GTK_TABLE(track_table), track_num_label[i], 0, 1, i+1, i+2, 0, 0, 0, 0);
+	}
+	/* Set up the chan/track mute checkboxes */
+	for (i=0;i<MAXTRACKS;i++) {
+		for (j=0;j<MAXCHANS;j++) {
+			track_mute[i][j] = gtk_toggle_button_new();
+			gtk_table_attach(GTK_TABLE(track_table), track_mute[i][j],
+				i+1, i+2, j+1, j+2, 0,0,0,0);
+			g_signal_connect(G_OBJECT (track_mute[i][j]), "toggled",
+				G_CALLBACK (track_mute_toggle_callback),
+					&transport_location->muted[i][j]);
+		}
+	}
+
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), top_window, pattern_editor_label);
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), abox, arranger_label);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), track_control_box, track_control_label);
 
 	/* Menu code taken from gtk tutorial . . .  */
 

@@ -43,6 +43,8 @@ long long mindiff = 100000;
 static int dummy_measure, dummy_percent;
 static int *pmeasure = &dummy_measure;
 static int *ppercent = &dummy_percent;
+static int *muted = NULL;
+static int num_tracks = 16;
 
 
 extern struct midi_method *midi;
@@ -128,7 +130,10 @@ void do_event(struct event *e)
 	switch (e->e.eventtype) {
 	case NOTE_ON: 
 		set_transport_location(e->e.measure, e->e.percent);
-		midi->noteon(midi_handle, e->e.track, e->e.channel, e->e.note, e->e.velocity);
+		if (muted[e->e.channel * num_tracks + e->e.track])
+			midi->noteoff(midi_handle, e->e.track, e->e.channel, e->e.note);
+		else
+			midi->noteon(midi_handle, e->e.track, e->e.channel, e->e.note, e->e.velocity);
 		break;
 	case NOTE_OFF: 
 		set_transport_location(e->e.measure, e->e.percent);
@@ -356,6 +361,12 @@ void set_transport_meter(int *measure, int *percent)
 {
 	pmeasure = measure;
 	ppercent = percent;
+}
+
+void set_muted_array(int *xmuted, int ntracks)
+{
+	muted = xmuted;
+	num_tracks = ntracks;
 }
 
 void write_midi_event(int fd, struct event *e)

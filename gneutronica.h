@@ -53,6 +53,8 @@ GLOBAL int INIT(melodic_mode, 0);
 #define MEASUREWIDTH 20 
 #define MINTEMPO 10
 #define MAXTEMPO 400
+#define MAXTRACKS 16
+#define MAXCHANS 16
 #define DEFAULT_VELOCITY 100
 #define DRAGLIMIT 50.0
 #define PROGNAME "Gneutronica"
@@ -88,6 +90,7 @@ struct shared_info_struct {
 	int measure;
 	int percent;
 	unsigned char midi_data[3];
+	int muted[MAXTRACKS][MAXCHANS];
 };
 GLOBAL unsigned char shared_buf[4096];
 
@@ -213,6 +216,9 @@ GLOBAL int ndivisions
  = sizeof(timediv) / sizeof(struct division_struct)
 #endif
 ;
+
+
+
 GLOBAL GtkWidget *NoteLabel;
 
 GLOBAL int INIT(mousedownx, -1);

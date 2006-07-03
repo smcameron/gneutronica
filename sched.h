@@ -84,6 +84,7 @@ void free_schedule(struct schedule_t *s);
 void print_schedule(struct schedule_t *s);
 
 void set_transport_meter(int *measure, int *percent);
+void set_muted_array(int *xmuted, int ntracks);
 void write_sched_to_midi_file(struct schedule_t *sched, const char *filename);
 
 #endif
