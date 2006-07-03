@@ -3383,9 +3383,9 @@ void remap_drumkit_song()
 	int i;
 
 	flatten_pattern(kit, cpattern);
-	for (i=0;i<npatterns;i++) {
-		remap_drumkit_pattern(pattern[i], i == cpattern);
-	}
+	for (i=0;i<npatterns;i++)
+		if (pattern[i]->music_type == PERCUSSION)
+			remap_drumkit_pattern(pattern[i], i == cpattern);
 	unflatten_pattern(kit, cpattern);
 	edit_pattern(cpattern);
 }
