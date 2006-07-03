@@ -131,3 +131,31 @@ gneutronica 0.31
 	  the arranger window by clicking and dragging with the first or
 	  third mouse button in the pattern area.
 
+gneutronica 0.32
+
+	* Added drumkit definition for a Roland TR808 sound font.
+	* Bugfix: inserted measures might get bogus tempo -- fixed.
+	* MIDI output method abstraction... two instantiations raw
+	  MIDI and ALSA sequencer.
+	* Now uses ALSA sequencer interface instead of raw MIDI.
+	* Bugfix: Scramble function had overflow bug that caused it to
+	  be non-random. Fixed.
+	* Combined Pattern Editor widnow and Arrangement Editor window into
+	  a single window by putting them both into tabs in a Gtk notebook.
+	* Output is assignable to up to 16 ALSA sequencer ports ("tracks")
+	  on a per-pattern basis to allow routing different patterns to
+	  different MIDI devices or softsynths.
+	* Now there is a rudimentary melodic sequencer as well as a
+	  percussion sequencer.
+	* Arrangement editor marks every 8 measures instead of every 10
+
+gneutronica 0.33
+
+	* Scramble button did not adjust noteoff times -- fixed.
+	* Shortened names of buttons at bottom of pattern window.
+	* Added a way to transpose melodic patterns up or down.
+	* Made the piano notes a little wider
+	* Added ability to mute MIDI channels and tracks (in case
+	  you want to record those parts separately so they may be
+	  mixed independently later.)
+
