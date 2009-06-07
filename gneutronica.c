@@ -4761,6 +4761,111 @@ void track_mute_toggle_callback(GtkWidget *widget, gpointer data)
 	*muted = (int) gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget));
 }
 
+void create_default_config_file()
+{
+	FILE *f;
+	char path[PATH_MAX];
+	char *home;
+
+	home = getenv("HOME");
+	if (home == NULL)
+		return;	
+
+	sprintf(path, "%s/.gneutronica", home);	
+	(void) mkdir(path, 0775);
+
+	sprintf(path, "%s/.gneutronica/gneutronica.conf", home);
+	f = fopen(path, "w+");
+	if (f == NULL) {
+		fprintf(stderr, "fopen: %s\n", strerror(errno));
+		return;
+	}
+
+	fprintf(f, "# gneutronica configuration file\n");
+	fprintf(f, "#\n");
+	fprintf(f, "#maximize_windows=0\n");
+	fprintf(f, "#drumkitfile=/usr/local/share/gneutronica/drumkits/general_midi_standard.dk\n");
+	fprintf(f, "#input_device=\n");
+	fprintf(f, "#output_device=hw\n");
+	fprintf(f, "#automag=1\n");
+	fclose(f);
+}
+
+void read_config_file(char *drumkitfile, char *output_device,
+		char *midi_input_device, int *maximize_windows,
+		int *automag_initial_state)
+{
+	FILE *f;
+	char data[256];
+	char path[PATH_MAX];
+	char *home;
+	char s[255];
+	int x, rc;
+	int line = 0;
+	char *fgetsrc;
+
+	home = getenv("HOME");
+	if (home == NULL)
+		return;
+
+	sprintf(path, "%s/.gneutronica/gneutronica.conf", home);
+	
+	f = fopen(path, "r"); 
+	if (f == NULL) {
+		fprintf(stderr, "%s: %s\n", path, strerror(errno));
+		if (errno == ENOENT)
+			create_default_config_file();
+		else
+			fprintf(stderr, "gneutronica: error opening '%s': %s\n", 
+				"~/.gneutronica/gneutronica.conf",
+				strerror(errno));
+		return;
+	}
+
+	while (!feof(f)) {
+
+		memset(data, 0, sizeof(data));
+
+		fgetsrc = fgets(data, 200, f);
+		if (fgetsrc == NULL)
+			break;
+
+		line++;
+		if (data[0] == '#')
+			continue; /* skip comments. */
+
+		rc = sscanf(data, "maximize_windows=%d", &x);
+		if (rc == 1) {
+			*maximize_windows = x;
+			continue;
+		}
+
+		rc = sscanf(data, "drumkitfile=%s%*c", s);
+		if (rc == 1) {
+			strcpy(drumkitfile, s);
+			continue;
+		}
+
+		rc = sscanf(data, "input_device=%s%*c", s);
+		if (rc == 1) {
+			strcpy(midi_input_device, s);
+			continue;
+		}
+
+		rc = sscanf(data, "output_device=%s%*c", s);
+		if (rc == 1) {
+			strcpy(output_device, s);
+			continue;
+		}
+
+		rc = sscanf(data, "automag=%d%*c", &x);
+		if (rc == 1) {
+			*automag_initial_state = x;
+			continue;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *track_control_box;
@@ -4793,6 +4898,7 @@ int main(int argc, char *argv[])
 	GtkWidget *track_box;
 	GtkWidget *channel_box;
 	int maximize_windows = 1;
+	int automag_initial_state = AUTOMAG_ON;
 
 	struct drumkit_struct *dk;
 	int i,j, rc;
@@ -4822,6 +4928,11 @@ int main(int argc, char *argv[])
 	strcpy(drumkitfile, "drumkits/yamaha_motifr_rockst1.dk");
 	strcpy(drumkitfile, "/usr/local/share/gneutronica/drumkits/general_midi_standard.dk");
 	strcpy(midi_input_device, "");
+
+	read_config_file(drumkitfile, output_device,
+		midi_input_device, &maximize_windows,
+		&automag_initial_state);
+
         while ((c = getopt(argc, argv, "mi:k:d:")) != -1) {
                 switch (c) {
                 case 'd': strcpy(output_device, optarg); break;
@@ -5002,7 +5113,7 @@ int main(int argc, char *argv[])
 	magbox = gtk_table_new(2, 3, FALSE);
 	gtk_box_pack_start(GTK_BOX(topbox), magbox, TRUE, TRUE, 0);
 	automag = gtk_check_button_new_with_label("AutoMag");
-	if (AUTOMAG_ON)
+	if (AUTOMAG_ON && automag_initial_state)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(automag), TRUE);
 	g_signal_connect(G_OBJECT (automag), "toggled", 
 				G_CALLBACK (hide_instruments_button_callback), NULL);
