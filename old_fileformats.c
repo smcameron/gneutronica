@@ -20,6 +20,7 @@
  */
 #include <stdio.h>
 #include <gtk/gtk.h>
+#include <malloc.h>
 #include "gneutronica.h"
 
 /* Keep old file format reading code in here so as not
