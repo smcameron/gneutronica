@@ -40,6 +40,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+
+extern double trunc(double x); /* math.h doesn't have this?  What? */
+
 #include <signal.h>
 #include <setjmp.h>
 #include <netinet/in.h> /* . . . just for for htons() */
