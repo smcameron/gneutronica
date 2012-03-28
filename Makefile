@@ -39,6 +39,7 @@ gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
 		midi_reader.o midi_file.o fractions.o drumtab.o \
 		midioutput_raw.o midioutput_alsa.o \
 		gneutronica.c `pkg-config --cflags --libs gtk+-2.0` \
+		-lasound
 
 midi_reader.o:	midi_reader.c midi_reader.h
 
