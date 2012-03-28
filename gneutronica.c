@@ -252,7 +252,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	line++;
 	while (!feof(f)) {
 		switch(format) {
-		case 2: rc = fscanf(f, "%[^,]%*c %[^,]%*c %d %d\n", 
+		case 2: rc = fscanf(f, "%[^,]%*c %[^,]%*c %hhu %d\n", 
 				dk->instrument[n].name, 
 				dk->instrument[n].type,
 				&dk->instrument[n].midivalue,
@@ -263,7 +263,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 				return -1;
 			}
 			break;
-		case 1: rc = fscanf(f, "%[^,]%*c %[^,]%*c %d\n", 
+		case 1: rc = fscanf(f, "%[^,]%*c %[^,]%*c %hhu\n", 
 				dk->instrument[n].name, 
 				dk->instrument[n].type,
 				&dk->instrument[n].midivalue);
@@ -3675,7 +3675,7 @@ int load_from_file_version_4(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure,
 				&(*h)->h.noteoff_time,
@@ -3907,7 +3907,7 @@ int import_patterns_v4(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d %g %d %d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure,
 				&(*h)->h.noteoff_time,
@@ -4964,12 +4964,12 @@ int main(int argc, char *argv[])
 	if (strcmp(midi_input_device, "") != 0) {
 		printf("Starting midi reader\n");
 		ifd = open(midi_input_device, O_RDONLY);
-		printf("ifd = %d\n");
+		printf("ifd = %d\n", ifd);
 		if (ifd >= 0) {
 			struct shared_info_struct *sis = (struct shared_info_struct *) transport_location;
 			setup_midi_receiver();
 			midi_reader_process_id = midi_reader(ifd, &sis->midi_data[0]);
-			printf("midi_reader started, pid=%D.\n",
+			printf("midi_reader started, pid=%d.\n",
 				midi_reader_process_id);
 		} else {
 			fprintf(stderr, "Error opening midi input device: $s\n", strerror(errno));

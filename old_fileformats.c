@@ -93,7 +93,7 @@ int load_from_file_version_2(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 
@@ -209,7 +209,7 @@ int load_from_file_version_1(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 
@@ -312,7 +312,7 @@ int import_patterns_v2(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 
@@ -434,7 +434,7 @@ int load_from_file_version_3(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 			set_old_noteoff(*h);
@@ -560,7 +560,7 @@ int import_patterns_v3(FILE *f)
 			}
 			*h = malloc(sizeof(struct hitpattern));
 			(*h)->next = NULL;
-			rc = sscanf(line, "T: %g DK: %d I: %d V: %d B:%d BPM:%d\n",
+			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
 				&(*h)->h.velocity, &(*h)->h.beat, &(*h)->h.beats_per_measure);
 

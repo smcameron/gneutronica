@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 
 #include "sched.h"
 #include "midi_file.h"
@@ -179,7 +180,7 @@ int add_to_schedule(struct schedule_t *s,
 	/* Find where this event goes */
 	spot = 0;
 	if (e->rtime.tv_usec > 1000000) {
-		printf("add_to_schedule, non-normalized time %10d:%10d\n", 
+		printf("add_to_schedule, non-normalized time %10ld:%10ld\n", 
 			e->rtime.tv_sec, e->rtime.tv_usec);
 	}
 	for (spot=0;spot < s->nevents;spot++) {

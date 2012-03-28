@@ -20,7 +20,9 @@
  */
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <signal.h>
 
@@ -64,7 +66,7 @@ int midi_reader(int fd, unsigned char *shared_data)
 			}
 		}
 		if (rc < 0 && errno != EINTR) {
-			printf("rc = %d, errno='%s'\n", strerror(errno));
+			printf("rc = %d, errno='%s'\n", rc, strerror(errno));
 			break;
 		}
 	}
