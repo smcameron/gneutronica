@@ -98,6 +98,13 @@ int unflatten_pattern(int ckit, int cpattern);
 int translate_drumtab_data(int factor);
 void pattern_record_button_clicked(GtkWidget *widget, gpointer data);
 void pattern_play_button_clicked(GtkWidget *widget, gpointer data);
+int import_patterns_from_file(const char *filename);
+int save_to_file(const char *filename);
+int export_to_midi_file(const char *filename);
+int find_tempo(int measure);
+int remove_tempo_change(int index);
+static void redraw_arranger(void);
+int insert_tempo_change(int measure, int tempo);
 
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
@@ -381,7 +388,7 @@ int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 	return rc;
 }
 
-save_drumkit_to_file(const char *filename) 
+static int save_drumkit_to_file(const char *filename)
 {
 	struct drumkit_struct *dk;
 	FILE *f;
@@ -405,6 +412,7 @@ save_drumkit_to_file(const char *filename)
 			dk->instrument[i].gm_equivalent);
 	}
 	fclose(f);
+	return 0;
 }
 
 void destroy_event(GtkWidget *widget, gpointer data);
@@ -809,7 +817,7 @@ int add_hit(struct hitpattern **hit,
 	struct hitpattern *prev, *this, *next;
 
 	if (thetime > measurelength || thetime < 0)
-		return;
+		return 0;
 
 	percent = thetime / measurelength;
 	noteoff_percent = (thetime+duration) / measurelength;
@@ -847,7 +855,7 @@ int add_hit(struct hitpattern **hit,
 	if (bestbeat == best_division) {
 		/* g_print("Rejecting beat %d of %d beats\n",
 			bestbeat+1, best_division); */
-		return;
+		return 0;
 	}
 	return (lowlevel_add_hit(hit, dkit, tpattern, instnum, bestbeat, best_division, 
 			noteoff_bestbeat, noteoff_best_division,
@@ -938,7 +946,7 @@ void unsigned_char_spin_button_change(GtkSpinButton *spinbutton, unsigned char *
 	*value = (unsigned char) gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
 
-redraw_arranger()
+static void redraw_arranger(void)
 {
 	int i;
 	for (i=0;i<npatterns;i++) {
@@ -1078,7 +1086,7 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 		int bytes_to_copy, bytes_to_move;
 
 		if (start_copy_measure <= -1 || end_copy_measure < start_copy_measure)
-			return;
+			return TRUE;
 
 		measures_to_copy = end_copy_measure - start_copy_measure + 1;
 		if (nmeasures + measures_to_copy > MAXMEASURES)
@@ -1090,7 +1098,7 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 		/* Copy to a temporary buffer first, to deal with overlaps, etc. */
 		tmp = malloc(bytes_to_copy);
 		if (tmp == NULL)
-			return;
+			return TRUE;
 		memcpy(tmp, &measure[start_copy_measure], bytes_to_copy); 
 		/* Make room, mmmove handles overlapping regions . . . */
 		memmove(&measure[m+measures_to_copy], &measure[m], bytes_to_move);
@@ -1204,11 +1212,11 @@ static gint drumtab_selection_received(GtkWidget* widget,
 
 	if (selection->length < 0) {
 		printf("Can't get selection.\n");
-		return;
+		return TRUE;
 	}
 	if (selection->type != GDK_SELECTION_TYPE_STRING) {
 		printf("Selection can't be converted to string.\n");
-		return;
+		return TRUE;
 	}
 
 	drumtab = (char *) selection->data;
@@ -1218,7 +1226,7 @@ static gint drumtab_selection_received(GtkWidget* widget,
 	process_drumtab_buffer(drumtab, factor);
 	translate_drumtab_data(factor);
 	dt_free_memory();
-	return;
+	return TRUE;
 }
 
 static void paste_drumtab_selection()
@@ -1316,9 +1324,10 @@ static int canvas_key_pressed(GtkWidget *w, GdkEventButton *event, struct instru
 static int canvas_mousedown(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
 {
 	if (!melodic_mode) 
-		return; /* Drums don't have a duration, you just hit 'em..., on mouseup */
+		return TRUE; /* Drums don't have a duration, you just hit 'em..., on mouseup */
 	mousedownx = event->x;
 	mousedowny = event->y; 
+	return TRUE;
 	/* printf("mousedown, x=%d, y=%d\n", mousedownx, mousedowny); */
 }
 
@@ -1694,7 +1703,7 @@ void percussion_toggle_callback(GtkWidget *widget, gpointer data)
 	check_melodic_mode();
 }
 
-set_notelabel(int note)
+void set_notelabel(int note)
 {
 	int n = note % 12;
 	if (n < 0)
@@ -2073,7 +2082,7 @@ int export_to_midi_file(const char *filename)
 	end = nmeasures;
 
 	if (start < 0 || end < start)
-		return;
+		return FALSE;
 
 	flatten_pattern(kit, cpattern);
 	schedule_measures(start, end);
@@ -2121,6 +2130,14 @@ void import_patterns_file_selected(GtkWidget *widget,
 	import_patterns_from_file(filename);
 }
 
+int import_drumtab_from_file(const char *filename, int factor)
+{
+	process_drumtab_file(filename, factor);
+	translate_drumtab_data(factor);
+	dt_free_memory();
+}
+
+
 void import_drumtab_file_selected(GtkWidget *widget,
 	GtkFileSelection *FileBox)
 {
@@ -2167,7 +2184,7 @@ GtkWidget *make_file_dialog(int i)
 	void *f;
 
 	if (i< 0 || i >= sizeof(file_dialog) / sizeof(file_dialog[0]))
-		return;
+		return NULL;
 
 	w = gtk_file_selection_new (file_dialog[i].title);
 	f = file_dialog[i].file_selected_function;
@@ -3268,7 +3285,7 @@ int transpose_hitpattern(struct hitpattern *p, int interval, int for_real)
 	int out_of_bounds = 0;
 
 	if (p == NULL) {
-		return;
+		return -1;
 	}
 	for (h = p; h != NULL; h = next) {
 		next = h->next;
@@ -4026,13 +4043,6 @@ int translate_drumtab_data(int factor)
 	redraw_arranger();
 }
 
-int import_drumtab_from_file(const char *filename, int factor)
-{
-	process_drumtab_file(filename, factor);
-	translate_drumtab_data(factor);
-	dt_free_memory();
-}
-
 int import_patterns_from_file(const char *filename)
 {
 	/* imports the patterns from another song into the current song. */
@@ -4140,7 +4150,7 @@ int load_from_file(const char *filename)
 
 
 int current_file_format_version = 4;
-int save_to_file(char *filename)
+int save_to_file(const char *filename)
 {
 	int i,j;
 	FILE *f;	
