@@ -4972,7 +4972,7 @@ int main(int argc, char *argv[])
 			printf("midi_reader started, pid=%d.\n",
 				midi_reader_process_id);
 		} else {
-			fprintf(stderr, "Error opening midi input device: $s\n", strerror(errno));
+			fprintf(stderr, "Error opening midi input device: %s\n", strerror(errno));
 		}
 	}
 
