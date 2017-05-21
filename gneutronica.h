@@ -43,7 +43,7 @@
 #define MAXPATTERNS 1000
 #define MAXKITS 100
 #define MAXINSTS 128
-#define DRAW_WIDTH 600
+#define DEFAULT_DRAW_WIDTH 1200
 
 GLOBAL int INIT(melodic_mode, 0);
 #define DRAW_HEIGHT (melodic_mode ? 8 : 25)
