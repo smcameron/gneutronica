@@ -32,6 +32,8 @@ void set_old_noteoff(struct hitpattern *h)
 	h->h.noteoff_beats_per_measure = 4;	
 }
 
+extern int xpect(FILE *f, int *lc, char *line, char *value);
+
 int load_from_file_version_2(FILE *f)
 {
 	char line[255];
