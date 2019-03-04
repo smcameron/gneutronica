@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include <malloc.h>
+#include <string.h>
+
 #include "gneutronica.h"
 
 /* Keep old file format reading code in here so as not
@@ -33,6 +35,8 @@ void set_old_noteoff(struct hitpattern *h)
 }
 
 extern int xpect(FILE *f, int *lc, char *line, char *value);
+extern void make_new_pattern_widgets(int new_pattern, int total_rows);
+extern void edit_pattern(int new_pattern);
 
 int load_from_file_version_2(FILE *f)
 {

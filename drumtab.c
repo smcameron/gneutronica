@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define INSTANTIATE_DRUMTAB 1
 #include "drumtab.h"
@@ -42,7 +43,7 @@ static void init_used()
 	memset(used, 0, 256);
 }
 
-static nimappings = (sizeof(imap) / sizeof(imap[0]));
+static int nimappings = (sizeof(imap) / sizeof(imap[0]));
 
 
 static int lookup_instrument(char *name, int *velocity)

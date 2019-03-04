@@ -37,7 +37,7 @@ int gcd(int n,int d)
 	return n;
 }
 
-int reduce_fraction(int *numerator, int *denominator)
+void reduce_fraction(int *numerator, int *denominator)
 {
 	int xgcd;
 

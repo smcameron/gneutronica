@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <netinet/in.h> /* for htonl(), etc. */
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "sched.h"
 
@@ -126,7 +127,7 @@ int write_MTrk(int fd)
 
 static struct timeval prevtime = { 0L, 0L };
 
-write_note(int fd, struct timeval *tm, unsigned char opcode, 
+void write_note(int fd, struct timeval *tm, unsigned char opcode, 
 		unsigned char note, unsigned char velocity)
 {
 	unsigned long ms;

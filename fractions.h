@@ -28,6 +28,6 @@
 #endif
 
 GLOBAL int gcd(int n,int d);
-GLOBAL int reduce_fraction(int *numerator, int *denominator);
+GLOBAL void reduce_fraction(int *numerator, int *denominator);
 
 #endif
