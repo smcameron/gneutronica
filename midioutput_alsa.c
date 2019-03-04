@@ -42,7 +42,7 @@ struct midi_handle_alsa {
 
 void midi_close_alsa(struct midi_handle *mh)
 {
-	printf("%s:%s:%s, not yet implemented\n",
+	printf("%s:%d:%s, not yet implemented\n",
 		 __FILE__, __LINE__, __FUNCTION__);
 }
 

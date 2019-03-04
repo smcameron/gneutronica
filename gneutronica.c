@@ -3519,7 +3519,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num)
 	return p;
 }
 
-static void pattern_struct_free(struct pattern_struct **p, int npatterns)
+void pattern_struct_free(struct pattern_struct **p, int npatterns)
 {
 	int i;
 	struct hitpattern *hp, *next;
@@ -3755,7 +3755,7 @@ int load_from_file_version_4(FILE *f)
 			}
 			linecount++;
 			*h = malloc(sizeof(struct hitpattern));
-			memset(h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(*h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -4059,7 +4059,7 @@ int import_patterns_v4(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(*h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,

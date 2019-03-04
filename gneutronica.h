@@ -376,6 +376,8 @@ GLOBAL int unflatten_pattern(int ckit, int cpattern);
 #define EXCLUDE_LIST_SIZE 2000
 GLOBAL int INIT(n_exclude_keypress_widgets, 0);
 GLOBAL GtkWidget *exclude_keypress_list[EXCLUDE_LIST_SIZE];
+GLOBAL void pattern_struct_free(struct pattern_struct **p, int npatterns);
+
 
 #undef GLOBAL
 #undef INIT
