@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "sched.h"
+#include "write_bytes.h"
 
 static void write_weird_midi_int(int fd, unsigned int value)
 {
@@ -45,7 +46,7 @@ static void write_weird_midi_int(int fd, unsigned int value)
 	count = 0;
 	x = (unsigned char *) &buf;
 	while (1) {
-		write(fd, x, 1);
+		write_bytes(fd, x, 1);
 		/* printf(" 0x%02x", *x); */
 		if (*x & 0x80) {
 			x++;
@@ -72,14 +73,14 @@ int write_MThd(int fd)
 	rc = write(fd, "MThd", 4);
 	if (rc != 4)
 		return -1;
-	rc = write(fd, &length, sizeof(length));
+	rc = write_bytes(fd, &length, sizeof(length));
 	if (rc != sizeof(length))
 		return -1;
-	rc = write(fd, &format, sizeof(format));
+	rc = write_bytes(fd, &format, sizeof(format));
 	if (rc != sizeof(format)) return -1;
-	rc = write(fd, &tracks, sizeof(tracks));
+	rc = write_bytes(fd, &tracks, sizeof(tracks));
 	if (rc != sizeof(tracks)) return -1;
-	rc = write(fd, &divisions, sizeof(divisions));
+	rc = write_bytes(fd, &divisions, sizeof(divisions));
 	if (rc != sizeof(divisions)) return -1;
 	return 0;	
 }
@@ -89,7 +90,7 @@ int write_end_of_track(int fd)
 	char eot[] = { 0xFF,0x2F,0x00 };
 	unsigned long ms = 0;
 	write_weird_midi_int(fd, ms);
-	return (write(fd, eot, 3) != 3);
+	return (write_bytes(fd, eot, 3) != 3);
 }
 
 int write_tempo_change(int fd, int microsecs_per_quarternote)
@@ -102,8 +103,8 @@ int write_tempo_change(int fd, int microsecs_per_quarternote)
 	microsecs_per_quarternote &= 0x00ffffff;
 	buf = htonl(microsecs_per_quarternote);
 	x = (unsigned char *) &buf;
-	rc = write(fd, msg, 3);
-	rc += write(fd, &x[1], 3);
+	rc = write_bytes(fd, msg, 3);
+	rc += write_bytes(fd, &x[1], 3);
 	return (rc != 6);
 }
 
@@ -121,8 +122,8 @@ int write_MThd(int fd)
 int write_MTrk(int fd)
 {
 	int length = htonl(0);
-	write(fd, "MTrk", 4);
-	write(fd, &length, 4);
+	write_bytes(fd, "MTrk", 4);
+	write_bytes(fd, &length, 4);
 }
 
 static struct timeval prevtime = { 0L, 0L };
@@ -135,9 +136,9 @@ void write_note(int fd, struct timeval *tm, unsigned char opcode,
 	write_weird_midi_int(fd, ms);
 
 	/* printf("writing opcode/note/velocity: %02x %02x %02x\n", opcode, note, velocity); */
-	write(fd, &opcode, 1);
-	write(fd, &note, 1);
-	write(fd, &velocity, 1); 
+	write_bytes(fd, &opcode, 1);
+	write_bytes(fd, &note, 1);
+	write_bytes(fd, &velocity, 1); 
 	prevtime = *tm;
 }
 

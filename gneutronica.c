@@ -4598,8 +4598,16 @@ void player_process_requests(int fd)
 			case PERFORM_PATCH_CHANGE: {
 				unsigned short bank;
 				unsigned char patch;
-				read(fd, &bank, sizeof(bank));
-				read(fd, &patch, sizeof(patch));
+				rc = read(fd, &bank, sizeof(bank));
+				if (rc != sizeof(bank)) {
+					fprintf(stderr, "Failed to read bank\n");
+					break;
+				}
+				rc = read(fd, &patch, sizeof(patch));
+				if (rc != sizeof(patch)) {
+					fprintf(stderr, "Failed to read patch\n");
+					break;
+				}
 				printf("Player: Changing to bank %d, patch %d\n", bank, patch);
 				midi->patch_change(midi_handle, 0, MIDI_CHANNEL, bank, patch);
 				break;

@@ -12,6 +12,9 @@ CFLAGS=${DEBUG} ${OPTIMIZE} ${GNEUTRONICA_LANGUAGE}
 
 all:	gneutronica documentation/gneutronica.1
 
+write_bytes.o:	write_bytes.c write_bytes.h
+	gcc ${CFLAGS} -c write_bytes.c
+
 midioutput_raw.o:	midioutput_raw.c midioutput_raw.h midioutput.h
 	gcc ${CFLAGS} -c midioutput_raw.c
 
@@ -34,11 +37,11 @@ version.h:	versionnumber.txt
 gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
 		version.h gneutronica.h midi_file.h fractions.o drumtab.o \
 		midi_reader.o midioutput_raw.o midioutput_alsa.o \
-		midioutput_raw.h midioutput_alsa.h lang.h
+		midioutput_raw.h midioutput_alsa.h lang.h write_bytes.o
 	gcc ${CFLAGS} -o gneutronica -I/usr/include/libgnomecanvas-2.0 -lasound \
 		old_fileformats.o sched.o \
 		midi_reader.o midi_file.o fractions.o drumtab.o \
-		midioutput_raw.o midioutput_alsa.o \
+		midioutput_raw.o midioutput_alsa.o write_bytes.o \
 		gneutronica.c `pkg-config --cflags --libs gtk+-2.0` \
 		-lasound -lm
 

@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
+#include "write_bytes.h"
 #include "midioutput.h"
 #define INSTANTIATE_MIDIOUTPUT_RAW_GLOBALS
 #include "midioutput_raw.h"
@@ -94,7 +95,7 @@ void noteon_raw(struct midi_handle *mh,
 	data[0] = 0x90 | (channel & 0x0f);
 	data[1] = value;
 	data[2] = volume;
-	write(mhr->fd, data, 3); /* This needs to be atomic */
+	write_bytes(mhr->fd, data, 3); /* This needs to be atomic */
 }
 
 void noteoff_raw(struct midi_handle *mh, 
@@ -109,7 +110,7 @@ void noteoff_raw(struct midi_handle *mh,
 	data[0] = 0x90 | (channel & 0x0f);
 	data[1] = value;
 	data[2] = 0;
-	write(mhr->fd, data, 3); /* This needs to be atomic */
+	write_bytes(mhr->fd, data, 3); /* This needs to be atomic */
 }
 
 void patch_change_raw(struct midi_handle *mh,
@@ -133,8 +134,8 @@ void patch_change_raw(struct midi_handle *mh,
 	patch_ch[0] = 0xc0 | (channel & 0x0f);
 	patch_ch[1] = patch;
 
-	write(mhr->fd, bank_ch, 3);
-	write(mhr->fd, patch_ch, 2);
+	write_bytes(mhr->fd, bank_ch, 3);
+	write_bytes(mhr->fd, patch_ch, 2);
 
 	return;
 }

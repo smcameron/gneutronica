@@ -33,6 +33,7 @@
 #include "sched.h"
 #include "midi_file.h"
 #include "midioutput.h"
+#include "write_bytes.h"
 
 #define SEC 1000000
 #define TIMING_PRECISION 10 /* microseconds */
@@ -412,7 +413,7 @@ void write_sched_to_midi_file(struct schedule_t *sched, const char *filename)
 	currpos = htonl(currpos - 22L); 
 
 	lseek(fd, 18L, SEEK_SET);
-	write(fd, &currpos, 4); 
+	write_bytes(fd, &currpos, 4); 
 	close(fd);
 	return;
 }
