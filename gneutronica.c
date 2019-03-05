@@ -4005,20 +4005,36 @@ int import_patterns_v4(FILE *f)
 	}
 	linecount++;
 
-	for (i=0;i<fake_ninsts;i++)
-		fscanf(f, "Instrument %*d: '%*[^']%*c %*d %d\n", &import_inst_map[i]);
+	for (i = 0; i < fake_ninsts; i++) {
+		rc = fscanf(f, "Instrument %*d: '%*[^']%*c %*d %d\n", &import_inst_map[i]);
+		if (rc != 1) {
+			fprintf(stderr, "%d: Expected Instrument...\n", linecount);
+			return -1;
+		}
+		linecount++;
+	}
 
 	rc = fscanf(f, "Patterns: %d\n", &newpatterns);
-	for (i=npatterns;i<npatterns+newpatterns;i++) {
+	if (rc != 1) {
+		fprintf(stderr, "%d: Expected Patterns...\n", linecount);
+		goto error_out;
+	}
+	linecount++;
+	for (i = npatterns; i < npatterns+newpatterns; i++) {
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
 		h = &pattern[i]->hitpattern;
-		fscanf(f, "Pattern %*d: %d %d %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
+		rc = fscanf(f, "Pattern %*d: %d %d %d %d %d %[^\n]%*c", &pattern[i]->beats_per_measure,
 				&pattern[i]->beats_per_minute, 
 				&pattern[i]->tracknum, 
 				&pattern[i]->channel, 
 				&pattern[i]->music_type, 
 				pattern[i]->patname);
+		if (rc != 6) {
+			fprintf(stderr, "%d: Expected Pattern ...\n", linecount);
+			goto error_out;
+		}
+		linecount++;
 		/* printf("patname %d = %s\n", i, pattern[i]->patname); */
 		rc = fscanf(f, "Divisions: %d %d %d %d %d\n", 
 			&pattern[i]->timediv[0].division,
@@ -4026,15 +4042,24 @@ int import_patterns_v4(FILE *f)
 			&pattern[i]->timediv[2].division,
 			&pattern[i]->timediv[3].division,
 			&pattern[i]->timediv[4].division);
-		if (rc != 5)
-			printf("Bad divisions...\n");
+		if (rc != 5) {
+			fprintf(stderr, "%d: Bad divisions...\n", linecount);
+			goto error_out;
+		}
+		linecount++;
 		while (1) {
 			rc = fscanf(f, "%[^\n]%*c", line);
+			if (rc != 1) {
+				fprintf(stderr, "%d: Failed to read a line\n", linecount);
+				goto error_out;
+			}
+			linecount++;
 			if (strcmp(line, "END-OF-PATTERN") == 0) {
 				/* printf("end of pattern\n"); fflush(stderr); */
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
+			memset(h, 0, sizeof(*h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -4042,10 +4067,14 @@ int import_patterns_v4(FILE *f)
 				&(*h)->h.noteoff_time,
 				&(*h)->h.noteoff_beat,
 				&(*h)->h.noteoff_beats_per_measure);
-
+			if (rc != 9) {
+				fprintf(stderr, "%d: Failed to read hit\n", linecount);
+				goto error_out;
+			}
+			linecount++;
 			gm = import_inst_map[(*h)->h.instrument_num];
 			if (gm != -1)
-				for (k=0;k<drumkit[kit].ninsts;k++) {
+				for (k = 0; k < drumkit[kit].ninsts; k++) {
 					if (gm == drumkit[kit].instrument[k].gm_equivalent) {
 						/* printf("remapping %d to %d\n", (*h)->h.instrument_num, k); */
 						(*h)->h.instrument_num = k;
@@ -4066,15 +4095,23 @@ int import_patterns_v4(FILE *f)
 				(double) (*h)->h.noteoff_beats_per_measure;
 
 			/* printf("new time is %g\n", (*h)->h.time); */
-			if (rc != 6) 
-				printf("rc != 6!\n");
 			h = &(*h)->next;
 		}
 		rc = fscanf(f, "dragging count: %d\n", &count);
-		for (j=0;j<count;j++) {
+		if (rc != 1) {
+			fprintf(stderr, "%d: Expected dragging count...\n", linecount);
+			goto error_out;
+		}
+		linecount++;
+		for (j = 0; j < count; j++) {
 			int ins;
 			long drag;
-			fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			rc = fscanf(f, "i:%d, d:%ld\n", &ins, &drag);
+			if (rc != 2) {
+				fprintf(stderr, "%d: Expected instrument drag...\n", linecount);
+				goto error_out;
+			}
+			linecount++;
 			pattern[i]->drag[ins] = (double) (drag / 1000.0);
 		}
 		make_new_pattern_widgets(i, i+1);
@@ -4082,6 +4119,9 @@ int import_patterns_v4(FILE *f)
 	fclose(f);
 	npatterns += newpatterns;
 	return 0;
+
+error_out:
+	pattern_struct_free(pattern, npatterns + newpatterns);
 }
 
 int translate_drumtab_data(int factor)
