@@ -106,6 +106,17 @@ int remove_tempo_change(int index);
 static void redraw_arranger(void);
 int insert_tempo_change(int measure, int tempo);
 
+static int get_drawing_width(void)
+{
+	int width, height;
+
+	if (pattern_scroller)
+		return (int) (pattern_scroller->allocation.width * 0.8);
+	return 800;
+}
+
+#define DRAW_WIDTH (get_drawing_width())
+
 /* Main menu items.  Almost all of this menu code was taken verbatim from the 
    gtk tutorial at http://www.gtk.org/tutorial/sec-itemfactoryexample.html
    I tweaked it tweaked a bit for style and menu content, but that's about it.*/
