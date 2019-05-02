@@ -31,7 +31,6 @@ int midi_reader(int fd, unsigned char *shared_data)
 	int rc;
 	unsigned char ch;
 	int ppid;
-	int state = 0;
 	unsigned char note, velocity;
 
 
@@ -49,8 +48,6 @@ int midi_reader(int fd, unsigned char *shared_data)
 			if (ch != 0xfe) {
 				printf("0x%02x ", ch);
 				fflush(stdout);
-			} else {
-				state = 0;
 			}
 			if (ch == 0x90) { /* note on */
 				rc = read(fd, &note, 1);
