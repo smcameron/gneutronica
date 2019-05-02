@@ -124,6 +124,7 @@ int write_MTrk(int fd)
 	int length = htonl(0);
 	write_bytes(fd, "MTrk", 4);
 	write_bytes(fd, &length, 4);
+	return 0;
 }
 
 static struct timeval prevtime = { 0L, 0L };
