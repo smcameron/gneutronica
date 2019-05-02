@@ -68,11 +68,11 @@ struct hit_struct {
 	unsigned char velocity;
 	double time;		/* noteon time, as a fraction of the measure */
 	int beat;
-	int beats_per_measure; /* this is a per-note value, used to position the note within a measure,
+	int beats_per_measure; /* this is a per-note value, used to position the note within a measure, */
 				/* and does not really reflect tempo information */
 	double noteoff_time;		/* noteon time, as a fraction of the measure */
 	int noteoff_beat;
-	int noteoff_beats_per_measure; /* this is a per-note value, used to position the note within a measure,
+	int noteoff_beats_per_measure; /* this is a per-note value, used to position the note within a measure, */
 				/* and does not really reflect tempo information */
 };
 

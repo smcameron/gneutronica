@@ -45,8 +45,6 @@ int load_from_file_version_2(FILE *f)
 	int ninsts;
 	int i,j,count, rc;
 	int hidden;
-	int fileformatversion;
-
 
 	printf("Hmm, old file format version 2, will update on save.\n");
 	linecount = 1;
@@ -120,7 +118,7 @@ int load_from_file_version_2(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -232,7 +230,6 @@ int load_from_file_version_1(FILE *f)
 	int ninsts;
 	int i,j, rc;
 	int hidden;
-	int fileformatversion;
 
 	printf("Hmm, old file format version 1, will update on save.\n");
 	linecount = 1;
@@ -304,7 +301,7 @@ int load_from_file_version_1(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -388,6 +385,7 @@ int load_from_file_version_1(FILE *f)
 
 error_out:
 	pattern_struct_free(pattern, npatterns);
+	return -1;
 }
 
 
@@ -395,10 +393,7 @@ int import_patterns_v2(FILE *f)
 {
 	char line[255];
 	int linecount;
-	int ninsts;
 	int i,j,count, rc;
-	int hidden;
-	int fileformatversion;
 	int fake_ninsts;
 	int newpatterns;
 
@@ -471,7 +466,7 @@ int import_patterns_v2(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -521,6 +516,7 @@ int import_patterns_v2(FILE *f)
 
 error_out:
 	pattern_struct_free(pattern, npatterns + newpatterns);
+	return -1;
 }
 
 int load_from_file_version_3(FILE *f)
@@ -530,7 +526,6 @@ int load_from_file_version_3(FILE *f)
 	int ninsts;
 	int i,j,count, rc;
 	int hidden;
-	int fileformatversion;
 	int gm_equiv;
 	char dkmake[100];
 	char dkmodel[100];
@@ -636,7 +631,7 @@ int load_from_file_version_3(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -748,10 +743,7 @@ int import_patterns_v3(FILE *f)
 {
 	char line[255];
 	int linecount;
-	int ninsts;
 	int i,j,k,count, rc;
-	int hidden;
-	int fileformatversion;
 	int fake_ninsts;
 	int newpatterns;
 	char dkmake[100], dkmodel[100], dkname[100];
@@ -836,7 +828,7 @@ int import_patterns_v3(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
