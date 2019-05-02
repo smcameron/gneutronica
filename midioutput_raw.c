@@ -56,7 +56,7 @@ struct midi_handle *midi_open_raw(unsigned char *name,
 	if (mhr == NULL)
 		return NULL;
 
-	fd = open(name, O_RDWR);
+	fd = open((char *) name, O_RDWR);
 	if (fd < 0)
 		goto cleanup;
 
