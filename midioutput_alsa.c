@@ -51,7 +51,7 @@ struct midi_handle *midi_open_alsa(unsigned char *name, int nports)
 	int rc;
 	int i;
 	struct midi_handle_alsa *mh;
-	unsigned char clientname[255], portname[255];
+	char clientname[255], portname[255];
 
 	sprintf(clientname, "Gneutronica (%d)", getpid());
 
@@ -62,7 +62,7 @@ struct midi_handle *midi_open_alsa(unsigned char *name, int nports)
 	if (nports > MAX_PORTS)
 		nports = MAX_PORTS;
 
-	rc = snd_seq_open(&mh->seqp, name, SND_SEQ_OPEN_OUTPUT, 0666);
+	rc = snd_seq_open(&mh->seqp, (char *) name, SND_SEQ_OPEN_OUTPUT, 0666);
 	if (rc < 0) {
 		printf("snd_seq_open returns %d\n", rc);
 		free(mh);
