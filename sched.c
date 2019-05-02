@@ -18,6 +18,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
  */
+
+#define UNUSED __attribute__((unused))
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -223,7 +226,7 @@ int sched_note(struct schedule_t *s,
 		unsigned char noteval,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
-		int note_duration, /* have yet to figure units on this... */
+		UNUSED int note_duration, /* have yet to figure units on this... */
 		unsigned char velocity,
 		int measure, 
 		int percent,
@@ -295,7 +298,7 @@ int sched_noop(struct schedule_t *s,
 		unsigned char noteval,
 		unsigned long measure_length, /* in microseconds */
 		double time, /* fraction of the measure to elapse before starting note */
-		int note_duration, /* have yet to figure units on this... */
+		UNUSED int note_duration, /* have yet to figure units on this... */
 		unsigned char velocity,
 		int measure,
 		int percent

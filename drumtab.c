@@ -19,6 +19,8 @@
 
  */
 
+#define UNUSED __attribute__((unused))
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -87,7 +89,7 @@ static int find_instrument(char *line)
 	j = 0; n[0] = '\0';
 
 	/* printf("line = %s\n", line); */
-	for (i=0;i<strlen(line);i++) {
+	for (i = 0; i < (int) strlen(line); i++) {
 		if (is_measure_separator(line[i]))
 			break;
 		if (isalpha(line[i]) || isdigit(line[i])) {
@@ -122,7 +124,7 @@ static int find_instrument(char *line)
 
 
 static int read_tab_file(const char *filename, char *buffer[],
-	int maxlinecount, int *linecount)
+	UNUSED int maxlinecount, int *linecount)
 {
 	FILE *f;
 	char *s;
@@ -235,9 +237,9 @@ static void process_tab(char *buffer[], int nlines, int *nmeasures)
 
 	sepr = MEASURE_SEPARATOR;
 
-	for (i=0;i<nlines;i++) {
+	for (i = 0; i < nlines; i++) {
 		/* look for a a vertical bar */
-		for (j=0;j<strlen(sepr);j++) {
+		for (j = 0; j < (int) strlen(sepr); j++) {
 			vbar = strchr(buffer[i], sepr[j]);
 			if (vbar != NULL)
 				break;

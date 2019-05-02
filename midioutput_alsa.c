@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
 
+#define UNUSED __attribute__((unused))
+
 
 #include "midioutput.h"
 #define INSTANTIATE_MIDIOUTPUT_ALSA_GLOBALS
@@ -40,7 +42,7 @@ struct midi_handle_alsa {
 	int queue;
 };
 
-void midi_close_alsa(struct midi_handle *mh)
+void midi_close_alsa(UNUSED struct midi_handle *mh)
 {
 	printf("%s:%d:%s, not yet implemented\n",
 		 __FILE__, __LINE__, __FUNCTION__);
@@ -76,7 +78,7 @@ struct midi_handle *midi_open_alsa(unsigned char *name, int nports)
 		mh->outputport[i] = snd_seq_create_simple_port(mh->seqp, portname,
 				SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
 				SND_SEQ_PORT_TYPE_MIDI_GENERIC);
-		if (mh->outputport < 0)
+		if (mh->outputport[i] < 0)
 			printf("snd_seq_create_simple_port %d failed\n", i);
 	}
 
@@ -124,11 +126,11 @@ void midi_noteon_alsa(struct midi_handle *mh,
 	return;
 }
 
-void midi_patch_change_alsa(struct midi_handle *mh,
-	unsigned char port,
-	unsigned char channel,
-	unsigned short bank,
-	unsigned char patch)
+void midi_patch_change_alsa(UNUSED struct midi_handle *mh,
+	UNUSED unsigned char port,
+	UNUSED unsigned char channel,
+	UNUSED unsigned short bank,
+	UNUSED unsigned char patch)
 {
 	printf("%s:%d, not yet implemented\n", __FILE__, __LINE__);
 	return;

@@ -42,6 +42,8 @@
 #include <math.h>
 #include <errno.h>
 
+#define UNUSED __attribute__((unused))
+
 extern double trunc(double x); /* math.h doesn't have this?  What? */
 
 #include <signal.h>
@@ -121,22 +123,22 @@ static int get_drawing_width(void)
    I tweaked it tweaked a bit for style and menu content, but that's about it.*/
 
 static GtkItemFactoryEntry menu_items[] = {
-	{ "/" FILE_LABEL,         NULL,         NULL,           0, "<Branch>" },
+	{ "/" FILE_LABEL,         NULL,         NULL,           0, "<Branch>", NULL },
 	/* { "/File/_New",     "<control>N", print_hello,    0, "<StockItem>", GTK_STOCK_NEW }, */
 	{ "/" FILE_LABEL "/_" OPEN_LABEL,    "<control>O", load_button_clicked,    0, "<StockItem>", GTK_STOCK_OPEN },
 	{ "/" FILE_LABEL "/_" SAVE_LABEL,    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
-	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL,         save_button_clicked,    0, "<Item>" },
-	{ "/" FILE_LABEL "/sep1",     NULL,         NULL,           0, "<Separator>" },
-	{ "/" FILE_LABEL "/" IMPORT_PATTERNS_LABEL, NULL,         import_patterns_button_clicked,    0, "<Item>" },
-	{ "/" FILE_LABEL "/" IMPORT_DRUM_TAB_LABEL, NULL,         import_drumtab_button_clicked,    0, "<Item>" },
-	{ "/" FILE_LABEL "/" EXPORT_TO_MIDI_FILE_LABEL, NULL,         export_midi_button_clicked,    0, "<Item>" },
+	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL,         save_button_clicked,    0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/sep1",     NULL,         NULL,           0, "<Separator>", NULL },
+	{ "/" FILE_LABEL "/" IMPORT_PATTERNS_LABEL, NULL,         import_patterns_button_clicked,    0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/" IMPORT_DRUM_TAB_LABEL, NULL,         import_drumtab_button_clicked,    0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/" EXPORT_TO_MIDI_FILE_LABEL, NULL,         export_midi_button_clicked,    0, "<Item>", NULL },
 	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
 	{ "/" FILE_LABEL "/" QUIT_LABEL,    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT },
-	{ "/" EDIT_LABEL,         NULL,         NULL,           0, "<Branch>" },
-	{ "/" EDIT_LABEL "/" PASTE_DRUM_TAB_LABEL,    NULL, paste_drumtab_clicked, 0, "<Item>" },
-	{ "/" EDIT_LABEL "/" REMAP_DRUM_KIT_MENU_LABEL,    NULL, remap_drumkit_clicked, 0, "<Item>" },
-	{ "/" HELP_LABEL,         NULL,         NULL,           0, "<LastBranch>" },
-	{ "/" HELP_LABEL "/" ABOUT_LABEL,   NULL,         (void *) about_activate, 0, "<Item>" },
+	{ "/" EDIT_LABEL,         NULL,         NULL,           0, "<Branch>", NULL },
+	{ "/" EDIT_LABEL "/" PASTE_DRUM_TAB_LABEL,    NULL, paste_drumtab_clicked, 0, "<Item>", NULL },
+	{ "/" EDIT_LABEL "/" REMAP_DRUM_KIT_MENU_LABEL,    NULL, remap_drumkit_clicked, 0, "<Item>", NULL },
+	{ "/" HELP_LABEL,         NULL,         NULL,           0, "<LastBranch>", NULL },
+	{ "/" HELP_LABEL "/" ABOUT_LABEL,   NULL,         (void *) about_activate, 0, "<Item>", NULL },
 };
 
 static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
@@ -169,9 +171,7 @@ static GtkWidget *get_menubar_menu( GtkWidget  *window )
 }
 
 /* Popup the menu when the popup button is pressed */
-static gboolean popup_cb( GtkWidget *widget,
-                          GdkEvent *event,
-                          GtkWidget *menu )
+static gboolean popup_cb(UNUSED GtkWidget *widget, GdkEvent *event, GtkWidget *menu)
 {
 	GdkEventButton *bevent = (GdkEventButton *)event;
 
@@ -426,7 +426,7 @@ static int save_drumkit_to_file(const char *filename)
 void destroy_event(GtkWidget *widget, gpointer data);
 void cleanup_tempo_changes();
 
-void tempo_change_ok_button(GtkWidget *widget, gpointer data)
+void tempo_change_ok_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int new_tempo;
 	printf("Tempo change ok button\n");
@@ -437,7 +437,7 @@ void tempo_change_ok_button(GtkWidget *widget, gpointer data)
 	gtk_widget_hide(TempoChWin);
 }
 
-void tempo_change_cancel_button(GtkWidget *widget, gpointer data)
+void tempo_change_cancel_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	printf("Tempo change cancel button\n");
 	cleanup_tempo_changes();
@@ -445,7 +445,7 @@ void tempo_change_cancel_button(GtkWidget *widget, gpointer data)
 	gtk_widget_queue_draw(Tempo_da);
 }
 
-void tempo_change_delete_button(GtkWidget *widget, gpointer data)
+void tempo_change_delete_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int index;
 	printf("Tempo change delete button\n");
@@ -457,7 +457,7 @@ void tempo_change_delete_button(GtkWidget *widget, gpointer data)
 	gtk_widget_queue_draw(Tempo_da);
 }
 
-void destroy_means_hide(GtkWidget *widget, gpointer data)
+void destroy_means_hide(GtkWidget *widget, UNUSED gpointer data)
 {
 	/* hmm, this doesn't really work, the next time the widget is activated... boom! */
 	gtk_widget_hide(widget); 
@@ -726,7 +726,7 @@ int lowlevel_add_hit(struct hitpattern **hit,
 
 void remove_hit(struct hitpattern **hit, 
 		double thetime, double measurelength, 
-		int dkit, int instnum, int pattern)
+		UNUSED int dkit, UNUSED int instnum, UNUSED int pattern)
 {
 
 	struct hitpattern *prev, *this, *next, *matchprev;
@@ -860,19 +860,19 @@ int add_hit(struct hitpattern **hit,
 			velocity, change_velocity));
 }
 
-void channel_spin_change(GtkSpinButton *spinbutton, void *data)
+void channel_spin_change(GtkSpinButton *spinbutton, UNUSED void *data)
 {
 	pattern[cpattern]->channel = 
 		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
 
-void track_spin_change(GtkSpinButton *spinbutton, void *data)
+void track_spin_change(GtkSpinButton *spinbutton, UNUSED void *data)
 {
 	pattern[cpattern]->tracknum = 
 		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
 
-void timediv_spin_change(GtkSpinButton *spinbutton, struct division_struct *data)
+void timediv_spin_change(UNUSED GtkSpinButton *spinbutton, UNUSED struct division_struct *data)
 {
 	int i;
 	/* Make the timing lines redraw . . . */
@@ -904,8 +904,8 @@ static void mark_selection_endpoint(int m, int end)
 		redraw_arranger();
 }
 
-static int arr_darea_button_press(GtkWidget *w, GdkEventButton *event, 
-		struct pattern_struct *data)
+static int arr_darea_button_press(UNUSED GtkWidget *w, GdkEventButton *event, 
+		UNUSED struct pattern_struct *data)
 {
 	int m;
 
@@ -952,7 +952,7 @@ static void redraw_arranger(void)
 	redraw_measure_op_buttons();
 }
 
-void insert_measures_button(GtkWidget *widget, gpointer data)
+void insert_measures_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int measures_to_copy, measures_to_move;
 	int bytes_to_copy, bytes_to_move;
@@ -985,7 +985,7 @@ void insert_measures_button(GtkWidget *widget, gpointer data)
 	redraw_arranger();
 }
 
-void delete_measures_button(GtkWidget *widget, gpointer data)
+void delete_measures_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int i, count;
 	if (nmeasures <= 1) /* can't have zero measures. */
@@ -1041,7 +1041,7 @@ void delete_measures_button(GtkWidget *widget, gpointer data)
 	return;
 }
 
-void select_measures_button(GtkWidget *widget, gpointer data)
+void select_measures_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	if (start_copy_measure > -1)
 		start_copy_measure = end_copy_measure = -1;
@@ -1053,7 +1053,7 @@ void select_measures_button(GtkWidget *widget, gpointer data)
 }
 
 static int measure_da_clicked(GtkWidget *w, GdkEventButton *event, 
-		gpointer data)
+		UNUSED gpointer data)
 {
 	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
@@ -1173,8 +1173,8 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 	return TRUE;
 }
 
-static int copy_measure_press(GtkWidget *w, GdkEventButton *event, 
-		gpointer data)
+static int copy_measure_press(UNUSED GtkWidget *w, GdkEventButton *event, 
+		UNUSED gpointer data)
 {
 	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
@@ -1184,8 +1184,8 @@ static int copy_measure_press(GtkWidget *w, GdkEventButton *event,
 	return 1;
 }
 
-static int copy_measure_release(GtkWidget *w, GdkEventButton *event, 
-		gpointer data)
+static int copy_measure_release(UNUSED GtkWidget *w, GdkEventButton *event, 
+		UNUSED gpointer data)
 {
 	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
@@ -1201,8 +1201,8 @@ static int copy_measure_release(GtkWidget *w, GdkEventButton *event,
 	return 1;
 }
 
-static gint drumtab_selection_received(GtkWidget* widget,
-	GtkSelectionData *selection, gpointer data)
+static gint drumtab_selection_received(UNUSED GtkWidget* widget,
+	GtkSelectionData *selection, UNUSED gpointer data)
 {
 	char *drumtab;
 	int factor;
@@ -1239,7 +1239,7 @@ static void paste_drumtab_selection()
 	/* We will get called back with the selection */
 }
 
-static void paste_drumtab_clicked(GtkWidget *widget, gpointer data)
+static void paste_drumtab_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	/* Selected from the menu, same as middle mouse button, except from clipboard */
 	static GdkAtom targets_atom = GDK_NONE;
@@ -1312,13 +1312,14 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 	return TRUE;
 }
 
-static int canvas_key_pressed(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
+static int canvas_key_pressed(UNUSED GtkWidget *w, UNUSED GdkEventButton *event,
+				UNUSED struct instrument_struct *data)
 {
 	printf("canvas key pressed\n");
 	return TRUE; 
 }
 
-static int canvas_mousedown(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
+static int canvas_mousedown(UNUSED GtkWidget *w, GdkEventButton *event, UNUSED struct instrument_struct *data)
 {
 	if (!melodic_mode) 
 		return TRUE; /* Drums don't have a duration, you just hit 'em..., on mouseup */
@@ -1402,7 +1403,7 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 	return TRUE;
 }
 
-static int measure_transport_expose(GtkWidget *w, GdkEvent *event, gpointer p)
+static int measure_transport_expose(GtkWidget *w, UNUSED GdkEvent *event, UNUSED gpointer p)
 {
 	int x, y2;
 	x = 0; y2 = ARRANGER_HEIGHT;
@@ -1418,7 +1419,7 @@ static int measure_transport_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	return TRUE;
 }
 
-gint transport_update_callback (gpointer data)
+gint transport_update_callback(UNUSED gpointer data)
 {
 	/* this is called back by gtk_main, as an idle function every so often
 	   during playback to update the transport location.  Returns TRUE,
@@ -1463,7 +1464,7 @@ gint transport_update_callback (gpointer data)
 	return TRUE;
 }
 
-static int measure_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
+static int measure_da_expose(GtkWidget *w, UNUSED GdkEvent *event, UNUSED gpointer p)
 {
 	int i, x, y1, j;
 
@@ -1520,7 +1521,7 @@ static int measure_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	return TRUE;
 }
 
-static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct *p)
+static int arr_darea_event(GtkWidget *w, UNUSED GdkEvent *event, struct pattern_struct *p)
 {
 	int i, x, y1, j;
 	/* printf("arranger event\n"); */
@@ -1692,7 +1693,7 @@ static void check_melodic_mode()
 	}
 }
 
-void percussion_toggle_callback(GtkWidget *widget, gpointer data)
+void percussion_toggle_callback(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	check_melodic_mode();
 }
@@ -1710,7 +1711,7 @@ void set_notelabel(int note)
 	gtk_widget_queue_draw(GTK_WIDGET(NoteLabel));
 }
 
-static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
+static int canvas_event(GtkWidget *w, UNUSED GdkEvent *event, struct instrument_struct *instrument)
 {
 	int i,j; 
 	double diff;
@@ -1846,7 +1847,8 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	return TRUE;
 }
 
-static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct *instrument)
+static int canvas_enter(UNUSED GtkWidget *w, UNUSED GdkEvent *event,
+				struct instrument_struct *instrument)
 {
 #if 0
 	struct instrument_struct *inst;
@@ -1905,8 +1907,7 @@ static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 
 void check_hitpatterns(char *x);
 
-void pattern_clear_button_clicked(GtkWidget *widget,
-	gpointer data)
+void pattern_clear_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	printf("Pattern clear button.\n");
 	int i;
@@ -1922,8 +1923,7 @@ void pattern_clear_button_clicked(GtkWidget *widget,
 
 }
 
-void pattern_stop_button_clicked(GtkWidget *widget,
-	gpointer data)
+void pattern_stop_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	printf("Pattern stop button.\n");
 	if (player_process_pid != -1)
@@ -1937,7 +1937,7 @@ void pattern_stop_button_clicked(GtkWidget *widget,
 	}
 }
 
-void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct timeval *base)
+void schedule_pattern(UNUSED int kit, int measure, int cpattern, int tempo, struct timeval *base)
 {
 	struct timeval basetime, orig_basetime;
 	unsigned long measurelength;
@@ -2085,8 +2085,7 @@ int export_to_midi_file(const char *filename)
 
 int load_from_file(const char *filename);
 
-void loadbox_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void loadbox_file_selected(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
@@ -2094,8 +2093,7 @@ void loadbox_file_selected(GtkWidget *widget,
 	load_from_file(filename);
 }
 
-void savebox_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void savebox_file_selected(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
@@ -2103,8 +2101,7 @@ void savebox_file_selected(GtkWidget *widget,
 	save_to_file(filename);
 }
 
-void savedrumkitbox_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void savedrumkitbox_file_selected(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
@@ -2112,8 +2109,7 @@ void savedrumkitbox_file_selected(GtkWidget *widget,
 	save_drumkit_to_file(filename);
 }
 
-void import_patterns_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void import_patterns_file_selected(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
@@ -2129,8 +2125,7 @@ void import_drumtab_from_file(const char *filename, int factor)
 }
 
 
-void import_drumtab_file_selected(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void import_drumtab_file_selected(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	int factor;
@@ -2141,8 +2136,7 @@ void import_drumtab_file_selected(GtkWidget *widget,
 	import_drumtab_from_file(filename, factor);
 }
 
-void export_to_midi(GtkWidget *widget,
-	GtkFileSelection *FileBox)
+void export_to_midi(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 {
 	const char *filename;
 	filename = gtk_file_selection_get_filename(FileBox);
@@ -2174,7 +2168,9 @@ GtkWidget *make_file_dialog(int i)
 	GtkWidget *w;
 	void *f;
 
-	if (i< 0 || i >= sizeof(file_dialog) / sizeof(file_dialog[0]))
+	if (i < 0)
+		return NULL;
+	if ((unsigned int) i >= sizeof(file_dialog) / sizeof(file_dialog[0]))
 		return NULL;
 
 	w = gtk_file_selection_new (file_dialog[i].title);
@@ -2190,38 +2186,32 @@ GtkWidget *make_file_dialog(int i)
 	return w;
 }
 
-void export_midi_button_clicked(GtkWidget *widget,
-	gpointer data)
+void export_midi_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(EXPORT_TO_MIDI);
 }
 
-void import_patterns_button_clicked(GtkWidget *widget,
-	gpointer data)
+void import_patterns_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(IMPORT_PATTERNS);
 }
 
-void import_drumtab_button_clicked(GtkWidget *widget,
-	gpointer data)
+void import_drumtab_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(IMPORT_DRUMTAB);
 }
 
-void save_button_clicked(GtkWidget *widget,
-	gpointer data)
+void save_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(SAVE_SONG);
 }
 
-void load_button_clicked(GtkWidget *widget,
-	gpointer data)
+void load_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(LOAD_SONG);
 }
 
-void save_drumkit_button_clicked(GtkWidget *widget,
-	gpointer data)
+void save_drumkit_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	make_file_dialog(SAVE_DRUMKIT);
 }
@@ -2229,16 +2219,16 @@ void save_drumkit_button_clicked(GtkWidget *widget,
 void remap_drumkit_song();
 void remap_drumkit_pattern(struct pattern_struct *p, int set_toggles);
 
-void remap_drumkit_clicked(GtkWidget *widget, /* this is for the menu item, remaps whole song */
-	gpointer data)
+void remap_drumkit_clicked(UNUSED GtkWidget *widget, /* this is for the menu item, remaps whole song */
+	UNUSED gpointer data)
 {
 	/* printf("remap song drumkit menu pressed\n"); */
 	remap_drumkit_song();
 }
 
 void remap_drumkit_hit(struct hit_struct *h, int set_toggles);
-void remap_drumkit_button_clicked(GtkWidget *widget, /* this is for the pattern button item */
-	gpointer data)
+void remap_drumkit_button_clicked(UNUSED GtkWidget *widget, /* this is for the pattern button item */
+	UNUSED gpointer data)
 {
 	/* printf("remap pattern drumkit button pressed\n"); */
 	flatten_pattern(kit, cpattern);
@@ -2248,8 +2238,7 @@ void remap_drumkit_button_clicked(GtkWidget *widget, /* this is for the pattern 
 }
 
 void send_schedule(struct schedule_t *sched, int loop);
-void arranger_play_button_clicked(GtkWidget *widget,
-	gpointer data)
+void arranger_play_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int start, end;
 
@@ -2274,8 +2263,7 @@ void arranger_play_button_clicked(GtkWidget *widget,
 			transport_update_callback, NULL);
 }
 
-void pattern_paste_button_clicked(GtkWidget *widget,
-	gpointer data)
+void pattern_paste_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int i, from = pattern_in_copy_buffer;
 	struct hitpattern *f;
@@ -2319,8 +2307,7 @@ void do_play()
 			transport_update_callback, NULL);
 }
 
-void pattern_play_button_clicked(GtkWidget *widget,
-	gpointer data)
+void pattern_play_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	do_play();
 #if 0
@@ -2334,8 +2321,7 @@ void pattern_play_button_clicked(GtkWidget *widget,
 #endif
 }
 
-void pattern_record_button_clicked(GtkWidget *widget,
-	gpointer data)
+void pattern_record_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	record_mode = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (pattern_record_button));
 	printf("Record pattern button clicked, record_mode = %d\n", record_mode);
@@ -2387,7 +2373,7 @@ void edit_pattern(int new_pattern)
 
 struct pattern_struct *pattern_struct_alloc(int pattern_num);
 
-void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
+void ins_pattern_button_pressed(UNUSED GtkWidget *widget, /* insert pattern */
 	struct pattern_struct *data)
 {
 	int i, j, slot;
@@ -2582,7 +2568,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	redraw_arranger();
 }
 
-void del_pattern_button_pressed(GtkWidget *widget, /* delete pattern */
+void del_pattern_button_pressed(UNUSED GtkWidget *widget, /* delete pattern */
 	struct pattern_struct *data)
 {
 	int i, j, k;	
@@ -2678,14 +2664,14 @@ void set_select_message(char *pattern)
 	gtk_tooltips_set_tip(tooltips, pattern_paste_button, msg, NULL);
 }
 
-void select_pattern_button_pressed(GtkWidget *widget, void *unused)
+void select_pattern_button_pressed(UNUSED GtkWidget *widget, UNUSED void *unused)
 {
 	pattern_in_copy_buffer = cpattern;
 	set_select_message(pattern[cpattern]->patname);
 	redraw_arranger();
 }
 
-void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */
+void copy_pattern_button_pressed(UNUSED GtkWidget *widget, /* copy pattern */
 	struct pattern_struct *data)
 {
 	pattern_in_copy_buffer = data->pattern_num;
@@ -2801,15 +2787,14 @@ void clear_all_current_instrument_hit_pattern()
 	return;
 }
 
-void edit_pattern_clicked(GtkWidget *widget, /* this is the "pattern name" button in the arranger window */
+void edit_pattern_clicked(UNUSED GtkWidget *widget, /* this is the "pattern name" button in the arranger window */
 	struct pattern_struct *data)
 {
 	flatten_pattern(kit, cpattern); /* save current pattern */
 	edit_pattern(data->pattern_num);
 }
 
-void prevbutton_clicked(GtkWidget *widget,
-	gpointer data)
+void prevbutton_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern <= 0) {
@@ -2831,8 +2816,7 @@ void prevbutton_clicked(GtkWidget *widget,
 }
 
 
-void nextbutton_clicked(GtkWidget *widget,
-	gpointer data)
+void nextbutton_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern >= MAXPATTERNS-1) {
@@ -2920,8 +2904,7 @@ int check_num_denom_ok(double *numerator, double *denominator)
 	return 1;
 }
 
-void add_space_before_button_pressed(GtkWidget *widget,
-	void *whatever)
+void add_space_before_button_pressed(UNUSED GtkWidget *widget, UNUSED void *whatever)
 {
 	double numerator, denominator;
 	double add, multiply;
@@ -2934,8 +2917,7 @@ void add_space_before_button_pressed(GtkWidget *widget,
 	adjust_space(add, multiply);
 }
 
-void add_space_after_button_pressed(GtkWidget *widget,
-	void *whatever)
+void add_space_after_button_pressed(UNUSED GtkWidget *widget, UNUSED void *whatever)
 {
 	double numerator, denominator;
 	double add, multiply;
@@ -2952,8 +2934,7 @@ void add_space_after_button_pressed(GtkWidget *widget,
 	adjust_space(add, multiply);
 }
 
-void remove_space_before_button_pressed(GtkWidget *widget,
-	void *whatever)
+void remove_space_before_button_pressed(UNUSED GtkWidget *widget, UNUSED void *whatever)
 {
 	double numerator, denominator;
 	double add, multiply;
@@ -2970,8 +2951,7 @@ void remove_space_before_button_pressed(GtkWidget *widget,
 	adjust_space(add, multiply);
 }
 
-void remove_space_after_button_pressed(GtkWidget *widget,
-	void *whatever)
+void remove_space_after_button_pressed(UNUSED GtkWidget *widget, UNUSED void *whatever)
 {
 	double numerator, denominator;
 	double add, multiply;
@@ -3008,8 +2988,7 @@ void transpose(int interval)
 	return;
 }
 
-void scramble_button_pressed(GtkWidget *widget,
-	void *whatever)
+void scramble_button_pressed(UNUSED GtkWidget *widget, UNUSED void *whatever)
 {
 	/* this function takes a pattern, divides it up into equal sized sections
 	   according to the first timediv spinbox, then scrambles it by shuffling
@@ -3111,7 +3090,7 @@ void scramble_button_pressed(GtkWidget *widget,
 		gtk_widget_queue_draw(drumkit[kit].instrument[i].canvas);
 }
 
-void instrument_clear_button_pressed(GtkWidget *widget, 
+void instrument_clear_button_pressed(UNUSED GtkWidget *widget, 
 	struct instrument_struct *inst)
 {
 	if (inst->hit != NULL) {
@@ -3121,8 +3100,7 @@ void instrument_clear_button_pressed(GtkWidget *widget,
 	}
 }
 
-void instrument_button_pressed(GtkWidget *widget,
-	struct instrument_struct *data)
+void instrument_button_pressed(UNUSED GtkWidget *widget, struct instrument_struct *data)
 {
 	unsigned char velocity;
 
@@ -3142,8 +3120,7 @@ void instrument_button_pressed(GtkWidget *widget,
 
 
 void silence(struct midi_handle *mh);
-void destroy_event(GtkWidget *widget,
-	gpointer data)
+void destroy_event(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	/* g_print("destroy event!\n"); */
 
@@ -3159,14 +3136,14 @@ void destroy_event(GtkWidget *widget,
 }
 
 
-gint delete_event(GtkWidget *widget,
-		GdkEvent *event,
-		gpointer data)
+gint delete_event(UNUSED GtkWidget *widget,
+		UNUSED GdkEvent *event,
+		UNUSED gpointer data)
 {
 	return TRUE;
 }
 
-void song_name_entered(GtkWidget *widget, GtkWidget *entry)
+void song_name_entered(UNUSED GtkWidget *widget, GtkWidget *entry)
 {
 	const gchar *entry_text;
 	entry_text = gtk_entry_get_text(GTK_ENTRY(entry));
@@ -3186,7 +3163,7 @@ void instrument_type_entered(GtkWidget *widget, struct instrument_struct *inst)
 	gtk_tooltips_set_tip(tooltips, inst->button, inst->type, NULL);
 }
 
-void hide_instruments_button_callback (GtkWidget *widget, gpointer data)
+void hide_instruments_button_callback(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	int i, vshidden, unchecked_hidden, editdrumkit;
 
@@ -4100,7 +4077,7 @@ error_out:
 	return -1;
 }
 
-int translate_drumtab_data(int factor)
+int translate_drumtab_data(UNUSED int factor)
 {
 	int i, j;
 	struct hitpattern **h;
@@ -4412,7 +4389,7 @@ void send_schedule(struct schedule_t *sched, int loop)
 	return;
 }
 
-void receive_midi_data(int signal)
+void receive_midi_data(UNUSED int signal)
 {
 	/* This is called whenever the midi_reader process gets some midi data */
 	/* from a midi input device, eg. Akai MPD16, or some such. */
@@ -4478,7 +4455,7 @@ void setup_midi_receiver()
 
 static jmp_buf the_beginning;
 
-void sigusr1_handler(int signal)
+void sigusr1_handler(UNUSED int signal)
 {
 	printf("Got SIGUSR1\n");
 	siglongjmp(the_beginning, 1); /* Go back to the beginning */
@@ -4585,7 +4562,7 @@ void player_process_requests(int fd)
 	}
 }
 
-int fork_player_process(char *device, int *fd)
+int fork_player_process(UNUSED char *device, int *fd)
 {
 	int p[2];
 	int pid, rc;
@@ -4612,7 +4589,7 @@ int fork_player_process(char *device, int *fd)
 	return(pid);
 }
 
-int midi_change_patch(GtkWidget *widget, gpointer data)
+int midi_change_patch(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	/* sends a command to the player process to make it send a bank/patch change to 
 	   the MIDI device */
@@ -4637,13 +4614,13 @@ int midi_change_patch(GtkWidget *widget, gpointer data)
 	return TRUE;
 }
 
-int midi_setup_activate(GtkWidget *widget, gpointer data)
+int midi_setup_activate(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	gtk_widget_show(midi_setup_window);
 	return TRUE;
 }
 
-int midi_setup_cancel(GtkWidget *widget, gpointer data)
+int midi_setup_cancel(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(midi_channel_spin_button), 
 		(gdouble) drumkit[kit].midi_channel);
@@ -4651,7 +4628,7 @@ int midi_setup_cancel(GtkWidget *widget, gpointer data)
 	return TRUE;
 }
 
-int midi_setup_ok(GtkWidget *widget, gpointer data)
+int midi_setup_ok(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
 	drumkit[kit].midi_channel = (unsigned char) (gtk_spin_button_get_value_as_int(
 		GTK_SPIN_BUTTON(midi_channel_spin_button))) & 0x0f;
@@ -4712,12 +4689,12 @@ void setup_midi_setup_window()
 	gtk_widget_show_all(midi_setup_vbox);
 }
 
-void about_ok_callback(GtkWidget *widget, gpointer data)
+void about_ok_callback(__attribute__((unused)) GtkWidget *widget, __attribute__((unused)) gpointer data)
 {
 	gtk_widget_hide(about_window);
 }
 
-int about_activate(GtkWidget *widget, gpointer data)
+int about_activate(__attribute__((unused)) GtkWidget *widget, __attribute__((unused)) gpointer data)
 {
 
 	static char about_msg[200];
@@ -4752,7 +4729,7 @@ int about_activate(GtkWidget *widget, gpointer data)
 	return TRUE;
 }
 
-int volume_magnifier_changed(GtkWidget *widget, gpointer data)
+int volume_magnifier_changed(__attribute__((unused)) GtkWidget *widget, __attribute__((unused)) gpointer data)
 {
 	gtk_widget_queue_draw(drumkit[kit].instrument[current_instrument].canvas);
 	return TRUE;
