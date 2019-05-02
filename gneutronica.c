@@ -103,14 +103,12 @@ int import_patterns_from_file(const char *filename);
 int save_to_file(const char *filename);
 int export_to_midi_file(const char *filename);
 int find_tempo(int measure);
-int remove_tempo_change(int index);
+static void remove_tempo_change(int index);
 static void redraw_arranger(void);
 int insert_tempo_change(int measure, int tempo);
 
 static int get_drawing_width(void)
 {
-	int width, height;
-
 	if (pattern_scroller)
 		return (int) (pattern_scroller->allocation.width * 0.8);
 	return 800;
@@ -230,7 +228,6 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	struct drumkit_struct *dk;
 	int i;
 	int rc, line, n;
-	char cmd[255];
 
 	if (format == 1)
 		fprintf(stderr, "Drumkit file %s is old file format version %d\n" 
@@ -306,7 +303,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 		dk->instrument[n].canvas = NULL;
 	}
 	dk->ninsts = n;
-	*ndrumkits++;
+	(*ndrumkits)++;
 	pclose(f);
 	return 0;
 }
@@ -314,7 +311,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 {
 	struct drumkit_struct *dk;
-	int rc, i;
+	int i;
 
 	dk = &drumkit[*ndrumkits];
 	dk->ninsts = MAXINSTS;
@@ -346,7 +343,7 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 		dk->instrument[i].hidebutton = NULL;
 		dk->instrument[i].canvas = NULL;
 	}
-	*ndrumkits++;
+	(*ndrumkits)++;
 	return 0;
 }
 
@@ -355,8 +352,7 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 {
 	FILE *f;
-	struct drumkit_struct *dk;
-	int rc, line, n;
+	int rc;
 	int fileformat;
 	char cmd[255];
 	char realfilename[300];
@@ -644,10 +640,9 @@ int lowlevel_add_hit(struct hitpattern **hit,
 		unsigned char velocity, int change_velocity)
 {
 	struct hitpattern *prev, *this, *next;
-	double percent, noteoff_percent;
+	double percent;
 
 	percent = (double) beat / (double) beats_per_measure;
-	noteoff_percent = (double) noteoff_beat / (double) noteoff_beats_per_measure;
 
 	/* g_print("Adding hit to %s at beat %d of %d beats, percent = %g\n",
 		drumkit[dkit].instrument[instnum].name, 
@@ -734,13 +729,12 @@ void remove_hit(struct hitpattern **hit,
 		int dkit, int instnum, int pattern)
 {
 
-	struct hitpattern *prev, *this, *next, *matchprev, *matchnext;
+	struct hitpattern *prev, *this, *next, *matchprev;
 	
 	double distance, mindist,  percent;
 
 	percent = thetime / measurelength;
 	matchprev = prev = NULL;
-	matchnext = next = NULL;
 	distance = mindist = DRAW_WIDTH * 2.0; 
 	for (this = *hit; this != NULL; this = next) {
 		next = this->next;
@@ -750,7 +744,6 @@ void remove_hit(struct hitpattern **hit,
 		if (distance < mindist) {
 			mindist = distance;
 			matchprev = prev;
-			matchnext = next;
 		}
 		prev = this;
 	}
@@ -820,13 +813,8 @@ int add_hit(struct hitpattern **hit,
 	int noteoff_bestbeat = -1;
 	int bestbeat = -1;
 	int noteoff_best_division, best_division;
-	int found, i;
 	int stg;
-	double noteoff_percent, percent, diff, bestdiff;
-	double target, divlen, x;
-	double zero;
-
-	struct hitpattern *prev, *this, *next;
+	double noteoff_percent, percent;
 
 	if (thetime > measurelength || thetime < 0)
 		return 0;
@@ -837,8 +825,6 @@ int add_hit(struct hitpattern **hit,
 	stg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (snap_to_grid));
 	
 	/* g_print("percent = %g\n", percent); */
-
-	bestdiff = 1000.0;
 
 	if (stg) {
 
@@ -876,14 +862,12 @@ int add_hit(struct hitpattern **hit,
 
 void channel_spin_change(GtkSpinButton *spinbutton, void *data)
 {
-	int i;
 	pattern[cpattern]->channel = 
 		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
 
 void track_spin_change(GtkSpinButton *spinbutton, void *data)
 {
-	int i;
 	pattern[cpattern]->tracknum = 
 		gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinbutton));
 }
@@ -923,7 +907,7 @@ static void mark_selection_endpoint(int m, int end)
 static int arr_darea_button_press(GtkWidget *w, GdkEventButton *event, 
 		struct pattern_struct *data)
 {
-	int m, s, e;
+	int m;
 
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
 
@@ -931,6 +915,7 @@ static int arr_darea_button_press(GtkWidget *w, GdkEventButton *event,
 		start_paint_measure = m;
 	else if (event->button == 3)
 		mark_selection_endpoint(m, 0);
+	return 1;
 }
 
 void redraw_measure_op_buttons()
@@ -970,7 +955,6 @@ static void redraw_arranger(void)
 void insert_measures_button(GtkWidget *widget, gpointer data)
 {
 	int measures_to_copy, measures_to_move;
-	struct measure_struct *tmp;
 	int bytes_to_copy, bytes_to_move;
 	int m = start_copy_measure;
 
@@ -1071,7 +1055,7 @@ void select_measures_button(GtkWidget *widget, gpointer data)
 static int measure_da_clicked(GtkWidget *w, GdkEventButton *event, 
 		gpointer data)
 {
-	int m, i;
+	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
 	if (m > nmeasures)
 		return TRUE;
@@ -1192,17 +1176,18 @@ static int measure_da_clicked(GtkWidget *w, GdkEventButton *event,
 static int copy_measure_press(GtkWidget *w, GdkEventButton *event, 
 		gpointer data)
 {
-	int m, i;
+	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
 	start_copy_measure = m;
 	end_copy_measure = m;
 	redraw_arranger();
+	return 1;
 }
 
 static int copy_measure_release(GtkWidget *w, GdkEventButton *event, 
 		gpointer data)
 {
-	int m, i;
+	int m;
 	m = (int) trunc((0.0 + event->x) / (0.0 + MEASUREWIDTH));
 	if (start_copy_measure == -1)
 		start_copy_measure = m;
@@ -1213,14 +1198,14 @@ static int copy_measure_release(GtkWidget *w, GdkEventButton *event,
 	else
 		end_copy_measure = m;
 	redraw_arranger();
+	return 1;
 }
 
 static gint drumtab_selection_received(GtkWidget* widget,
 	GtkSelectionData *selection, gpointer data)
 {
-	GList *item_list;
 	char *drumtab;
-	int i, factor;
+	int factor;
 
 	if (selection->length < 0) {
 		printf("Can't get selection.\n");
@@ -1286,7 +1271,6 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 
 	if (event->button == 1) {
 		if (mn < begin_measure) {
-			int tmp = mn;
 			mn = begin_measure;
 			begin_measure = mn;
 		}
@@ -1331,6 +1315,7 @@ static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event,
 static int canvas_key_pressed(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
 {
 	printf("canvas key pressed\n");
+	return TRUE; 
 }
 
 static int canvas_mousedown(GtkWidget *w, GdkEventButton *event, struct instrument_struct *data)
@@ -1400,7 +1385,6 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 		remove_hit(&data->hit, (double) hitx, (double) DRAW_WIDTH,
 			kit, data->instrument_num, cpattern);
 	if (current_instrument != data->instrument_num) {
-		int i;
 		int prev = current_instrument;
 		int newheight;
 
@@ -1420,8 +1404,8 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 
 static int measure_transport_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
-	int x, y1, y2;
-	x = 0; y1 = 0; y2 = ARRANGER_HEIGHT;
+	int x, y2;
+	x = 0; y2 = ARRANGER_HEIGHT;
 	gdk_draw_line(w->window, gc, 0,0, MEASUREWIDTH * (nmeasures), 0);
 	gdk_draw_line(w->window, gc, 0, y2, MEASUREWIDTH * (nmeasures), y2);
 	gdk_draw_line(w->window, gc, 0, 0, 0, ARRANGER_HEIGHT);
@@ -1481,11 +1465,11 @@ gint transport_update_callback (gpointer data)
 
 static int measure_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
-	int i, x, y1, y2, j;
+	int i, x, y1, j;
 
 	gdk_draw_line(w->window, gc, 0,0, MEASUREWIDTH * (nmeasures), 0);
 	gdk_draw_line(w->window, gc, 0, ARRANGER_HEIGHT, MEASUREWIDTH * (nmeasures), ARRANGER_HEIGHT);
-	x = 0; y1 = 0; y2 = ARRANGER_HEIGHT;
+	x = 0; y1 = 0;
 	for (i=0;i<=nmeasures;i++) {
 		if (i==nmeasures && w != Paste_da)
 			break;
@@ -1538,7 +1522,7 @@ static int measure_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct *p)
 {
-	int i, x, y1, y2, j;
+	int i, x, y1, j;
 	/* printf("arranger event\n"); */
 
 	gdk_draw_line(w->window, gc, 0,0, MEASUREWIDTH * (nmeasures + 1), 0);
@@ -1550,7 +1534,7 @@ static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct 
 			MEASUREWIDTH * (nmeasures + 1), ARRANGER_HEIGHT-2);
 	}
 		
-	x = 0; y1 = 0; y2 = ARRANGER_HEIGHT;
+	x = 0; y1 = 0;
 	if (start_copy_measure > -1 && end_copy_measure >= start_copy_measure)
 		gdk_draw_line(w->window, gc, start_copy_measure*MEASUREWIDTH+1, y1+ARRANGER_HEIGHT/2, 
 					(end_copy_measure+1)*MEASUREWIDTH-1, y1+ARRANGER_HEIGHT/2);
@@ -1582,6 +1566,7 @@ static int arr_darea_event(GtkWidget *w, GdkEvent *event, struct pattern_struct 
 		x += MEASUREWIDTH;
 	}
 	/* gtk_widget_queue_draw(w); */
+	return 1;
 }
 
 static int hide_all_the_canvas_widgets(struct instrument_struct *inst)
@@ -1595,6 +1580,7 @@ static int hide_all_the_canvas_widgets(struct instrument_struct *inst)
 	gtk_widget_hide(GTK_WIDGET(inst->type_entry));
 	gtk_widget_hide(GTK_WIDGET(inst->hidebutton));
 	gtk_widget_hide(GTK_WIDGET(inst->button));
+	return 1;
 }
 
 static void bring_back_right_widgets(struct instrument_struct *inst,
@@ -1666,14 +1652,10 @@ static void bring_back_right_widgets(struct instrument_struct *inst,
 static void check_melodic_mode()
 {
 	int i;
-	int automag_is_on;
-	int autocrunch_is_on;
 	int vshidden, unchecked_hidden, editdrumkit;
 
 	melodic_mode = (int) !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (percussion_toggle));
 
-	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
-	autocrunch_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (autocrunch));
 	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
 	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
 	editdrumkit = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (edit_instruments_toggle));
@@ -1732,15 +1714,13 @@ static int canvas_event(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 {
 	int i,j; 
 	double diff;
-	GdkColor color, bg;
+	GdkColor color;
 	float divs, zero;
 	struct hitpattern *this;
 	int height;
-	int automag_is_on;
 	int autocrunch_is_on;
 	int vshidden, unchecked_hidden, editdrumkit;
 
-	automag_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (automag));
 	autocrunch_is_on = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (autocrunch));
 	vshidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_volume_sliders));
 	unchecked_hidden = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (hide_instruments));
@@ -1894,7 +1874,7 @@ static int canvas_enter(GtkWidget *w, GdkEvent *event, struct instrument_struct 
 	if (autocrunch_is_on && abs(current_instrument - instrument->instrument_num) <= 4) 
 		return 0;
 
-	if (!autocrunch_is_on && automag_is_on || record_mode) {
+	if ((!autocrunch_is_on && automag_is_on) || record_mode) {
 		old_inst = current_instrument; 
 		current_instrument =  instrument->instrument_num;
 		inst = &drumkit[kit].instrument[old_inst];
@@ -1963,9 +1943,8 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 	unsigned long measurelength;
 	unsigned long beats_per_minute, beats_per_measure;
 	struct hitpattern *this;
-	int rc, i;
+	int i;
 	long drag; /* microsecs */
-	long dragsecs;
 	struct timeval tmpbase;
 	int track, channel;
 	unsigned char note;
@@ -2011,7 +1990,7 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 			note = inst->midivalue;
 		/* printf("this->h.time = %g\n", this->h.time); */
 		tmpbase = basetime;
-		rc = sched_note(&sched, &basetime, track, channel, note, 
+		sched_note(&sched, &basetime, track, channel, note, 
 			measurelength, this->h.time, 1000000, this->h.velocity, 
 			measure, pct, drag);
 		/* schedule note off if not percussion */
@@ -2021,20 +2000,20 @@ void schedule_pattern(int kit, int measure, int cpattern, int tempo, struct time
 		else if (pct > 100)
 			pct = 100;
 		if (pattern[cpattern]->music_type != PERCUSSION)
-			rc = sched_note(&sched, &tmpbase, track, channel, note, 
+			sched_note(&sched, &tmpbase, track, channel, note, 
 				measurelength, this->h.noteoff_time, 1000000, /* velocity zero */ 0, 
 				measure, pct, drag);
 	}
 	/* This no-op is just so the next measure doesn't before this one is really over. */
 	orig_basetime = basetime;
-	rc = sched_noop(&sched, &basetime, track, 
+	sched_noop(&sched, &basetime, track, 
 		0, measurelength, 1.0, 1000000, 127, measure, 100); 
 
 	/* FIXME, instead of scheduling all these crazy noops, probably should build them
 	   into the player code algorithmically or something. */
 	if (record_mode) {
 		int metronome = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(pattern_metronome_chbox));
-		int timediv0, timediv1, note, volume;
+		int timediv0;
 		if (pattern[cpattern]->timediv[0].division == 0)
 			timediv0 = -1;
 		else
@@ -2142,7 +2121,7 @@ void import_patterns_file_selected(GtkWidget *widget,
 	import_patterns_from_file(filename);
 }
 
-int import_drumtab_from_file(const char *filename, int factor)
+void import_drumtab_from_file(const char *filename, int factor)
 {
 	process_drumtab_file(filename, factor);
 	translate_drumtab_data(factor);
@@ -2299,7 +2278,7 @@ void pattern_paste_button_clicked(GtkWidget *widget,
 	gpointer data)
 {
 	int i, from = pattern_in_copy_buffer;
-	struct hitpattern *f, **hit;
+	struct hitpattern *f;
 
 	/* superimpose the hits from one pattern into another */
 	if (from < 0 || 
@@ -2317,7 +2296,6 @@ void pattern_paste_button_clicked(GtkWidget *widget,
 		printf("%p: beat:%d/%d inst=%d\n", f, f->h.beat,
 			f->h.beats_per_measure, f->h.instrument_num); fflush(stdout);
 	}
-	hit == &pattern[cpattern]->hitpattern;
 	for (f = pattern[from]->hitpattern; f != NULL; f=f->next) {
 		lowlevel_add_hit(&pattern[cpattern]->hitpattern, kit, cpattern, 
 			f->h.instrument_num, f->h.beat, f->h.beats_per_measure, 
@@ -2412,7 +2390,7 @@ struct pattern_struct *pattern_struct_alloc(int pattern_num);
 void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	struct pattern_struct *data)
 {
-	int i, j, k, slot;
+	int i, j, slot;
 	int new_arranger_scroller_size;
 	int total_rows;
 	char msg[255];
@@ -2506,6 +2484,7 @@ void ins_pattern_button_pressed(GtkWidget *widget, /* insert pattern */
 	g_signal_connect(G_OBJECT (p->arr_darea), "button-press-event",
 			G_CALLBACK (arr_darea_button_press), p);
 	gtk_widget_set_size_request(p->arr_darea, ARRANGER_WIDTH, ARRANGER_HEIGHT);
+	total_rows = npatterns + 6;
 	new_arranger_scroller_size = (total_rows+2) * ARRANGER_HEIGHT;
 	if (new_arranger_scroller_size > 200)
 		new_arranger_scroller_size = 200;
@@ -2709,7 +2688,6 @@ void select_pattern_button_pressed(GtkWidget *widget, void *unused)
 void copy_pattern_button_pressed(GtkWidget *widget, /* copy pattern */
 	struct pattern_struct *data)
 {
-	char msg[255];
 	pattern_in_copy_buffer = data->pattern_num;
 	set_select_message(data->patname);
 	redraw_arranger();
@@ -2826,8 +2804,6 @@ void clear_all_current_instrument_hit_pattern()
 void edit_pattern_clicked(GtkWidget *widget, /* this is the "pattern name" button in the arranger window */
 	struct pattern_struct *data)
 {
-	int i;
-
 	flatten_pattern(kit, cpattern); /* save current pattern */
 	edit_pattern(data->pattern_num);
 }
@@ -2835,7 +2811,6 @@ void edit_pattern_clicked(GtkWidget *widget, /* this is the "pattern name" butto
 void prevbutton_clicked(GtkWidget *widget,
 	gpointer data)
 {
-	int i;
 	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern <= 0) {
 		g_print("No previous pattern.\n");
@@ -2859,7 +2834,6 @@ void prevbutton_clicked(GtkWidget *widget,
 void nextbutton_clicked(GtkWidget *widget,
 	gpointer data)
 {
-	int i;
 	pattern_stop_button_clicked(NULL, NULL);
 	if (cpattern >= MAXPATTERNS-1) {
 		g_print("No room for more patterns\n");
@@ -2889,7 +2863,6 @@ void adjust_space(double add, double multiply)
 {
 	int i;
 	struct pattern_struct *p = pattern[cpattern];
-	struct hitpattern *hp;
 	struct hitpattern *h;
 	struct hit_struct *hit;
 	struct hitpattern *prev = NULL;
@@ -3292,7 +3265,7 @@ void check_hitpatterns(char *x)
 
 int transpose_hitpattern(struct hitpattern *p, int interval, int for_real)
 {
-	int newvalue, oldvalue;
+	int newvalue;
 	struct hitpattern *h, *next;
 	int out_of_bounds = 0;
 
@@ -3422,7 +3395,7 @@ void remap_drumkit_song()
 	edit_pattern(cpattern);
 }
 
-int clear_kit_pattern(int ckit)
+void clear_kit_pattern(int ckit)
 {
 	/* clears all the recorded strikes for all instruments in the current pattern */
 	struct drumkit_struct *dk = &drumkit[ckit];
@@ -3615,19 +3588,25 @@ int unflatten_pattern(int ckit, int cpattern)
 			(gdouble) pattern[cpattern]->drag[i]);
 	}
 	set_pattern_window_title();
+	return 0;
 }
 
 int xpect(FILE *f, int *lc, char *line, char *value)
 {
 	int rc;
-	
+
+	/* TODO: fix this, use fgets() for fuck's sake. */
 	rc = fscanf(f, "%[^\n]%*c", line);
+	if (rc != 1) {
+		printf("Failed to read a string at line %d: %s\n", *lc, line);
+		return -1;
+	}
 	if (strncmp(line, value, strlen(value)) != 0) {
 		printf("Error at line %d:%s\n", *lc, line);
 		printf("Expected '%s', got '%s'\n", value, line); 
 		return -1;
 	}
-	*lc++;
+	(*lc)++;
 	return 0;	
 }
 
@@ -3638,7 +3617,6 @@ int load_from_file_version_4(FILE *f)
 	int ninsts;
 	int i,j,count, rc;
 	int hidden;
-	int fileformatversion;
 	int gm_equiv;
 	char dkmake[100];
 	char dkmodel[100];
@@ -3755,7 +3733,7 @@ int load_from_file_version_4(FILE *f)
 			}
 			linecount++;
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -3940,7 +3918,7 @@ int insert_tempo_change(int measure, int tempo)
 	return rc;
 }
 
-int remove_tempo_change(int index)
+static void remove_tempo_change(int index)
 {
 	int i;
 	for (i=index;i<ntempochanges-1;i++)
@@ -3966,10 +3944,7 @@ int import_patterns_v4(FILE *f)
 {
 	char line[255];
 	int linecount;
-	int ninsts;
 	int i,j,k,count, rc;
-	int hidden;
-	int fileformatversion;
 	int fake_ninsts;
 	int newpatterns;
 	char dkmake[100], dkmodel[100], dkname[100];
@@ -4059,7 +4034,7 @@ int import_patterns_v4(FILE *f)
 				break;
 			}
 			*h = malloc(sizeof(struct hitpattern));
-			memset(*h, 0, sizeof(*h));
+			memset(*h, 0, sizeof(**h));
 			(*h)->next = NULL;
 			rc = sscanf(line, "T: %lg DK: %d I: %d V: %hhu B:%d BPM:%d %lg %d %d\n",
 				&(*h)->h.time, &(*h)->h.drumkit, &(*h)->h.instrument_num,
@@ -4122,6 +4097,7 @@ int import_patterns_v4(FILE *f)
 
 error_out:
 	pattern_struct_free(pattern, npatterns + newpatterns);
+	return -1;
 }
 
 int translate_drumtab_data(int factor)
@@ -4193,17 +4169,14 @@ int translate_drumtab_data(int factor)
 	}
 	nmeasures += maxmeasure+1;
 	redraw_arranger();
+	return 0;
 }
 
 int import_patterns_from_file(const char *filename)
 {
 	/* imports the patterns from another song into the current song. */
 	FILE *f;
-	char line[255];
-	int linecount;
-	int ninsts;
-	int i,j, rc;
-	int hidden;
+	int rc;
 	int fileformatversion;
 
 	/* printf("Import patterns from: %s\n", filename); */
@@ -4242,11 +4215,7 @@ int import_patterns_from_file(const char *filename)
 int load_from_file(const char *filename)
 {
 	FILE *f;
-	char line[255];
-	int linecount;
-	int ninsts;
-	int i,j, rc;
-	int hidden;
+	int i, rc;
 	int fileformatversion;
 
 	/* First clear everything old out of the way */
@@ -4451,7 +4420,7 @@ void receive_midi_data(int signal)
 	unsigned char data[3];
 	double thetime;
 	struct instrument_struct *inst;
-	int rc, i;
+	int i;
 
 	printf("Received MIDI data:");
 
@@ -4476,7 +4445,7 @@ void receive_midi_data(int signal)
 				for (i=0;i<drumkit[kit].ninsts; i++) {
 					inst = &drumkit[kit].instrument[i];
 					if (inst->midivalue == data[1]) {
-						rc = add_hit(&inst->hit, (double) thetime, -1.0, 
+						add_hit(&inst->hit, (double) thetime, -1.0, 
 							(double) 100.0, 
 							kit, inst->instrument_num, cpattern, data[2], 1);
 						
@@ -4486,7 +4455,7 @@ void receive_midi_data(int signal)
 				}
 			} else {
 				inst = &drumkit[kit].instrument[data[1]];
-				rc = add_hit(&inst->hit, (double) thetime, -1.0, (double) 100.0, 
+				add_hit(&inst->hit, (double) thetime, -1.0, (double) 100.0, 
 						kit, inst->instrument_num, cpattern, data[2], 1);
 				gtk_widget_queue_draw(inst->canvas);
 			}
@@ -4498,9 +4467,7 @@ void receive_midi_data(int signal)
 
 void setup_midi_receiver()
 {
-	int i, rc;
 	struct sigaction action;
-	unsigned char cmd;
 
 	memset(&action, 0, sizeof(action));
 	action.sa_handler = receive_midi_data;
@@ -4663,8 +4630,11 @@ int midi_change_patch(GtkWidget *widget, gpointer data)
 		GTK_SPIN_BUTTON(midi_patch_spin_button))) & 0x0f;
 	
 	rc = write(player_process_fd, &cmd, 1);
-	rc = write(player_process_fd, &bank, sizeof(bank));
-	rc = write(player_process_fd, &patch, sizeof(patch));
+	rc += write(player_process_fd, &bank, sizeof(bank));
+	rc += write(player_process_fd, &patch, sizeof(patch));
+	if (rc != 1 + sizeof(bank) + sizeof(patch))
+		printf("Failed to change patch.\n");
+	return TRUE;
 }
 
 int midi_setup_activate(GtkWidget *widget, gpointer data)
@@ -4683,7 +4653,6 @@ int midi_setup_cancel(GtkWidget *widget, gpointer data)
 
 int midi_setup_ok(GtkWidget *widget, gpointer data)
 {
-	unsigned char midi_channel;
 	drumkit[kit].midi_channel = (unsigned char) (gtk_spin_button_get_value_as_int(
 		GTK_SPIN_BUTTON(midi_channel_spin_button))) & 0x0f;
 	gtk_widget_hide(midi_setup_window);
@@ -5074,7 +5043,7 @@ int main(int argc, char *argv[])
 	int i,j, rc;
 
 	/* ----- open the midi output device ------------------------ */
-        int fd, ifd, c;
+        int ifd, c;
         char output_device[255], drumkitfile[255], midi_input_device[255];
 
 	memset(&transport_location, 0, sizeof(transport_location));
@@ -5112,7 +5081,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-	midi_handle = midi->open(output_device, MAXTRACKS);
+	midi_handle = midi->open((unsigned char *) output_device, MAXTRACKS);
 	if (midi_handle == NULL) {
 		printf("Can't open MIDI device file %s\n", output_device);
 	}
@@ -5868,9 +5837,6 @@ int main(int argc, char *argv[])
 	flatten_pattern(kit, cpattern);
 
 	gtk_main();
-
-	if (fd > 0) 
-		close(fd);
 
 	if (ifd > 0)
 		close(ifd);
