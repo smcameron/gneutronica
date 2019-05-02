@@ -38,11 +38,6 @@ static char *dt_buf[MAXLINES];
 
 static int used[256];
 
-static void init_used()
-{
-	memset(used, 0, 256);
-}
-
 static int nimappings = (sizeof(imap) / sizeof(imap[0]));
 
 
@@ -226,17 +221,14 @@ static int process_line(char *line, int instrument,
 	return 0;
 }
 
-static int process_tab(char *buffer[], int nlines, int *nmeasures)
+static void process_tab(char *buffer[], int nlines, int *nmeasures)
 {
 	int i, j;
 	char *sepr;
 	int current_measure = 0;
-	int last_measure = -1;
-	int current_instrument = -1;
 	int new_staff_iminent = 1;
 	int current_staff = -1;
 	int last_measure_of_staff = -1;
-	int this_measure;
 	int in = -1;
 
 	char *vbar;
@@ -271,7 +263,8 @@ static int process_tab(char *buffer[], int nlines, int *nmeasures)
 		printf("inst %d = %s\n", i, dt_inst[i].name); */
 }
 
-static int print_pattern(struct dt_pattern_type *p)
+#if 0
+static void print_pattern(struct dt_pattern_type *p)
 {
 	struct dt_hit_type *h;
 
@@ -296,6 +289,7 @@ static int print_data(int nmeasures)
 	}
 	return 0;
 }
+#endif
 
 static int patterns_equal(struct dt_pattern_type *p1, struct dt_pattern_type *p2)
 {
@@ -329,13 +323,12 @@ static int sort_by_measure()
 {
 	/* sort the patterns by measure order, but with a measure, leave the patterns in order. */
 
-	int i, j;
+	int i;
 	struct dt_pattern_type temp;
 	int insert_before = 0;
 	int measure = 0;
 	int done;
 	int maxmeasure = 0;
-	int k;
 
 	for (i=0;i<dt_npats;i++)
 		if (dt_pat[i].measure > maxmeasure)
@@ -367,7 +360,7 @@ static int sort_by_measure()
 	return 0;
 }
 
-static int find_duplicates()
+static void find_duplicates()
 {
 	int nduplicates_found = 0;;
 	int i, j;
@@ -401,7 +394,7 @@ static int find_duplicates()
 		dt_npats,  nduplicates_found, dt_npats - nduplicates_found); */
 }
 
-int collapse_unique_patterns()
+static void collapse_unique_patterns()
 {
 	/* for each measure which contains several unique_patterns,
 	   collapse those patterns into a single pattern */
@@ -425,6 +418,7 @@ int collapse_unique_patterns()
 			if (dt_pat[j].is_unique && dt_pat[i].measure == measure) {
 				/* printf("Joining pat %d with %d\n", j, first_unique); */
 				/* join this pattern with pattern first_unique */
+				last = NULL;
 				for (h = dt_pat[j].hit; h != NULL; h=h->next)
 					if (h->next == NULL)
 						last = h;
@@ -454,7 +448,7 @@ static void initialize()
 }
 
 
-int process_drumtab_lines(char *buf[], int nlines, int factor)
+void process_drumtab_lines(char *buf[], int nlines, int factor)
 {
 	process_tab(buf, nlines, &dt_nmeasures);
 	sort_by_measure();
@@ -468,14 +462,17 @@ int process_drumtab_lines(char *buf[], int nlines, int factor)
 
 int process_drumtab_file(const char *filename, int factor)
 {
-	int nlines, rc, i;
+	int nlines, rc;
 
 	initialize();
 
 	rc = read_tab_file(filename, dt_buf, MAXLINES, &nlines);
+	if (rc)
+		return rc;
 	dt_nlines = nlines;
 	/* printf("rc = %d, nlines = %d\n", rc, nlines); */
 	process_drumtab_lines(dt_buf, nlines, factor);
+	return 0;
 }
 
 void process_drumtab_buffer(char *buffer, int factor)
