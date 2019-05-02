@@ -55,7 +55,7 @@ extern struct midi_method *midi;
 extern struct midi_handle *midi_handle;
 
 /* Relative to absolute time ... */
-int rtime_to_atime(struct timeval *basetime, 
+void rtime_to_atime(struct timeval *basetime, 
 		struct timeval *rtime,
 		struct timeval *atime)
 {
@@ -174,7 +174,7 @@ int add_to_schedule(struct schedule_t *s,
 		struct event *e)
 {
 	int n = s->nevents;
-	int i, j, spot;
+	int i, spot;
 	
 	if (n >= MAXEVENTS) {
 		printf("MAXEVENTS exceeded!\n");
@@ -342,9 +342,6 @@ void free_schedule(struct schedule_t *s)
 void print_schedule(struct schedule_t *s)
 {
 	int i;
-	struct timeval rtime; /* relative time */
-	struct timeval atime; /* absolute time */
-	struct event_details e;
 	for (i=0;i<s->nevents;i++) {
 		printf("%4d: r:%10ld:%7ld a:%10ld:%7ld t:%d:n:%d:v:%d", 
 			i,

@@ -49,7 +49,7 @@ struct schedule_t {
 	struct event *e[MAXEVENTS];
 };
 
-int rtime_to_atime(struct timeval *basetime, struct timeval *rtime,
+void rtime_to_atime(struct timeval *basetime, struct timeval *rtime,
 		struct timeval *atime);
 int wait_for(struct timeval *tm);
 void do_event(struct event *e);
