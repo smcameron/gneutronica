@@ -94,7 +94,8 @@ void factor_drumtab_button_clicked(GtkWidget *widget, gpointer data);
 static void paste_drumtab_clicked(GtkWidget *widget, gpointer data);
 int about_activate(GtkWidget *widget, gpointer data);
 void export_midi_button_clicked(GtkWidget *widget, gpointer data);
-void remap_drumkit_clicked(GtkWidget *widget, gpointer data);
+void remap_drumkit_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data);
+void trigger_about_activate(GtkWidget *widget, gpointer data);
 void destroy_event(GtkWidget *widget, gpointer data);
 void widget_exclude_keypress(GtkWidget *w);
 int unflatten_pattern(int ckit, int cpattern);
@@ -123,22 +124,22 @@ static int get_drawing_width(void)
    I tweaked it tweaked a bit for style and menu content, but that's about it.*/
 
 static GtkItemFactoryEntry menu_items[] = {
-	{ "/" FILE_LABEL,         NULL,         NULL,           0, "<Branch>", NULL },
-	/* { "/File/_New",     "<control>N", print_hello,    0, "<StockItem>", GTK_STOCK_NEW }, */
-	{ "/" FILE_LABEL "/_" OPEN_LABEL,    "<control>O", load_button_clicked,    0, "<StockItem>", GTK_STOCK_OPEN },
-	{ "/" FILE_LABEL "/_" SAVE_LABEL,    "<control>S", save_button_clicked,    0, "<StockItem>", GTK_STOCK_SAVE },
-	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL,         save_button_clicked,    0, "<Item>", NULL },
-	{ "/" FILE_LABEL "/sep1",     NULL,         NULL,           0, "<Separator>", NULL },
-	{ "/" FILE_LABEL "/" IMPORT_PATTERNS_LABEL, NULL,         import_patterns_button_clicked,    0, "<Item>", NULL },
-	{ "/" FILE_LABEL "/" IMPORT_DRUM_TAB_LABEL, NULL,         import_drumtab_button_clicked,    0, "<Item>", NULL },
-	{ "/" FILE_LABEL "/" EXPORT_TO_MIDI_FILE_LABEL, NULL,         export_midi_button_clicked,    0, "<Item>", NULL },
-	/* { "/File/_Quit",    "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
+	{ "/" FILE_LABEL, NULL, NULL, 0, "<Branch>", NULL },
+	/* { "/File/_New", "<control>N", print_hello, 0, "<StockItem>", GTK_STOCK_NEW }, */
+	{ "/" FILE_LABEL "/_" OPEN_LABEL, "<control>O", load_button_clicked, 0, "<StockItem>", GTK_STOCK_OPEN },
+	{ "/" FILE_LABEL "/_" SAVE_LABEL, "<control>S", save_button_clicked, 0, "<StockItem>", GTK_STOCK_SAVE },
+	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL, save_button_clicked, 0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/sep1", NULL, NULL, 0, "<Separator>", NULL },
+	{ "/" FILE_LABEL "/" IMPORT_PATTERNS_LABEL, NULL, import_patterns_button_clicked, 0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/" IMPORT_DRUM_TAB_LABEL, NULL, import_drumtab_button_clicked, 0, "<Item>", NULL },
+	{ "/" FILE_LABEL "/" EXPORT_TO_MIDI_FILE_LABEL, NULL, export_midi_button_clicked, 0, "<Item>", NULL },
+	/* { "/File/_Quit", "<CTRL>Q", gtk_main_quit, 0, "<StockItem>", GTK_STOCK_QUIT }, */
 	{ "/" FILE_LABEL "/" QUIT_LABEL,    "<CTRL>Q", destroy_event, 0, "<StockItem>", GTK_STOCK_QUIT },
-	{ "/" EDIT_LABEL,         NULL,         NULL,           0, "<Branch>", NULL },
-	{ "/" EDIT_LABEL "/" PASTE_DRUM_TAB_LABEL,    NULL, paste_drumtab_clicked, 0, "<Item>", NULL },
-	{ "/" EDIT_LABEL "/" REMAP_DRUM_KIT_MENU_LABEL,    NULL, remap_drumkit_clicked, 0, "<Item>", NULL },
-	{ "/" HELP_LABEL,         NULL,         NULL,           0, "<LastBranch>", NULL },
-	{ "/" HELP_LABEL "/" ABOUT_LABEL,   NULL,         (void *) about_activate, 0, "<Item>", NULL },
+	{ "/" EDIT_LABEL, NULL, NULL, 0, "<Branch>", NULL },
+	{ "/" EDIT_LABEL "/" PASTE_DRUM_TAB_LABEL, NULL, paste_drumtab_clicked, 0, "<Item>", NULL },
+	{ "/" EDIT_LABEL "/" REMAP_DRUM_KIT_MENU_LABEL, NULL, remap_drumkit_clicked, 0, "<Item>", NULL },
+	{ "/" HELP_LABEL, NULL, NULL, 0, "<LastBranch>", NULL },
+	{ "/" HELP_LABEL "/" ABOUT_LABEL, NULL, trigger_about_activate, 0, "<Item>", NULL },
 };
 
 static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
@@ -146,7 +147,7 @@ static gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
 GtkWidget *main_menubar, *main_popup_button, *main_option_menu;
 
 /* Returns a menubar widget made from the above menu */
-static GtkWidget *get_menubar_menu( GtkWidget  *window )
+static GtkWidget *get_menubar_menu( GtkWidget *window )
 {
 	GtkItemFactory *item_factory;
 	GtkAccelGroup *accel_group;
@@ -2153,20 +2154,20 @@ void export_to_midi(UNUSED GtkWidget *widget, GtkFileSelection *FileBox)
 static struct file_dialog_descriptor {
 	char *title;
 	GtkWidget **widget;
-	void *file_selected_function;
+	void (*file_selected_function)(GtkWidget *widget, GtkFileSelection *selection);
 } file_dialog[] = {
-	{ SAVE_SONG_ITEM, &SaveBox, (void *) savebox_file_selected, },
-	{ LOAD_SONG_ITEM, &LoadBox, (void *) loadbox_file_selected, },
-	{ SAVE_DRUMKIT_LABEL, &SaveDrumkitBox, (void *) savedrumkitbox_file_selected, },
-	{ IMPORT_PATTERNS_ITEM, &ImportPatternsBox, (void *) import_patterns_file_selected, },
-	{ IMPORT_DRUM_TAB_ITEM, &ImportDrumtabBox, (void *) import_drumtab_file_selected, },
-	{ EXPORT_SONG_TO_MIDI_ITEM, &export_to_midi_box, (void *) export_to_midi, },
+	{ SAVE_SONG_ITEM, &SaveBox, savebox_file_selected, },
+	{ LOAD_SONG_ITEM, &LoadBox, loadbox_file_selected, },
+	{ SAVE_DRUMKIT_LABEL, &SaveDrumkitBox, savedrumkitbox_file_selected, },
+	{ IMPORT_PATTERNS_ITEM, &ImportPatternsBox, import_patterns_file_selected, },
+	{ IMPORT_DRUM_TAB_ITEM, &ImportDrumtabBox, import_drumtab_file_selected, },
+	{ EXPORT_SONG_TO_MIDI_ITEM, &export_to_midi_box, export_to_midi, },
 };
 	
 GtkWidget *make_file_dialog(int i)
 {
 	GtkWidget *w;
-	void *f;
+	void (*f)(GtkWidget *w, GtkFileSelection *s);
 
 	if (i < 0)
 		return NULL;
@@ -2277,11 +2278,11 @@ void pattern_paste_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data
 	flatten_pattern(kit, cpattern);
 
 	for (f = pattern[cpattern]->hitpattern; f != NULL; f=f->next) {
-		printf("%p: beat:%d/%d inst=%d\n", f, f->h.beat,
+		printf("%p: beat:%d/%d inst=%d\n", (void *) f, f->h.beat,
 			f->h.beats_per_measure, f->h.instrument_num); fflush(stdout);
 	}
 	for (f = pattern[from]->hitpattern; f != NULL; f=f->next) {
-		printf("%p: beat:%d/%d inst=%d\n", f, f->h.beat,
+		printf("%p: beat:%d/%d inst=%d\n", (void *) f, f->h.beat,
 			f->h.beats_per_measure, f->h.instrument_num); fflush(stdout);
 	}
 	for (f = pattern[from]->hitpattern; f != NULL; f=f->next) {
@@ -3620,7 +3621,7 @@ int load_from_file_version_4(FILE *f)
 		printf("Failed to read Drumkit model\n");
 		goto error_out;
 	}
-	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	rc = fscanf(f, "Drumkit Name:%[^\n]%*c", dkname); linecount++;
 	if (rc != 1) {
 		printf("Failed to read Drumkit name\n");
 		goto error_out;
@@ -3939,7 +3940,7 @@ int import_patterns_v4(FILE *f)
 	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit model\n");
-	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	rc = fscanf(f, "Drumkit Name:%[^\n]%*c", dkname); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit name\n");
 
@@ -4727,6 +4728,11 @@ int about_activate(__attribute__((unused)) GtkWidget *widget, __attribute__((unu
 	}
 	gtk_widget_show_all(about_window);
 	return TRUE;
+}
+
+void trigger_about_activate(GtkWidget *widget, gpointer data)
+{
+	about_activate(widget, data);
 }
 
 int volume_magnifier_changed(__attribute__((unused)) GtkWidget *widget, __attribute__((unused)) gpointer data)
