@@ -81,3 +81,10 @@ uninstall:
 
 clean:
 	/bin/rm -f gneutronica *.o documentation/gneutronica.1 version.h drumtab
+
+scan-build:
+	make clean
+	rm -fr /tmp/snis-scan-build-output
+	scan-build -o /tmp/snis-scan-build-output make CC=clang
+	xdg-open /tmp/snis-scan-build-output/*/index.html
+
