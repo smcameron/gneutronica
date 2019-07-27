@@ -1,4 +1,4 @@
-
+CC=gcc
 PROGRAM=gneutronica
 BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share/${PROGRAM}
@@ -13,19 +13,19 @@ CFLAGS=${DEBUG} ${OPTIMIZE} ${GNEUTRONICA_LANGUAGE} -Wall
 all:	gneutronica documentation/gneutronica.1
 
 write_bytes.o:	write_bytes.c write_bytes.h
-	gcc ${CFLAGS} -c write_bytes.c
+	$(CC) ${CFLAGS} -c write_bytes.c
 
 midioutput_raw.o:	midioutput_raw.c midioutput_raw.h midioutput.h
-	gcc ${CFLAGS} -c midioutput_raw.c
+	$(CC) ${CFLAGS} -c midioutput_raw.c
 
 midioutput_alsa.o:	midioutput_alsa.c midioutput_alsa.h midioutput.h
-	gcc ${CFLAGS} -c midioutput_alsa.c
+	$(CC) ${CFLAGS} -c midioutput_alsa.c
 
 drumtab.o:	drumtab.c drumtab.h dt_known_insts.h
-	gcc ${CFLAGS} -c drumtab.c
+	$(CC) ${CFLAGS} -c drumtab.c
 
 fractions.o:	fractions.c fractions.h
-	gcc ${CFLAGS} -c fractions.c
+	$(CC) ${CFLAGS} -c fractions.c
 
 documentation/gneutronica.1:	documentation/gneutronica.1.template versionnumber.txt
 	chmod +x ./make_manpage
@@ -38,7 +38,7 @@ gneutronica:	gneutronica.c old_fileformats.o sched.o midi_file.o \
 		version.h gneutronica.h midi_file.h fractions.o drumtab.o \
 		midi_reader.o midioutput_raw.o midioutput_alsa.o \
 		midioutput_raw.h midioutput_alsa.h lang.h write_bytes.o
-	gcc ${CFLAGS} -o gneutronica -I/usr/include/libgnomecanvas-2.0 -lasound \
+	$(CC) ${CFLAGS} -o gneutronica -I/usr/include/libgnomecanvas-2.0 -lasound \
 		old_fileformats.o sched.o \
 		midi_reader.o midi_file.o fractions.o drumtab.o \
 		midioutput_raw.o midioutput_alsa.o write_bytes.o \
@@ -52,7 +52,7 @@ sched.o:	sched.c sched.h	midi_file.h
 midi_file.o:	midi_file.c midi_file.h
 
 old_fileformats.o:	old_fileformats.c old_fileformats.h gneutronica.h
-		gcc ${CFLAGS} -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
+		$(CC) ${CFLAGS} -c `pkg-config --cflags gtk+-2.0` old_fileformats.c
 
 install:	gneutronica
 	echo "Installing ${BINDIR}/${PROGRAM} and ${SHAREDIR}/drumkits"
