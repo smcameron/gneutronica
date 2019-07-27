@@ -395,7 +395,7 @@ int import_patterns_v2(FILE *f)
 	int linecount;
 	int i,j,count, rc;
 	int fake_ninsts;
-	int newpatterns;
+	int newpatterns = 0;
 
 	linecount = 1;
 	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
@@ -745,7 +745,7 @@ int import_patterns_v3(FILE *f)
 	int linecount;
 	int i,j,k,count, rc;
 	int fake_ninsts;
-	int newpatterns;
+	int newpatterns = 0;
 	char dkmake[100], dkmodel[100], dkname[100];
 	int same_drumkit;
 	int import_inst_map[MAXINSTS], gm;

@@ -538,7 +538,7 @@ void free_pattern(struct pattern_struct *p)
 		gtk_widget_destroy(GTK_WIDGET(p->copy_button));
 	if (p->del_button != NULL)
 		gtk_widget_destroy(GTK_WIDGET(p->del_button));
-	if (p->ins_button != NULL); 
+	if (p->ins_button != NULL)
 		gtk_widget_destroy(GTK_WIDGET(p->ins_button));
 		// gtk_object_unref(GTK_OBJECT(p->arr_button));
 
@@ -2913,7 +2913,7 @@ int check_num_denom_ok(double *numerator, double *denominator)
 		printf("numerator too small\n");
 		return 0;
 	}
-	if (abs(*numerator - *denominator) < 0.0001) {
+	if (fabs(*numerator - *denominator) < 0.0001) {
 		printf("numerator too close to denominator\n");
 		return 0;
 	}
@@ -4621,14 +4621,14 @@ int midi_change_patch(GtkWidget *widget, gpointer data)
 	unsigned char cmd = PERFORM_PATCH_CHANGE;
 	int rc;
 
-	drumkit[kit].midi_bank = bank;
-	drumkit[kit].midi_patch = patch;
-
 	bank = (unsigned short) (gtk_spin_button_get_value_as_int(
 		GTK_SPIN_BUTTON(midi_bank_spin_button))) & 0x00ffff;
 	patch = (unsigned char) (gtk_spin_button_get_value_as_int(
 		GTK_SPIN_BUTTON(midi_patch_spin_button))) & 0x0f;
 	
+	drumkit[kit].midi_bank = bank;
+	drumkit[kit].midi_patch = patch;
+
 	rc = write(player_process_fd, &cmd, 1);
 	rc += write(player_process_fd, &bank, sizeof(bank));
 	rc += write(player_process_fd, &patch, sizeof(patch));
