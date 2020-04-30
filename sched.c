@@ -184,7 +184,6 @@ int add_to_schedule(struct schedule_t *s,
 		return -1;
 	}
 	/* Find where this event goes */
-	spot = 0;
 	if (e->rtime.tv_usec > 1000000) {
 		printf("add_to_schedule, non-normalized time %10ld:%10ld\n", 
 			e->rtime.tv_sec, e->rtime.tv_usec);

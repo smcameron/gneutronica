@@ -113,6 +113,10 @@ int load_from_file_version_2(FILE *f)
 		pattern[i]->gm_converted = 0;
 		while (1) {
 			rc = fscanf(f, "%[^\n]%*c", line);
+			if (rc != 1) {
+				fprintf(stderr, "%d: Failed to read a line\n", linecount);
+				goto error_out;
+			}
 			if (strcmp(line, "END-OF-PATTERN") == 0) {
 				/* printf("end of pattern\n"); fflush(stderr); */
 				break;
@@ -266,6 +270,10 @@ int load_from_file_version_1(FILE *f)
 		}
 	}
 	rc = fscanf(f, "Patterns: %d\n", &npatterns);
+	if (rc != 1) {
+		fprintf(stderr, "%d: Expected pattern count\n", linecount);
+		goto error_out;
+	}
 	for (i = 0; i < npatterns; i++) {
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);
@@ -548,7 +556,7 @@ int load_from_file_version_3(FILE *f)
 	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit model\n");
-	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	rc = fscanf(f, "Drumkit Name:%[^\n]%*c", dkname); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit name\n");
 
@@ -765,7 +773,7 @@ int import_patterns_v3(FILE *f)
 	rc = fscanf(f, "Drumkit Model:%[^\n]%*c", dkmodel); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit model\n");
-	rc = fscanf(f, "Drumkit Name:%[^\n]\%*c", dkname); linecount++;
+	rc = fscanf(f, "Drumkit Name:%[^\n]%*c", dkname); linecount++;
 	if (rc != 1)
 		printf("Failed to read Drumkit name\n");
 
@@ -793,6 +801,10 @@ int import_patterns_v3(FILE *f)
 	}
 
 	rc = fscanf(f, "Patterns: %d\n", &newpatterns);
+	if (rc != 1) {
+		fprintf(stderr, "%d: expected pattern count\n", linecount);
+		goto error_out;
+	}
 	for (i=npatterns;i<npatterns+newpatterns;i++) {
 		struct hitpattern **h;
 		pattern[i] = pattern_struct_alloc(i);

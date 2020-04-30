@@ -736,7 +736,7 @@ void remove_hit(struct hitpattern **hit,
 
 	percent = thetime / measurelength;
 	matchprev = prev = NULL;
-	distance = mindist = DRAW_WIDTH * 2.0; 
+	mindist = DRAW_WIDTH * 2.0; 
 	for (this = *hit; this != NULL; this = next) {
 		next = this->next;
 		distance = this->h.time * measurelength - percent * measurelength;
@@ -1407,7 +1407,8 @@ static int canvas_clicked(GtkWidget *w, GdkEventButton *event, struct instrument
 static int measure_transport_expose(GtkWidget *w, UNUSED GdkEvent *event, UNUSED gpointer p)
 {
 	int x, y2;
-	x = 0; y2 = ARRANGER_HEIGHT;
+
+	y2 = ARRANGER_HEIGHT;
 	gdk_draw_line(w->window, gc, 0,0, MEASUREWIDTH * (nmeasures), 0);
 	gdk_draw_line(w->window, gc, 0, y2, MEASUREWIDTH * (nmeasures), y2);
 	gdk_draw_line(w->window, gc, 0, 0, 0, ARRANGER_HEIGHT);
@@ -1816,7 +1817,6 @@ static int canvas_event(GtkWidget *w, UNUSED GdkEvent *event, struct instrument_
 	for (this = instrument->hit; this != NULL; this = this->next) {
 		double x1,y1,x2,y2;
 
-		y1 = (height / 2)-5;
 		x1 = this->h.time * DRAW_WIDTH /* - 5 */ ;
 		y1 = height - (int) (((double) height * (double) this->h.velocity) / 127.0);
 		y2 = height;
@@ -2983,7 +2983,7 @@ void transpose(int interval)
 	if (rc != 0)
 		return;
 	/* Must be ok, transpose for real. */
-	rc = transpose_hitpattern(p->hitpattern, interval, 1);
+	(void) transpose_hitpattern(p->hitpattern, interval, 1);
 	unflatten_pattern(kit, cpattern);
 	edit_pattern(cpattern);
 	return;
@@ -3931,6 +3931,8 @@ int import_patterns_v4(FILE *f)
 
 	linecount = 1;
 	rc = fscanf(f, "Songname: '%[^']%*c\n", songname);
+	if (rc != 1)
+		printf("Expected song name at line %d\n", linecount);
 	linecount++;
 	if (xpect(f, &linecount, line, "Comment:") == -1) return -1;
 

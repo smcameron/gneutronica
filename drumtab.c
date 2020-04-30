@@ -101,10 +101,8 @@ static int find_instrument(char *line)
 	/* printf("n = %s\n", n); */
 
 	for (i=0;i<dt_ninsts;i++) {
-		if (strcmp(n, dt_inst[i].name) == 0) {
-			found = i;
+		if (strcmp(n, dt_inst[i].name) == 0)
 			break;
-		}
 	}
 	found = i;
 	if (found >= dt_ninsts) {
