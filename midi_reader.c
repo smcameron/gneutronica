@@ -26,6 +26,22 @@
 #include <sys/types.h>
 #include <signal.h>
 
+static int read_bytes(int fd, unsigned char *c, int count)
+{
+	int rc;
+	int bytes_left = count;
+
+	do {
+		rc = read(fd, &c[count - bytes_left], bytes_left);
+		if (rc < 0 && errno == EINTR)
+			continue;
+		if (rc < 0)
+			break;
+		bytes_left -= rc;
+	} while (bytes_left > 0);
+	return rc;
+}
+
 int midi_reader(int fd, unsigned char *shared_data)
 {
 	int rc;
@@ -43,30 +59,34 @@ int midi_reader(int fd, unsigned char *shared_data)
 
 	printf("Midi reader process running.\n");
 	while (1) {
-		rc = read(fd, &ch, 1);
-		if (rc == 1) {
-			if (ch != 0xfe) {
-				printf("0x%02x ", ch);
-				fflush(stdout);
-			}
-			if (ch == 0x90) { /* note on */
-				rc = read(fd, &note, 1);
-				rc = read(fd, &velocity, 1);
-				if (velocity != 0) { /* we don't send note-offs, correct?  meh. */
-					/* get lock */
-					shared_data[0] = ch;
-					shared_data[1] = note;
-					shared_data[2] = velocity;
-					/* release lock */
-					kill(ppid, SIGUSR1);
-				}
-			}
+		rc = read_bytes(fd, &ch, 1);
+		if (rc < 0)
+			goto read_error;
+		if (ch != 0xfe) {
+			printf("0x%02x ", ch);
+			fflush(stdout);
 		}
-		if (rc < 0 && errno != EINTR) {
-			printf("rc = %d, errno='%s'\n", rc, strerror(errno));
-			break;
+		if (ch == 0x90) { /* note on */
+			rc = read_bytes(fd, &note, 1);
+			if (rc < 0)
+				goto read_error;
+			rc = read_bytes(fd, &velocity, 1);
+			if (rc < 0)
+				goto read_error;
+			if (velocity != 0) { /* we don't send note-offs, correct?  meh. */
+				/* get lock */
+				shared_data[0] = ch;
+				shared_data[1] = note;
+				shared_data[2] = velocity;
+				/* release lock */
+				kill(ppid, SIGUSR1);
+			}
 		}
 	}
+
+read_error:
+	if (rc)
+		printf("rc = %d, errno='%s'\n", rc, strerror(errno));
 	exit(0);
 }
 
