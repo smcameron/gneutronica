@@ -773,6 +773,7 @@ void find_bestbeat(double percent, double measurelength,
 
 	*bestbeat = -1;
 	*bestdivision = -1;
+	bestdiff = 1e100; /* absurdly large initial value to shut scan-build up. */
 
 	for (i=0;i<ndivisions;i++) {
 		zero =  gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(timediv[i].spin));
