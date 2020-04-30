@@ -180,6 +180,7 @@ int add_to_schedule(struct schedule_t *s,
 	int i, spot;
 	
 	if (n >= MAXEVENTS) {
+		free(e);
 		printf("MAXEVENTS exceeded!\n");
 		return -1;
 	}
@@ -246,10 +247,11 @@ int sched_note(struct schedule_t *s,
 	struct event *note, *note2;
 	unsigned long long when;
 	int secs, usecs;
+
 	note = (struct event *) malloc(sizeof(*note));
-	note2 = (struct event *) malloc(sizeof(*note));
 	if (note == NULL)
 		return -1;
+	note2 = (struct event *) malloc(sizeof(*note));
 
 	note->e.track = track;
 	note->e.channel = channel;
@@ -326,8 +328,8 @@ int sched_noop(struct schedule_t *s,
 	/* offset these times by the relative time when this measure begins */
 	rtime_to_atime(measure_begins, &note->rtime, &note->rtime);
 
-	add_to_schedule(s, note); /* no op */
 	*measure_begins = note->rtime;
+	add_to_schedule(s, note); /* no op */
 
 	return 0;
 }
