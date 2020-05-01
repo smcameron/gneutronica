@@ -5076,7 +5076,8 @@ int main(int argc, char *argv[])
 
 	midi_handle = midi->open((unsigned char *) output_device, MAXTRACKS);
 	if (midi_handle == NULL) {
-		printf("Can't open MIDI device file %s\n", output_device);
+		fprintf(stderr, "Can't open MIDI device file %s\n", output_device);
+		exit(1);
 	}
 	
 	player_process_pid = fork_player_process(output_device, &player_process_fd);
