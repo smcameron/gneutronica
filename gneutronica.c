@@ -4381,19 +4381,19 @@ void send_schedule(struct schedule_t *sched, int loop)
 
 	rc = write(player_process_fd, &cmd, 1);
 	if (rc != 1) {
-		fprintf(stderr, "Error writing to player process.\n");
+		fprintf(stderr, "Error writing command to player process: %s.\n", strerror(errno));
 		return;
 	}
 	rc = write(player_process_fd, &sched->nevents, sizeof(sched->nevents));
 	if (rc == -1) {
-		fprintf(stderr, "Error writing to player process.\n");
+		fprintf(stderr, "Error writing event count to player process: %s\n", strerror(errno));
 		return;
 	}
 
 	for (i=0;i<sched->nevents;i++) {
 		rc = write(player_process_fd, sched->e[i], sizeof(*sched->e[i]));
 		if (rc == -1) {
-			fprintf(stderr, "Error writing to player process.\n");
+			fprintf(stderr, "Error writing event to player process: %s\n", strerror(errno));
 		}
 	}
 	return;
