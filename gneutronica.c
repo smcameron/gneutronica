@@ -4222,6 +4222,7 @@ int load_from_file(const char *filename)
 	f = fopen(filename, "r");
 	if (f == NULL) {
 		printf("Nope\n");
+		fclose(f);
 		return -1;
 	}
 
@@ -4229,6 +4230,7 @@ int load_from_file(const char *filename)
 	if (rc != 1) {
 		printf("File does not appear to be a %s file.\n",
 			PROGNAME);
+		fclose(f);
 		return -1;
 	}
 
@@ -4245,10 +4247,12 @@ int load_from_file(const char *filename)
 			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
+			fclose(f);
 			return -1;
 	}
 	if (rc == 0)
 		set_arranger_window_title();
+	fclose(f);
 	return rc;
 }
 
