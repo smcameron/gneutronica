@@ -87,7 +87,7 @@ int write_MThd(int fd)
 
 int write_end_of_track(int fd)
 {
-	char eot[] = { 0xFF,0x2F,0x00 };
+	unsigned char eot[] = { 0xFF,0x2F,0x00 };
 	unsigned long ms = 0;
 	write_weird_midi_int(fd, ms);
 	return (write_bytes(fd, eot, 3) != 3);
