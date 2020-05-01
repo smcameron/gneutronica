@@ -240,10 +240,11 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	rc = fscanf(f, "%[^,]%*c %[^,]%*c %[^\n]%*c", dk->make, dk->model, dk->name);
 	/* g_print("rc = %d\n", rc); */
 	if (rc != 3) {
-		fprintf(stderr, "Error in %s at line %d\n", filename, line);
+		fprintf(stderr, "Error in %s (make/model/name) at line %d, rc = %d\n", filename, line, rc);
 		pclose(f);
 		return -1;
 	}
+	fprintf(stderr, "Reading drumkit %s %s %s\n", dk->make, dk->model, dk->name);
 
 	dk->instrument = malloc(sizeof(struct instrument_struct)*MAXINSTS);
 	if (dk->instrument == NULL) {
@@ -275,7 +276,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 				&dk->instrument[n].midivalue,
 				&dk->instrument[n].gm_equivalent);
 			if (rc != 4) {
-				fprintf(stderr, "Error in %s at line %d\n", filename, line);
+				fprintf(stderr, "Error in %s instrument at line %d, rc = %d\n", filename, line, rc);
 				pclose(f);
 				return -1;
 			}
