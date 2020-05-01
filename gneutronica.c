@@ -4995,6 +4995,7 @@ void read_config_file(char *drumkitfile, char *output_device,
 			continue;
 		}
 	}
+	fclose(f);
 }
 
 int main(int argc, char *argv[])
