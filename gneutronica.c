@@ -4701,10 +4701,10 @@ void about_ok_callback(__attribute__((unused)) GtkWidget *widget, __attribute__(
 int about_activate(__attribute__((unused)) GtkWidget *widget, __attribute__((unused)) gpointer data)
 {
 
-	static char about_msg[200];
+	static char about_msg[1024];
 
 	if (about_window == NULL) {
-		sprintf(about_msg, "\n\n%s v. %s\n\n"
+		snprintf(about_msg, sizeof(about_msg), "\n\n%s v. %s\n\n"
 			"Gneutronica is a MIDI drum machine\n\n"
 			COPYRIGHT "\n\n"
 			"http://sourceforge.net/projects/gneutronica\n\n",
