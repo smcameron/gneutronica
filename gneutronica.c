@@ -4171,6 +4171,7 @@ int import_patterns_from_file(const char *filename)
 	if (rc != 1) {
 		printf("File %s does not appear to be a %s file.\n", filename,
 			PROGNAME);
+		fclose(f);
 		return -1;
 	}
 
@@ -4190,6 +4191,7 @@ int import_patterns_from_file(const char *filename)
 			fileformatversion);
 			return -1;
 	}
+	fclose(f);
 	return rc;
 }
 
