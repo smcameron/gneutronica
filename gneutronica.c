@@ -1836,10 +1836,13 @@ static int canvas_event(GtkWidget *w, UNUSED GdkEvent *event, struct instrument_
 			x2 = x1 + 10;
 			/* front vertical line... */
 			gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x1, (int) y1);
+			gdk_draw_line(w->window, gc, (int) x1 + 1, (int) y2, (int) x1 + 1, (int) y1);
 			/* bottom line... */
 			gdk_draw_line(w->window, gc, (int) x1, (int) y2, (int) x2, (int) y2);
+			gdk_draw_line(w->window, gc, (int) x1, (int) y2 - 1, (int) x2, (int) y2 - 1);
 			/* slanty line */
 			gdk_draw_line(w->window, gc, (int) x1, (int) y1, (int) x2, (int) y2);
+			gdk_draw_line(w->window, gc, (int) x1 + 1, (int) y1, (int) x2 + 1, (int) y2);
 			/* horizontal line on top... */
 			gdk_draw_line(w->window, gc, (int) x1-8, (int) y1, (int) x1+8, (int) y1);
 		}
