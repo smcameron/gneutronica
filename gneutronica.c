@@ -1545,6 +1545,18 @@ static int arr_darea_event(GtkWidget *w, UNUSED GdkEvent *event, struct pattern_
 					(end_copy_measure+1)*MEASUREWIDTH-1, y1+ARRANGER_HEIGHT/2);
 	for (i=0;i<nmeasures+2;i++) {
 		/* probably could do something better by using color... */
+		gdk_draw_line(w->window, gc, x, y1, x, y1+ARRANGER_HEIGHT);
+		if ((i % 8) == 0)
+			gdk_draw_line(w->window, gc, x+1, y1, x+1, y1+ARRANGER_HEIGHT);
+		if (measure[i].npatterns != 0 && i<nmeasures ) {
+			for (j=0;j<measure[i].npatterns;j++) {
+				if (measure[i].pattern[j] == p->pattern_num) {
+					int filled = (i < start_copy_measure || i > end_copy_measure || start_copy_measure < 0);
+					gdk_draw_rectangle(w->window, gc, filled, x + 5, y1 + 5, MEASUREWIDTH - 10, ARRANGER_HEIGHT - 10);
+					break;
+				}
+			}
+		}
 		if (i == start_copy_measure) {
 			gdk_draw_line(w->window, gc, x+1, y1, x+1, y1+ARRANGER_HEIGHT);
 			gdk_draw_line(w->window, gc, x+1, ARRANGER_HEIGHT / 2, x+MEASUREWIDTH/2, ARRANGER_HEIGHT/3); 
@@ -1555,18 +1567,6 @@ static int arr_darea_event(GtkWidget *w, UNUSED GdkEvent *event, struct pattern_
 				x+MEASUREWIDTH-1, y1+ARRANGER_HEIGHT);
 			gdk_draw_line(w->window, gc, x+MEASUREWIDTH-1, ARRANGER_HEIGHT / 2, x+MEASUREWIDTH/2, ARRANGER_HEIGHT/3); 
 			gdk_draw_line(w->window, gc, x+MEASUREWIDTH-1, ARRANGER_HEIGHT / 2, x+MEASUREWIDTH/2, 2*ARRANGER_HEIGHT/3); 
-		}
-		gdk_draw_line(w->window, gc, x, y1, x, y1+ARRANGER_HEIGHT);
-		if ((i % 8) == 0)
-			gdk_draw_line(w->window, gc, x+1, y1, x+1, y1+ARRANGER_HEIGHT);
-		if (measure[i].npatterns != 0 && i<nmeasures ) {
-			for (j=0;j<measure[i].npatterns;j++) {
-				if (measure[i].pattern[j] == p->pattern_num) {
-					gdk_draw_line(w->window, gc, x, y1, x+MEASUREWIDTH, y1+ARRANGER_HEIGHT);
-					gdk_draw_line(w->window, gc, x+MEASUREWIDTH, y1, x, y1+ARRANGER_HEIGHT);
-					break;
-				}
-			}
 		}
 		x += MEASUREWIDTH;
 	}
