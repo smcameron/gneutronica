@@ -3523,6 +3523,8 @@ int unflatten_pattern(int ckit, int cpattern)
 			/* printf("copying tempo, %d, %d\n", 
 				pattern[cpattern]->beats_per_measure,
 				pattern[cpattern]->beats_per_minute); */
+		} else {
+			pattern[cpattern]->channel = DEFAULT_MIDI_CHANNEL;
 		}
 	}
 	if (pattern[cpattern]->arr_button != NULL)
@@ -4111,6 +4113,10 @@ int translate_drumtab_data(UNUSED int factor)
 		p->timediv[4].division = 0;
 		p->beats_per_minute = 120;
 		p->beats_per_measure = 4;
+		if (npatterns == 0)
+			p->channel = DEFAULT_MIDI_CHANNEL;
+		else
+			p->channel = pattern[npatterns - 1]->channel;
 		/* sprintf(p->patname, "%s %d", dt_inst[dt_pat[i].hit->inst].name, i); */
 		sprintf(p->patname, "Pattern %d",npatterns);
 		dt_pat[i].gn_pattern = npatterns;
@@ -5393,7 +5399,8 @@ int main(int argc, char *argv[])
 	channel_box = gtk_hbox_new(FALSE, 0);
 	channel_label = gtk_label_new(CHANNEL_LABEL);
 	channelspin = gtk_spin_button_new_with_range(0, 15, 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(channelspin), (gdouble) 0.0);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(channelspin), (gdouble) DEFAULT_MIDI_CHANNEL);
+	gtk_tooltips_set_tip(tooltips, channelspin, MIDI_CHANNEL_TIP, NULL);
 	g_signal_connect(G_OBJECT(channelspin), "value-changed", 
 		G_CALLBACK(channel_spin_change), NULL);
 	widget_exclude_keypress(channelspin);

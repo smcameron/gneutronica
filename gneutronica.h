@@ -109,6 +109,7 @@ struct pattern_struct {
 #define MELODIC 1
 	int tracknum;
 	int channel;
+#define DEFAULT_MIDI_CHANNEL 9
 	int pattern_num;
 	int beats_per_measure; /* this is tempo information for this pattern */
 	int beats_per_minute; /* this is tempo information for this pattern for single pattern playback
