@@ -112,6 +112,7 @@
 #define CLEAR_LABEL "Clear"
 #define CLEAR_TIP "Delete all the notes for this instrument in this pattern."
 #define VOLUME_SLIDER_TIP "Controls the default volume for this insrument."
+#define MIDI_CHANNEL_TIP "MIDI Channel minus 1. (first channel is zero, not one)"
 #define SCRAMBLE_LABEL "Scramble"
 #define SCRAMBLE_TIP "Scramble this measure by divisions randomly. " \
 	"Is this a useful feature?  A million monkeys can't be wrong " \
@@ -131,7 +132,7 @@
 #define TRACK_LABEL "Track:"
 #define PERCUSSION_LABEL "Percussion"
 #define MELODIC_LABEL "Melodic"
-#define CHANNEL_LABEL "CHannel:"
+#define CHANNEL_LABEL "Channel:"
 
 #define ADD_SPACE_BEFORE_LABEL "Add Space Before"
 #define ADD_SPACE_BEFORE_TIP "Adds space to the beginning of the measure, " \
@@ -411,6 +412,9 @@
 #define VOLUME_SLIDER_TIP "Commande le volume de défaut pour cet insrument."
 #undef SCRAMBLE_LABEL
 #define SCRAMBLE_LABEL "Brouiller"
+
+#undef MIDI_CHANNEL_TIP
+#define MIDI_CHANNEL_TIP "Canal MIDI moins 1. (le premier canal est zéro, pas un)"
 
 #undef SCRAMBLE_TIP
 #define SCRAMBLE_TIP "Brouiller cette mesure par des divisions aléatoirement.  " \
