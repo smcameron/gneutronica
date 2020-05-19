@@ -3811,7 +3811,6 @@ int load_from_file_version_4(FILE *f)
 		}
 		linecount++;
 	}
-	fclose(f);
 
 	edit_pattern(0);
 /*
@@ -4190,6 +4189,7 @@ int import_patterns_from_file(const char *filename)
 			printf("(version %d).\n\n", fileformatversion); 
 			printf("Load this song file into %s, then save it to a new file,\n", PROGNAME);
 			printf("and then import the patterns from the new file.\n\n\n"); 
+			rc = -1;
 			break;
 		case 2: rc = import_patterns_v2(f);
 			break;
@@ -4199,7 +4199,8 @@ int import_patterns_from_file(const char *filename)
 			break;
 		default: printf("Unsupported file format version: %d\n", 
 			fileformatversion);
-			return -1;
+			rc = -1;
+			break;
 	}
 	fclose(f);
 	return rc;

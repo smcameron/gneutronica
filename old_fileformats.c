@@ -211,7 +211,6 @@ int load_from_file_version_2(FILE *f)
 		}
 		linecount++;
 	}
-	fclose(f);
 
 	edit_pattern(0);
 /*
@@ -380,7 +379,6 @@ int load_from_file_version_1(FILE *f)
 		}
 		linecount++;
 	}
-	fclose(f);
 
 	edit_pattern(0);
 /*
@@ -518,7 +516,6 @@ int import_patterns_v2(FILE *f)
 		}
 		make_new_pattern_widgets(i, i+1);
 	}
-	fclose(f);
 	npatterns += newpatterns;
 	return 0;
 
@@ -731,7 +728,6 @@ int load_from_file_version_3(FILE *f)
 		}
 		linecount++;
 	}
-	fclose(f);
 
 	edit_pattern(0);
 /*
@@ -897,7 +893,6 @@ int import_patterns_v3(FILE *f)
 		}
 		make_new_pattern_widgets(i, i+1);
 	}
-	fclose(f);
 	npatterns += newpatterns;
 	return 0;
 error_out:
