@@ -4282,9 +4282,9 @@ int save_to_file(const char *filename)
 		current_file_format_version);
 	fprintf(f, "Songname: '%s'\n", songname);
 	fprintf(f, "Comment:\n");
-	fprintf(f, "Drumkit Make: %s\n", drumkit[kit].make);
-	fprintf(f, "Drumkit Model: %s\n", drumkit[kit].model);
-	fprintf(f, "Drumkit Name: %s\n", drumkit[kit].name);
+	fprintf(f, "Drumkit Make:%s\n", drumkit[kit].make);
+	fprintf(f, "Drumkit Model:%s\n", drumkit[kit].model);
+	fprintf(f, "Drumkit Name:%s\n", drumkit[kit].name);
 	fprintf(f, "Instruments: %d\n", drumkit[kit].ninsts);
 
 	/* Save the instrument types, so that translating to another drumkit is possible */ 
