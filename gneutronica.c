@@ -223,25 +223,72 @@ GtkWidget *get_option_menu( void )
 }
 /*  . . . End of code copied from gtk tutorial. */
 
-int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits, 
+struct filedata {
+	char *filename;
+	FILE *f;
+	int linecount;
+	char buffer[1024];
+	char *str;
+};
+
+FILE *open_file(struct filedata *f, char *filename, char *mode)
+{
+	f->filename = filename;
+	memset(f->buffer, 0, sizeof(f->buffer));
+	f->str = NULL;
+	f->linecount = 0;
+	f->f = fopen(f->filename, mode);
+	return f->f;
+}
+
+void close_file(struct filedata *f)
+{
+	fclose(f->f);
+	f->filename = NULL;
+	f->f = NULL;
+	f->linecount = 0;
+	memset(f->buffer, 0, sizeof(f->buffer));
+	f->str = NULL;
+}
+
+char *get_next_line(struct filedata *f)
+{
+	errno = 0;
+	do {
+		f->str = fgets(f->buffer, sizeof(f->buffer), f->f);
+		if (!f->str) {
+			if (errno == EINTR)
+				continue;
+			if (!feof(f->f) || errno != 0) /* end of file */
+				fprintf(stderr, "Error reading '%s': %s\n", f->filename, strerror(errno));
+			f->str = NULL;
+			return NULL;
+		}
+		f->linecount++;
+	} while (f->buffer[0] == '#'); /* skip comments */
+	f->str = f->buffer;
+	return f->str;
+}
+
+int read_drumkit_fileformat_1_or_2(struct filedata *f, int *ndrumkits,
 	struct drumkit_struct *drumkit, int format)
 {
 	struct drumkit_struct *dk;
 	int i;
-	int rc, line, n;
+	int rc, n;
 
 	if (format == 1)
 		fprintf(stderr, "Drumkit file %s is old file format version %d\n" 
 			"and contains no instrument mapping info\n", 
-			filename, format);
-	line = 1;
+			f->filename, format);
 	dk = &drumkit[*ndrumkits];
 	dk->ninsts = 0;
-	rc = fscanf(f, "%[^,]%*c %[^,]%*c %[^\n]%*c", dk->make, dk->model, dk->name);
+	f->str = get_next_line(f);
+	rc = sscanf(f->str, "%[^,]%*c %[^,]%*c %[^\n]%*c", dk->make, dk->model, dk->name);
 	/* g_print("rc = %d\n", rc); */
 	if (rc != 3) {
-		fprintf(stderr, "Error in %s (make/model/name) at line %d, rc = %d\n", filename, line, rc);
-		pclose(f);
+		fprintf(stderr, "Error in %s (make/model/name) at line %d, rc = %d\n", f->filename, f->linecount, rc);
+		close_file(f);
 		return -1;
 	}
 	fprintf(stderr, "Reading drumkit %s %s %s\n", dk->make, dk->model, dk->name);
@@ -249,7 +296,7 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	dk->instrument = malloc(sizeof(struct instrument_struct)*MAXINSTS);
 	if (dk->instrument == NULL) {
 		fprintf(stderr, "Out of memory\n");
-		pclose(f);
+		close_file(f);
 		return -1;
 	}
 	memset(dk->instrument, 0, sizeof(struct instrument_struct)*MAXINSTS);
@@ -267,46 +314,49 @@ int read_drumkit_fileformat_1_or_2(char *filename, FILE *f, int *ndrumkits,
 	}
 
 	n = 0;
-	line++;
-	while (!feof(f)) {
+	while (!feof(f->f)) {
+		f->str = get_next_line(f);
+		if (!f->str)
+			break;
 		switch(format) {
-		case 2: rc = fscanf(f, "%[^,]%*c %[^,]%*c %hhu %d\n", 
+		case 2: rc = sscanf(f->str, "%[^,]%*c %[^,]%*c %hhu %d\n",
 				dk->instrument[n].name, 
 				dk->instrument[n].type,
 				&dk->instrument[n].midivalue,
 				&dk->instrument[n].gm_equivalent);
 			if (rc != 4) {
-				fprintf(stderr, "Error in %s instrument at line %d, rc = %d\n", filename, line, rc);
-				pclose(f);
+				fprintf(stderr, "Error in %s instrument at line %d, rc = %d\n", f->filename, f->linecount, rc);
+				close_file(f);
 				return -1;
 			}
 			break;
-		case 1: rc = fscanf(f, "%[^,]%*c %[^,]%*c %hhu\n", 
+		case 1: rc = sscanf(f->str, "%[^,]%*c %[^,]%*c %hhu\n",
 				dk->instrument[n].name, 
 				dk->instrument[n].type,
 				&dk->instrument[n].midivalue);
 			if (rc != 3) {
-				fprintf(stderr, "Error in %s at line %d\n", filename, line);
-				pclose(f);
+				fprintf(stderr, "Error in %s at line %d\n", f->filename, f->linecount);
+				close_file(f);
 				return -1;
 			}
 			dk->instrument[n].gm_equivalent = -1;
 			break;
-		default:fprintf(stderr, "Error in %s at line %d\n", filename, line);
-			pclose(f);
+		default:fprintf(stderr, "Error in %s at line %d\n", f->filename, f->linecount);
+			close_file(f);
 			return -1;
 		}
 		dk->instrument[n].instrument_num = n;
 		n++;
-		line++;
-		dk->instrument[n].hit = NULL;
-		dk->instrument[n].button = NULL;
-		dk->instrument[n].hidebutton = NULL;
-		dk->instrument[n].canvas = NULL;
+		if (n < MAXINSTS) {
+			dk->instrument[n].hit = NULL;
+			dk->instrument[n].button = NULL;
+			dk->instrument[n].hidebutton = NULL;
+			dk->instrument[n].canvas = NULL;
+		}
 	}
 	dk->ninsts = n;
 	(*ndrumkits)++;
-	pclose(f);
+	close_file(f);
 	return 0;
 }
 
@@ -353,43 +403,45 @@ int make_default_drumkit(int *ndrumkits, struct drumkit_struct *drumkit)
 
 int read_drumkit(char *filename, int *ndrumkits, struct drumkit_struct *drumkit)
 {
-	FILE *f;
 	int rc;
 	int fileformat;
-	char cmd[255];
-	char realfilename[300];
+	char realfilename[PATH_MAX + 1];
 	struct stat statbuf;
+	struct filedata f;
 
-	strncpy(realfilename, filename, 300);
+	strncpy(realfilename, filename, PATH_MAX);
 
 	rc = stat(realfilename, &statbuf);
-	if (rc != 0 && (strlen(DEFAULT_DRUMKIT_DIR) + strlen(filename) + 2) < 300) {
+	if (rc != 0 && (strlen(DEFAULT_DRUMKIT_DIR) + strlen(filename) + 2) < PATH_MAX) {
 		/* try putting DEFAULT_DRUMKIT_DIR n the front and see if that helps. */
 		sprintf(realfilename, "%s/%s", DEFAULT_DRUMKIT_DIR, filename);
 		rc = stat(realfilename, &statbuf);
 		if (rc != 0) /* Nope... put it back, and let it fail normally */
-			strncpy(realfilename, filename, 300);
+			strncpy(realfilename, filename, PATH_MAX);
 	}
 
 	if (*ndrumkits >= MAXKITS)
 		return -1;
 
-	sprintf(cmd, "grep -v '^#' %s", realfilename);
-	f = popen(cmd, "r");
-	if (f == NULL) {
-		fprintf(stderr, "Can't open %s: %s\n", filename, strerror(errno));
+	f.f = open_file(&f, realfilename, "r");
+	if (f.f == NULL) {
+		fprintf(stderr, "Can't open %s: %s\n", f.filename, strerror(errno));
 		return -1;
 	}
-	rc = fscanf(f, "Gneutronica drumkit file format %d\n", &fileformat);
+
+	get_next_line(&f);
+	if (!f.str)
+		return -1;
+	rc = sscanf(f.str, "Gneutronica drumkit file format %d\n", &fileformat);
 	if (rc != 1) {
 		printf("%s does not appear to be a Gneutronica drumkit file\n", filename);
-		pclose(f);
+		close_file(&f);
 		return -1;
 	}
 
 	switch (fileformat) {
 	case 1: 
-	case 2: rc = read_drumkit_fileformat_1_or_2(filename, f, ndrumkits, drumkit, fileformat);
+	case 2: rc = read_drumkit_fileformat_1_or_2(&f, ndrumkits, drumkit, fileformat);
 		break;
 	default: printf("Unknown drumkit fileformat version %d\n", fileformat);
 		rc = -1;
