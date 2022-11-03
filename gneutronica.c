@@ -616,7 +616,7 @@ void make_new_pattern_widgets(int new_pattern, int total_rows)
 	struct pattern_struct *p = pattern[new_pattern];
 	int top;
 	int new_arranger_scroller_size;
-	char msg[100];
+	char msg[256];
 
 	if (p == NULL)
 		return;
