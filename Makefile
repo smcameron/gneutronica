@@ -8,7 +8,10 @@ OPTIMIZE=-O3
 GNEUTRONICA_LANGUAGE=
 # GNEUTRONICA_LANGUAGE=-DGNEUTRONICA_FRENCH
 
-CFLAGS=${DEBUG} ${OPTIMIZE} ${GNEUTRONICA_LANGUAGE} -Wall -Wextra --pedantic
+CFLAGS=${DEBUG} ${OPTIMIZE} ${GNEUTRONICA_LANGUAGE} -Wall -Wextra --pedantic \
+	-D_FORTIFY_SOURCE=2 -fsanitize=bounds -Wstringop-truncation -Warray-bounds \
+	-Wstringop-overflow -fstack-protector-strong -Wvla \
+	-Wimplicit-fallthrough
 
 all:	gneutronica documentation/gneutronica.1
 
