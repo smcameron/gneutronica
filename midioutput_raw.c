@@ -151,7 +151,7 @@ int isopen_raw(struct midi_handle *mh)
 	return 1;
 }
 
-const char *default_file_raw()
+const char *default_file_raw(void)
 {
 	static const char *filename = "/dev/snd/midiC0D0";
 	return(filename);

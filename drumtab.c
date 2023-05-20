@@ -319,7 +319,7 @@ static int patterns_equal(struct dt_pattern_type *p1, struct dt_pattern_type *p2
 	return 1;
 }
 
-static int sort_by_measure()
+static int sort_by_measure(void)
 {
 	/* sort the patterns by measure order, but with a measure, leave the patterns in order. */
 
@@ -360,7 +360,7 @@ static int sort_by_measure()
 	return 0;
 }
 
-static void find_duplicates()
+static void find_duplicates(void)
 {
 	int nduplicates_found = 0;;
 	int i, j;
@@ -394,7 +394,7 @@ static void find_duplicates()
 		dt_npats,  nduplicates_found, dt_npats - nduplicates_found); */
 }
 
-static void collapse_unique_patterns()
+static void collapse_unique_patterns(void)
 {
 	/* for each measure which contains several unique_patterns,
 	   collapse those patterns into a single pattern */
@@ -434,7 +434,7 @@ static void collapse_unique_patterns()
 	}
 }
 
-static void initialize()
+static void initialize(void)
 {
 	int i;
 	memset(dt_pat, 0, sizeof(dt_pat));
@@ -509,7 +509,7 @@ static void free_dt_hit(struct dt_hit_type *h)
 	free(h);
 }
 
-void dt_free_memory()
+void dt_free_memory(void)
 {
 	int i;
 	if (buffer_alloced) {

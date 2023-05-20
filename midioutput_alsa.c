@@ -151,7 +151,7 @@ int midi_isopen_alsa(struct midi_handle *mh)
 	return 1;
 }
 
-const char *midi_default_file_alsa()
+const char *midi_default_file_alsa(void)
 {
 	static const char *filename = "hw";
 	return(filename);

@@ -81,11 +81,6 @@ struct midi_handle *midi_handle = NULL;
 #define PLAYER_QUIT 2
 #define PERFORM_PATCH_CHANGE 4
 
-void print_hello()
-{
-	printf("hello\n");
-}
-
 void load_button_clicked(GtkWidget *widget, gpointer data);
 void save_button_clicked(GtkWidget *widget, gpointer data);
 void import_patterns_button_clicked(GtkWidget *widget, gpointer data);
@@ -125,7 +120,6 @@ static int get_drawing_width(void)
 
 static GtkItemFactoryEntry menu_items[] = {
 	{ "/" FILE_LABEL, NULL, NULL, 0, "<Branch>", NULL },
-	/* { "/File/_New", "<control>N", print_hello, 0, "<StockItem>", GTK_STOCK_NEW }, */
 	{ "/" FILE_LABEL "/_" OPEN_LABEL, "<control>O", load_button_clicked, 0, "<StockItem>", GTK_STOCK_OPEN },
 	{ "/" FILE_LABEL "/_" SAVE_LABEL, "<control>S", save_button_clicked, 0, "<StockItem>", GTK_STOCK_SAVE },
 	{ "/" FILE_LABEL "/" SAVE_AS_LABEL, NULL, save_button_clicked, 0, "<Item>", NULL },
@@ -478,7 +472,7 @@ static int save_drumkit_to_file(const char *filename)
 }
 
 void destroy_event(GtkWidget *widget, gpointer data);
-void cleanup_tempo_changes();
+void cleanup_tempo_changes(void);
 
 void tempo_change_ok_button(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
@@ -518,7 +512,7 @@ void destroy_means_hide(GtkWidget *widget, UNUSED gpointer data)
 }
 
 
-void make_tempo_change_editor()
+void make_tempo_change_editor(void)
 {
 	TempoChWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
@@ -973,7 +967,7 @@ static int arr_darea_button_press(UNUSED GtkWidget *w, GdkEventButton *event,
 	return 1;
 }
 
-void redraw_measure_op_buttons()
+void redraw_measure_op_buttons(void)
 {
 	/* I should really make a measure_ops_da[] array, or something . . .  */
 	gtk_widget_queue_draw(Tempo_da);
@@ -1281,7 +1275,7 @@ static gint drumtab_selection_received(UNUSED GtkWidget* widget,
 	return TRUE;
 }
 
-static void paste_drumtab_selection()
+static void paste_drumtab_selection(void)
 {
 	static GdkAtom targets_atom = GDK_NONE;
 
@@ -1706,7 +1700,7 @@ static void bring_back_right_widgets(struct instrument_struct *inst,
 	}
 }
 
-static void check_melodic_mode()
+static void check_melodic_mode(void)
 {
 	int i;
 	int vshidden, unchecked_hidden, editdrumkit;
@@ -2274,7 +2268,7 @@ void save_drumkit_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 	make_file_dialog(SAVE_DRUMKIT);
 }
 
-void remap_drumkit_song();
+void remap_drumkit_song(void);
 void remap_drumkit_pattern(struct pattern_struct *p, int set_toggles);
 
 void remap_drumkit_clicked(UNUSED GtkWidget *widget, /* this is for the menu item, remaps whole song */
@@ -2354,7 +2348,7 @@ void pattern_paste_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data
 	return;
 }
 
-void do_play()
+void do_play(void)
 {
 	flatten_pattern(kit, cpattern);
 	schedule_pattern(kit, 0, cpattern, -1, NULL);
@@ -2387,7 +2381,7 @@ void pattern_record_button_clicked(UNUSED GtkWidget *widget, UNUSED gpointer dat
 		do_play();
 }
 
-void set_arranger_window_title()
+void set_arranger_window_title(void)
 {
 	sprintf(arranger_title, ARRANGER_TITLE_ITEM, /* "%s v. %s - Arrangement Editor: %s" */
 		PROGNAME, VERSION, songname);
@@ -2395,7 +2389,7 @@ void set_arranger_window_title()
 	gtk_entry_set_text(GTK_ENTRY(song_name_entry), songname);
 }
 
-void set_pattern_window_title()
+void set_pattern_window_title(void)
 {
 	gchar pattern_name[100];
 
@@ -2737,7 +2731,7 @@ void copy_pattern_button_pressed(UNUSED GtkWidget *widget, /* copy pattern */
 	redraw_arranger();
 }
 
-void copy_current_instrument_hit_pattern()
+void copy_current_instrument_hit_pattern(void)
 {
 	int previous = instrument_in_copy_buffer;
 	instrument_in_copy_buffer = current_instrument;
@@ -2747,7 +2741,7 @@ void copy_current_instrument_hit_pattern()
 	printf("Recorded instrument %d\n", current_instrument);
 }
 
-void paste_current_instrument_hit_pattern()
+void paste_current_instrument_hit_pattern(void)
 {
 	struct drumkit_struct *dk = &drumkit[kit];
 	struct hitpattern *h;
@@ -2777,7 +2771,7 @@ void paste_current_instrument_hit_pattern()
 	return;
 }
 
-void paste_all_current_instrument_hit_pattern()
+void paste_all_current_instrument_hit_pattern(void)
 {
 	struct drumkit_struct *dk = &drumkit[kit];
 	struct hitpattern *h;
@@ -2816,7 +2810,7 @@ void paste_all_current_instrument_hit_pattern()
 	return;
 }
 
-void clear_all_current_instrument_hit_pattern()
+void clear_all_current_instrument_hit_pattern(void)
 {
 	struct drumkit_struct *dk = &drumkit[kit];
 	struct instrument_struct *inst;
@@ -3418,7 +3412,7 @@ void remap_drumkit_pattern(struct pattern_struct *p, int set_toggles)
 	p->gm_converted = 1;
 }
 
-void remap_drumkit_song()
+void remap_drumkit_song(void)
 {
 	int i;
 
@@ -3879,7 +3873,7 @@ error_out:
 
 }
 
-void cleanup_tempo_changes()
+void cleanup_tempo_changes(void)
 {
 	struct tempo_change_t tmp[MAXMEASURES];
 	int i, ntc = 0;
@@ -3974,7 +3968,7 @@ int find_tempo(int measure)
 	return tempo;
 }
 
-void init_measures();
+void init_measures(void);
 
 int import_patterns_v4(FILE *f)
 {
@@ -4416,7 +4410,7 @@ void silence(struct midi_handle *mh)
 				midi->noteoff(mh, j, k, i);
 }
 
-void init_measures()
+void init_measures(void)
 {
 	int i;
 	if (measure != NULL)
@@ -4515,7 +4509,7 @@ void receive_midi_data(UNUSED int signal)
 	return;
 }
 
-void setup_midi_receiver()
+void setup_midi_receiver(void)
 {
 	struct sigaction action;
 
@@ -4709,7 +4703,7 @@ int midi_setup_ok(UNUSED GtkWidget *widget, UNUSED gpointer data)
 	return TRUE;
 }
 
-void setup_midi_setup_window()
+void setup_midi_setup_window(void)
 {
 	char windowname[100];
 	midi_setup_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -4955,7 +4949,7 @@ void track_mute_toggle_callback(GtkWidget *widget, gpointer data)
 	*muted = (int) gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget));
 }
 
-void create_default_config_file()
+void create_default_config_file(void)
 {
 	FILE *f;
 	char path[PATH_MAX];

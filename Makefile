@@ -11,7 +11,7 @@ GNEUTRONICA_LANGUAGE=
 CFLAGS=${DEBUG} ${OPTIMIZE} ${GNEUTRONICA_LANGUAGE} -Wall -Wextra --pedantic \
 	-D_FORTIFY_SOURCE=2 -fsanitize=bounds -Wstringop-truncation -Warray-bounds \
 	-Wstringop-overflow -fstack-protector-strong -Wvla \
-	-Wimplicit-fallthrough
+	-Wimplicit-fallthrough -Wstrict-prototypes
 
 all:	gneutronica documentation/gneutronica.1
 
