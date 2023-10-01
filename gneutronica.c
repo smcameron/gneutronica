@@ -1285,21 +1285,12 @@ static void paste_drumtab_selection(void)
 
 	/* And request the "STRING" target for the primary selection */
 	gtk_selection_convert (arranger_window, GDK_SELECTION_PRIMARY, targets_atom, GDK_CURRENT_TIME);
-	/* We will get called back with the selection */
+	/* We will get called back with the selection via drumtab_selection_received(), via g_signal "selection_received" */
 }
 
 static void paste_drumtab_clicked(UNUSED GtkWidget *widget, UNUSED gpointer data)
 {
-	/* Selected from the menu, same as middle mouse button, except from clipboard */
-	static GdkAtom targets_atom = GDK_NONE;
-
-	/* Get the atom corresponding to the string "STRING" */
-	if (targets_atom == GDK_NONE)
-		targets_atom = gdk_atom_intern ("STRING", FALSE);
-
-	/* And request the "STRING" target for the primary selection */
-	gtk_selection_convert (arranger_window, GDK_SELECTION_CLIPBOARD, targets_atom, GDK_CURRENT_TIME);
-	/* We will get called back with the selection */
+	paste_drumtab_selection();
 }
 
 static int arr_darea_clicked(GtkWidget *w, GdkEventButton *event, 
